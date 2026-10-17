@@ -13,7 +13,6 @@ local AMBIENT = { 0.26, 0.25, 0.46 }
 local PLATE_COLORS = { { 0.35, 0.95, 1 }, { 1, 0.45, 0.85 }, { 1, 0.85, 0.35 }, { 0.55, 1, 0.5 } }
 local MIRROR = { 0.8, 0.5, 1 }
 local VEIL = { 1, 0.72, 0.3 }
--- Light colour and motion per light-emitting tile kind.
 local LIGHTS = {
   torch = { color = { 1, 0.58, 0.25 }, flicker = 3, alpha = 0.92 },
   goal = { color = { 0.55, 1, 0.95 }, breathe = 3, alpha = 0.95 },
@@ -346,7 +345,6 @@ TILES.crumble.draw = withSlot('crumble', proceduralCrumble, function(c)
 end)
 
 -- Doors span several cells, so they are drawn as one slab per letter rather than per tile.
--- A slab taller than wide lifts into its lintel; a hatch (wider than tall) slides into its left jamb.
 local function drawDoor(world, id, cells, open)
   local col = PLATE_COLORS[cells[1].idx]
   local x0, y0, x1, y1 = math.huge, math.huge, 0, 0
@@ -395,32 +393,30 @@ local function drawDoor(world, id, cells, open)
     end
     return
   end
-  local x, top, bottom = x0, y0, y1
-  local h = vis
   gfx.setColor(0.09, 0.09, 0.2)
-  gfx.rectangle('fill', x, top, T, 3)
-  if h > 0 then
+  gfx.rectangle('fill', x0, y0, T, 3)
+  if vis > 0 then
     gfx.setColor(0.26, 0.23, 0.36)
-    gfx.rectangle('fill', x + 1, top, T - 2, h)
+    gfx.rectangle('fill', x0 + 1, y0, T - 2, vis)
     gfx.setColor(0.36, 0.33, 0.5)
-    gfx.rectangle('fill', x + 1, top, 1, h)
+    gfx.rectangle('fill', x0 + 1, y0, 1, vis)
     gfx.setColor(0.13, 0.11, 0.22)
-    gfx.rectangle('fill', x + T - 2, top, 1, h)
-    for yy = top + 8, top + h - 2, T do
-      gfx.rectangle('fill', x + 1, yy, T - 2, 1)
+    gfx.rectangle('fill', x0 + T - 2, y0, 1, vis)
+    for yy = y0 + 8, y0 + vis - 2, T do
+      gfx.rectangle('fill', x0 + 1, yy, T - 2, 1)
     end
     gfx.setColor(col[1], col[2], col[3], pulse)
-    gfx.rectangle('fill', x + 7, top + 4, 2, max(0, h - 8))
-    gfx.rectangle('fill', x + 4, top + floor(h / 2) - 1, 8, 2)
+    gfx.rectangle('fill', x0 + 7, y0 + 4, 2, max(0, vis - 8))
+    gfx.rectangle('fill', x0 + 4, y0 + floor(vis / 2) - 1, 8, 2)
     gfx.setColor(col[1], col[2], col[3])
-    gfx.rectangle('fill', x + 1, top + h - 2, T - 2, 2)
+    gfx.rectangle('fill', x0 + 1, y0 + vis - 2, T - 2, 2)
   end
   if open > 0 then
     gfx.setColor(col[1], col[2], col[3], 0.22 * open)
-    gfx.rectangle('fill', x + 1, top, 1, bottom - top)
-    gfx.rectangle('fill', x + T - 2, top, 1, bottom - top)
+    gfx.rectangle('fill', x0 + 1, y0, 1, y1 - y0)
+    gfx.rectangle('fill', x0 + T - 2, y0, 1, y1 - y0)
     gfx.setColor(col[1], col[2], col[3], 0.8 * open)
-    gfx.rectangle('fill', x + 6, top + 3, 4, 2)
+    gfx.rectangle('fill', x0 + 6, y0 + 3, 4, 2)
   end
 end
 
@@ -596,7 +592,6 @@ function R.drawPlayer(p, alpha)
   gfx.pop()
 end
 
--- Keyed by echo.mirrored: a plain echo is cyan, a mirrored one violet.
 local ECHO_PALETTE = {
   [false] = { tint = { 0.55, 0.95, 1 }, body = { 0.3, 0.85, 1 }, core = { 0.6, 0.97, 1 }, flame = { 0.45, 0.95, 1 },
     eyes = { 0.1, 0.35, 0.45 }, edge = { 0.8, 1, 1 }, glow = { 0.3, 0.85, 1 } },

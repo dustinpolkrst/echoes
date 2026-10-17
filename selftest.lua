@@ -425,7 +425,7 @@ local function testConfluenceTiming()
   local ok, why = run(w, { { 'R', cond.atX(228) }, { 'RJ', cond.atX(1000) } })
   check('level 12: a running jump lands in the spikes', not ok and w.player.state == 'dead' and w.player.x < 19 * 16, tostring(why))
   w = Level.new(Levels[12])
-  local script = prefix(Solutions.scripts[12], 7)
+  local script = prefix(Solutions.scripts[Levels[12].name], 7)
   script[#script + 1] = { 200, '-' }
   script[#script + 1] = { 'R', cond.atX(376) }
   script[#script + 1] = { 1, 'X' }
@@ -435,8 +435,10 @@ local function testConfluenceTiming()
     w.doorOpen.a == false and w.player.x <= 25 * 16 - 10 + 0.01, ('x=%.1f'):format(w.player.x))
 end
 
--- Timed segments shift by dt frames; each condition segment keeps its direction keys held for hold
--- more frames (a re-held J or X would be a fresh press, which no human does by accident).
+local function withoutPresses(keys)
+  return (keys:gsub('[JX]', ''))
+end
+
 local function perturbed(script, dt, hold)
   local out = {}
   for _, seg in ipairs(script) do
@@ -444,7 +446,7 @@ local function perturbed(script, dt, hold)
       out[#out + 1] = { math.max(1, seg[1] + dt), seg[2] }
     else
       out[#out + 1] = seg
-      if hold > 0 then out[#out + 1] = { hold, seg[1]:gsub('[JX]', '') } end
+      if hold > 0 then out[#out + 1] = { hold, withoutPresses(seg[1]) } end
     end
   end
   return out
@@ -457,7 +459,7 @@ local function testSolutionSlack()
     local failures = {}
     for _, v in ipairs(VARIANTS) do
       local w = Level.new(Levels[i])
-      local ok, outcome = run(w, perturbed(Solutions.scripts[i], v[1], v[2]))
+      local ok, outcome = run(w, perturbed(Solutions.scripts[Levels[i].name], v[1], v[2]))
       if not (ok and outcome == 'cleared') then
         failures[#failures + 1] = ('dt=%+d hold=%d: %s'):format(v[1], v[2], tostring(outcome))
       end
@@ -470,7 +472,7 @@ end
 local function testSolutions()
   for i, def in ipairs(Levels) do
     local w = Level.new(def)
-    local ok, outcome = run(w, Solutions.scripts[i])
+    local ok, outcome = run(w, Solutions.scripts[def.name])
     check(('level %d "%s" scripted solution reaches the goal'):format(i, def.name),
       ok and outcome == 'cleared', ok and outcome or outcome)
   end

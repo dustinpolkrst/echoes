@@ -1,4 +1,5 @@
 local Level = require 'level'
+local Levels = require 'levels'
 
 local M = {}
 
@@ -84,22 +85,20 @@ end
 function C.onLastEcho(w) return w.player.support == w.echoes[#w.echoes] end
 function C.grounded(w) return w.player.state == 'ground' end
 function C.doorOpen(id) return function(w) return w.doorOpen[id] end end
--- The newest echo is heading right and has drawn level with the player (within lag pixels behind).
-function C.lastEchoPassing(lag)
+function C.lastEchoOvertakingRight(maxBehind)
   return function(w)
     local e = w.echoes[#w.echoes]
-    return e ~= nil and e.x > e.prevX and e.x >= w.player.x - lag
+    return e ~= nil and e.x > e.prevX and e.x >= w.player.x - maxBehind
   end
 end
 
 local atX, atXLeft, onTop = C.atX, C.atXLeft, C.onTop
 local apex, echoArrived, onLastEcho, grounded, doorOpen = C.apex, C.echoArrived, C.onLastEcho, C.grounded, C.doorOpen
-local lastEchoPassing = C.lastEchoPassing
+local lastEchoOvertakingRight = C.lastEchoOvertakingRight
 
--- Coordinates are pixels (tile = 16). Each list is a full playthrough of the level at that index.
+-- Coordinates are pixels (tile = 16). Each list is a full playthrough of the level of that name.
 M.scripts = {
-  -- 1 Wake
-  {
+  ['Wake'] = {
     { 'R', atX(202) }, { 'RJ', atX(246) }, { 'R', grounded },
     { 'R', atX(284) }, { 'RJ', atX(312) }, { 'R', atX(332) }, { 'R', grounded },
     { 'R', atX(348) }, { 'RJ', atX(374) }, { 'R', atX(404) }, { 'R', grounded },
@@ -111,15 +110,13 @@ M.scripts = {
     { 'R', atX(822) }, { 'RJ', atX(870) }, { 'R', grounded },
     { 'R', atX(940) },
   },
-  -- 2 First Echo
-  {
+  ['First Echo'] = {
     { 'R', atX(163) }, { 190, '-' }, { 1, 'X' },
     { 'R', atX(372) }, { 'RJ', atX(440) }, { 'R', grounded },
     { 'R', atX(488) }, { 'RJ', atX(540) }, { 'R', grounded },
     { 'R', atX(640) },
   },
-  -- 3 Stairway
-  {
+  ['Stairway'] = {
     { 'R', atX(66) }, { 'RJ', onTop(192, 80) }, { 'R', atX(133) }, { 'R', grounded },
     { 1, 'J' }, { 'J', apex }, { 1, 'JX' }, { '-', grounded },
     { 'L', atXLeft(116) }, { 'LJ', onTop(192, 80, 112) },
@@ -130,16 +127,14 @@ M.scripts = {
     { 'R', atX(358) }, { 'RJ', atX(410) }, { 'R', grounded },
     { 'R', atX(600) },
   },
-  -- 4 Two Minds
-  {
+  ['Two Minds'] = {
     { 'R', atX(66) }, { 190, '-' }, { 1, 'X' },
     { 'R', atX(130) }, { 190, '-' }, { 1, 'X' },
     { 'R', atX(316) }, { 'RJ', atX(372) }, { 'R', grounded },
     { 'R', atX(424) }, { 'RJ', atX(486) }, { 'R', grounded },
     { 'R', atX(700) },
   },
-  -- 5 Ascent
-  {
+  ['Ascent'] = {
     { 'R', atX(99) }, { 190, '-' }, { 1, 'X' },
     { 'R', atX(200) }, { 'RJ', onTop(528, 209) },
     { 'R', atX(246) }, { 'RJ', onTop(496, 288) },
@@ -160,45 +155,38 @@ M.scripts = {
     { 'L', atXLeft(176) }, { 'LJ', atXLeft(116) }, { 'L', grounded },
     { 'L', atXLeft(40) },
   },
-  -- 6 Other Side
-  {
+  ['Other Side'] = {
     { 'R', atX(66) }, { 100, '-' }, { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
   },
-  -- 7 Trapdoor
-  {
+  ['Trapdoor'] = {
     { 'R', atX(190) }, { 1, 'X' }, { '-', onTop(224) },
     { 'R', atX(255) }, { '-', doorOpen('a') }, { 'R', atX(340) },
   },
-  -- 8 Undertow
-  {
+  ['Undertow'] = {
     { 'R', atX(70) }, { '-', onTop(224) }, { 1, 'X' }, { '-', echoArrived },
     { 'J', onLastEcho }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
   },
-  -- 9 Underfoot
-  {
+  ['Underfoot'] = {
     { 'R', atX(48) }, { 190, '-' }, { 1, 'X' }, { 'R', atX(296) }, { '-', onTop(224) },
   },
-  -- 10 Ferry
-  {
+  ['Ferry'] = {
     { 'R', atX(208) }, { 'L', atXLeft(80) }, { 'R', atX(209) }, { 1, 'X' },
-    { '-', lastEchoPassing(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(400) },
+    { '-', lastEchoOvertakingRight(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(400) },
   },
-  -- 11 Short Memory
-  {
+  ['Short Memory'] = {
     { 'R', atX(26) }, { 'RJ', onTop(208, 54, 102) }, { 130, '-' },
     { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
   },
-  -- 12 Confluence
-  {
+  ['Confluence'] = {
     { 'R', atX(208) }, { 'L', atXLeft(80) }, { 'R', atX(209) }, { 1, 'X' },
-    { '-', lastEchoPassing(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(376) }, { 1, 'X' },
+    { '-', lastEchoOvertakingRight(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(376) }, { 1, 'X' },
     { '-', doorOpen('a') }, { 'R', atX(440) },
   },
 }
 
 -- An input source for a live scene: returns the next scripted input, then idles.
 function M.provider(index)
-  local drive = M.driver(M.scripts[index])
+  local drive = M.driver(M.scripts[Levels[index].name])
   local done = false
   return function(world)
     if done then return {} end

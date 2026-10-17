@@ -30,18 +30,17 @@ end
 M.CRACK, M.REGROW = 0.5, 3
 
 -- draw functions are attached by render.lua so the simulation stays headless.
--- rect is the cell's interaction box; list is the world field that collects cells of the kind.
 M.TILES = {
   solid = { solid = true, static = true },
   oneway = { oneway = true, static = true },
-  spike = { hurts = true, static = true, rect = { 2, 8, T - 4, 8 }, list = 'spikes' },
+  spike = { hurts = true, static = true, rect = { 2, 8, T - 4, 8 }, worldList = 'spikes' },
   torch = { light = 64 },
   goal = { light = 78, goal = true },
-  plate = { plate = true, rect = { 1, 12, T - 2, 4 }, list = 'plates' },
+  plate = { plate = true, rect = { 1, 12, T - 2, 4 }, worldList = 'plates' },
   door = { solid = true, openable = true },
-  mirror = { light = 56, mirror = true, list = 'mirrors' },
-  veil = { light = 30, veil = true, rect = { 0, 0, T, T }, list = 'veils' },
-  crumble = { solid = true, crumble = true, list = 'crumbles' },
+  mirror = { light = 56, mirror = true, worldList = 'mirrors' },
+  veil = { light = 30, veil = true, rect = { 0, 0, T, T }, worldList = 'veils' },
+  crumble = { solid = true, crumble = true, worldList = 'crumbles' },
 }
 local TILES = M.TILES
 
@@ -79,7 +78,7 @@ function M.new(def)
           local r = tile.rect
           c.rect = { x = tx * T + r[1], y = ty * T + r[2], w = r[3], h = r[4] }
         end
-        if tile.list then table.insert(w[tile.list], c) end
+        if tile.worldList then table.insert(w[tile.worldList], c) end
         if tile.openable then
           w.doorCells[c.id] = w.doorCells[c.id] or {}
           table.insert(w.doorCells[c.id], c)
@@ -202,6 +201,10 @@ local function touchesCell(b, c)
     and floor(b.y / T) <= c.ty and floor((b.y + b.h - EPS) / T) >= c.ty
 end
 
+local function standsOn(b, c)
+  return math.abs(b.y + b.h - c.ty * T) <= 1 and b.x < (c.tx + 1) * T and b.x + b.w > c.tx * T
+end
+
 -- Door state is a pure function of who stands where, so there is nothing to toggle or desync.
 function World:updateDoors(silent)
   local bodies = self:bodies()
@@ -251,12 +254,12 @@ end
 
 function World:inVeil(x, y, w, h)
   for _, v in ipairs(self.veils) do
-    if overlaps({ x = x, y = y, w = w, h = h }, v.rect) then return true end
+    local r = v.rect
+    if x < r.x + r.w and x + w > r.x and y < r.y + r.h and y + h > r.y then return true end
   end
   return false
 end
 
--- A body whose feet rest on a crumble cell starts it cracking; it regrows once nothing stands inside it.
 function World:updateCrumbles(dt)
   local bodies = self:bodies()
   for _, c in ipairs(self.crumbles) do
@@ -279,8 +282,7 @@ function World:updateCrumbles(dt)
       end
     else
       for _, b in ipairs(bodies) do
-        local bottom = b.y + b.h
-        if math.abs(bottom - top) <= 1 and b.x < (c.tx + 1) * T and b.x + b.w > c.tx * T then
+        if standsOn(b, c) then
           c.crack = M.CRACK
           break
         end
@@ -306,10 +308,10 @@ function M.step(w, input, dt)
   w.events = {}
   w.time = w.time + dt
 
-  local veiled = function(x, y, ew, eh) return w:inVeil(x, y, ew, eh) end
+  local inVeil = function(x, y, ew, eh) return w:inVeil(x, y, ew, eh) end
   for i = #w.echoes, 1, -1 do
     local e = w.echoes[i]
-    e:update(dt, veiled)
+    e:update(dt, inVeil)
     if not e:isAlive() then table.remove(w.echoes, i) end
   end
   w:updateCrumbles(dt)

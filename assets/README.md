@@ -11,7 +11,7 @@ A PNG whose width is a multiple of its height is a horizontal strip of square fr
 | Slot | Frame size | Anchor and frames |
 | --- | --- | --- |
 | `player` | 16x16 | Feet at the bottom centre of the 10x12 hitbox. Animated at 8 fps. Draw it facing right, it is flipped for left. The game squashes and stretches it. |
-| `echo` | 16x16 | Same as `player`. The game tints it cyan and fades it. Absent means the procedural ghost, even if `player` exists. |
+| `echo` | 16x16 | Same as `player`. The game tints it cyan, or violet for a mirrored echo, and fades it. Absent means the procedural ghost, even if `player` exists. |
 | `solid` | 16x16 | Top-left of the cell. A strip is a set of variants, one picked per cell by hash. No edge or neighbour logic. |
 | `oneway` | 16x16 | Top-left of the cell. Variants like `solid`. The collision surface is the top 5 rows, so draw the platform there. |
 | `spike` | 16x16 | Top-left of the cell. Animated at 6 fps. The hurt box is the lower half. |
@@ -19,6 +19,9 @@ A PNG whose width is a multiple of its height is a horizontal strip of square fr
 | `door` | 16x16 | One cell, repeated down the door and cropped from the bottom as it opens. Animated at 6 fps. Tinted by plate colour like `plate`. |
 | `goal` | 16x16 | Top-left of the cell. Animated at 8 fps. |
 | `torch` | 16x16 | Top-left of the cell. Animated at 8 fps. Replaces the chain and flame. |
+| `mirror` | 16x16 | Top-left of the cell. Animated at 8 fps. The shrine the player touches to cast a mirrored echo; the procedural one overhangs the cell above. |
+| `veil` | 16x16 | Top-left of the cell. Animated at 8 fps. Drawn over the background with alpha; echoes halt at it and the player walks through. |
+| `crumble` | 16x16 | Top-left of the cell. Frame 1 intact, frame 2 cracking, frame 3 gone. |
 | `bg_far` | 480x270 or wider | Replaces the sky gradient. Tiles horizontally at parallax 0.05, fixed vertically. Make it opaque. |
 | `bg_mid` | 480x270 or wider | Replaces the arches. Parallax 0.12, hangs from the bottom edge. Use transparency. |
 | `bg_near` | 480x270 or wider | Replaces the hanging vines. Parallax 0.35, hangs from the top edge. Use transparency. |
@@ -38,3 +41,4 @@ Looked up in that order. Sounds are loaded as static sources and played at the g
 | `door` | Door opens or closes | Pitch 1.0 open, 0.85 close. |
 | `death` | Player dies | |
 | `goal` | Level cleared | |
+| `crumble` | Crumble stone collapses or regrows | Pitch 1.0 collapse, 1.4 regrowth. |
