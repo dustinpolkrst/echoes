@@ -1,6 +1,7 @@
-local selftest = false
+local selftest, bench = false, false
 for _, a in pairs(arg or {}) do
   if a == '--selftest' then selftest = true end
+  if a == '--bench' then bench = true end
 end
 
 function love.conf(t)
@@ -9,7 +10,7 @@ function love.conf(t)
   t.window.title = 'ECHOES'
   t.window.width = 960
   t.window.height = 540
-  t.window.vsync = 1
+  t.window.vsync = bench and 0 or 1
   t.window.resizable = true
   t.window.minwidth = 960
   t.window.minheight = 540

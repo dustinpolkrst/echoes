@@ -1,12 +1,33 @@
-local selftest, flow, shotTarget, shotArg = false, false, nil, nil
+local selftest, flow, bench, shotTarget, shotArg = false, false, nil, nil, nil
+local benchOpts = {}
+local diffPair
 local args = arg or {}
 for i, a in pairs(args) do
   if a == '--selftest' then selftest = true end
   if a == '--flow' then flow = true end
+  if a == '--bench' then
+    local label = args[i + 1]
+    bench = label and label:sub(1, 2) ~= '--' and label or false
+  end
+  if a == '--size' then
+    local w, h = (args[i + 1] or ''):match('^(%d+)x(%d+)$')
+    benchOpts.size = { tonumber(w), tonumber(h) }
+  end
+  if a == '--profile' then benchOpts.profile = true end
+  if a == '--diff' then diffPair = { args[i + 1], args[i + 2] } end
   if a == '--shot' then
     shotTarget = args[i + 1] or '1'
     shotArg = tonumber(args[i + 2])
   end
+end
+
+if diffPair then
+  function love.load()
+    local same = require('imgdiff').run(diffPair[1], diffPair[2])
+    io.stdout:flush()
+    love.event.quit(same and 0 or 1)
+  end
+  return
 end
 
 if selftest then
@@ -45,6 +66,10 @@ function love.load()
 
   if flow then
     local ok = require('flowtest').run(Scenes)
+    io.stdout:flush()
+    love.event.quit(ok and 0 or 1)
+  elseif bench ~= nil then
+    local ok = require('bench').run(Scenes, bench or nil, benchOpts)
     io.stdout:flush()
     love.event.quit(ok and 0 or 1)
   elseif shot.target then

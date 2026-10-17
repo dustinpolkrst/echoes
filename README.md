@@ -81,6 +81,14 @@ Runs the simulation headless (no window), prints PASS or FAIL per check, and exi
 
 Loads level N (0 is the title), simulates 90 frames of scripted input including an echo cast, and saves `shot_N.png` to the LÖVE save directory (`%APPDATA%/LOVE/echoes` on Windows). The full path is printed. `--shot N F` plays the level's scripted solution for F frames instead.
 
+    love echoes --bench LABEL [--size WxH] [--profile]
+
+Plays the title, pause, level select, an iris-restart loop and every level's scripted solution with vsync off: 120 warmup frames, then 1200 timed frames per scene split into update, draw submission and present, then 300 frames with the GC stopped to count KB allocated per frame. Prints median, p95, p99 and max frame ms, draw calls and allocation per scene, and writes `bench/LABEL_summary.csv` and `bench/LABEL_frames.csv` to the save directory. `--size` runs at another window size; `--profile` adds a per-function ms/frame breakdown (its frame times include the timers' own cost).
+
+    love echoes --diff A.png B.png
+
+Compares two PNGs in the save directory pixel by pixel and writes `B_diff.png` with differing pixels in red. `--shot` seeds the random generators and freezes the menu clock so two runs of the same shot match.
+
 ## Screens and saving
 
 Title, pause, level select, settings and the level-clear card share one menu model (`menu.lua`) and are driven by the same actions on keyboard and pad. Progress (cleared levels, best time, fewest deaths) and settings (volumes, screen shake, fullscreen) are saved to `save.txt` in the LÖVE save directory. A missing or corrupt file falls back to defaults. A level unlocks when the previous one is cleared. The window is resizable and the canvas stays integer-scaled.

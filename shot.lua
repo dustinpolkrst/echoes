@@ -36,6 +36,9 @@ end
 -- target: a level number (0 is the title), or title, pause, select, settings, clear, transition.
 -- arg: frames of the scripted solution for a level number; the level or cleared-count for named screens.
 function Shot.setup(Scenes, target, arg)
+  love.math.setRandomSeed(1)
+  math.randomseed(1)
+  require('ui').time = function() return 0 end
   local Levels = require 'levels'
   local level = tonumber(target)
   if level then
@@ -88,5 +91,7 @@ function Shot.setup(Scenes, target, arg)
   end
   return arg and ('shot_%s_%d.png'):format(target, arg) or ('shot_%s.png'):format(target)
 end
+
+Shot.seededStore, Shot.frames, Shot.input = seededStore, frames, shotInput
 
 return Shot
