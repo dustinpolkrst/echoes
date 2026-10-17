@@ -1,19 +1,27 @@
 local Input = {}
 
 local DEADZONE = 0.35
+local REPEAT_DELAY, REPEAT_RATE = 0.4, 0.1
 
 -- Held actions are polled every step; edge actions arrive from key/button events.
--- confirm shares the jump bindings so "press jump" prompts work on both devices.
+-- Menus read confirm/back/up/down/left/right; gameplay reads jump/cast/restart/pause. A scene
+-- handles only the actions it lists, and dispatch stops at the first one handled, so Esc
+-- (back, then pause) and Z (confirm, then jump) never act twice.
 local BINDINGS = {
   left = { keys = { 'left', 'a' }, buttons = { 'dpleft' } },
   right = { keys = { 'right', 'd' }, buttons = { 'dpright' } },
+  up = { keys = { 'up', 'w' }, buttons = { 'dpup' } },
+  down = { keys = { 'down', 's' }, buttons = { 'dpdown' } },
   jump = { keys = { 'z', 'space', 'w', 'up' }, buttons = { 'a' } },
   cast = { keys = { 'x', 'k' }, buttons = { 'x', 'b' } },
-  confirm = { keys = { 'z', 'space', 'w', 'up' }, buttons = { 'a', 'start' } },
+  confirm = { keys = { 'z', 'space', 'return', 'kpenter' }, buttons = { 'a' } },
+  back = { keys = { 'escape', 'backspace' }, buttons = { 'b' } },
+  pause = { keys = { 'escape', 'p' }, buttons = { 'start' } },
   restart = { keys = { 'r' }, buttons = { 'back' } },
 }
 local HELD = { 'left', 'right', 'jump', 'cast' }
-local EDGE = { 'confirm', 'restart', 'jump', 'cast' }
+local EDGE = { 'confirm', 'back', 'pause', 'restart', 'up', 'down', 'left', 'right', 'jump', 'cast' }
+local NAV = { 'up', 'down', 'left', 'right' }
 Input.BINDINGS = BINDINGS
 
 Input.lastDevice = 'key'
@@ -33,14 +41,70 @@ local function actionsFor(field, value)
   return out
 end
 
-function Input.fromKey(key)
+function Input.fromKey(key, isRepeat)
   Input.lastDevice = 'key'
-  return actionsFor('keys', key)
+  local out = actionsFor('keys', key)
+  if isRepeat then
+    local nav = {}
+    for _, name in ipairs(out) do
+      if contains(NAV, name) then nav[#nav + 1] = name end
+    end
+    return nav
+  end
+  return out
 end
 
+-- Pad directions come from navPoll so a held d-pad or stick repeats with one code path.
 function Input.fromButton(button)
   Input.lastDevice = 'pad'
-  return actionsFor('buttons', button)
+  local out = {}
+  for _, name in ipairs(actionsFor('buttons', button)) do
+    if not contains(NAV, name) then out[#out + 1] = name end
+  end
+  return out
+end
+
+local function padDirections(joysticks)
+  local held = {}
+  for _, j in ipairs(joysticks) do
+    for _, name in ipairs(NAV) do
+      if j:isGamepadDown(BINDINGS[name].buttons[1]) then held[name] = true end
+    end
+    local x, y = j:getGamepadAxis('leftx'), j:getGamepadAxis('lefty')
+    if x < -DEADZONE then held.left = true elseif x > DEADZONE then held.right = true end
+    if y < -DEADZONE then held.up = true elseif y > DEADZONE then held.down = true end
+  end
+  return held
+end
+
+-- Emits a direction on press, then again after REPEAT_DELAY and every REPEAT_RATE while held.
+function Input.newNavState()
+  return { held = {} }
+end
+
+function Input.navPoll(state, joysticks, dt)
+  joysticks = joysticks or Input.joysticks()
+  local now, out = padDirections(joysticks), {}
+  for _, name in ipairs(NAV) do
+    if now[name] then
+      local t = state.held[name]
+      if t == nil then
+        out[#out + 1] = name
+        state.held[name] = REPEAT_DELAY
+      else
+        t = t - dt
+        if t <= 0 then
+          out[#out + 1] = name
+          t = t + REPEAT_RATE
+        end
+        state.held[name] = t
+      end
+    else
+      state.held[name] = nil
+    end
+  end
+  if #out > 0 then Input.lastDevice = 'pad' end
+  return out
 end
 
 function Input.joysticks()
@@ -100,12 +164,16 @@ function Input.hint(text)
   return text
 end
 
-function Input.confirmLabel()
-  return Input.lastDevice == 'pad' and 'press A' or 'press jump'
+function Input.pad()
+  return Input.lastDevice == 'pad'
 end
 
-function Input.confirmKeys()
-  return Input.lastDevice == 'pad' and 'A / Start' or 'Z / Space / Up'
+-- Prompt names for the footer hints, following the last device used.
+function Input.names()
+  if Input.pad() then
+    return { confirm = 'A', back = 'B', pause = 'Start', restart = 'Back', move = 'D-pad' }
+  end
+  return { confirm = 'Z', back = 'Esc', pause = 'Esc', restart = 'R', move = 'Arrows' }
 end
 
 return Input

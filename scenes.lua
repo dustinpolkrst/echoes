@@ -5,30 +5,46 @@ local Render = require 'render'
 local Particles = require 'particles'
 local Sfx = require 'sfx'
 local Input = require 'input'
+local Save = require 'save'
+local Progress = require 'progress'
+local Menu = require 'menu'
+local Trans = require 'transition'
+local Ui = require 'ui'
+local Hud = require 'hud'
 
 local gfx = love.graphics
 local floor, sin, pi, min, max = math.floor, math.sin, math.pi, math.min, math.max
 local DT = Level.DT
 local T = Level.T
+local C = Ui.colors
 
 local S = {}
 local current
-local run = { deaths = 0, time = 0 }
-
-local COLORS = {
-  amber = { 1, 0.82, 0.45 },
-  cyan = { 0.45, 0.95, 1 },
-  white = { 0.92, 0.94, 1 },
-}
 
 S.readInput = Input.read
 
 -- Replaced by --shot so a scripted run can drive the same scenes; receives the live world.
 S.inputSource = function() return Input.read() end
 
-local function clock(seconds)
-  local m = floor(seconds / 60)
-  return ('%d:%04.1f'):format(m, seconds - m * 60)
+local clock = require('hudmodel').clock
+
+-- Persistence and settings -----------------------------------------------------
+
+S.store = Save.open({ read = function() return nil end, write = function() return true end })
+
+local function data() return S.store.data end
+local function persist() Save.persist(S.store) end
+
+function S.applySettings()
+  local s = data().settings
+  love.audio.setVolume(s.master)
+  Sfx.volume = s.sfx
+  if love.window.getFullscreen() ~= s.fullscreen then love.window.setFullscreen(s.fullscreen, 'desktop') end
+end
+
+function S.init(store)
+  S.store = store
+  S.applySettings()
 end
 
 -- Camera -------------------------------------------------------------------
@@ -60,6 +76,7 @@ end
 -- Event reactions ----------------------------------------------------------
 
 local shake = 0
+local stats = { deaths = 0 }
 
 local DUST = { 0.55, 0.55, 0.8 }
 local function react(world, ev)
@@ -73,8 +90,8 @@ local function react(world, ev)
   elseif ev.name == 'death' then
     Sfx.play('death')
     Input.rumble(0.6, 0.25)
-    run.deaths = run.deaths + 1
-    shake = 5
+    stats.deaths = stats.deaths + 1
+    shake = data().settings.shake and 5 or 0
     Particles.burst(x, y, 34, { speed = 110, life = 0.8, grav = 120, drag = 1.2, color = { 1, 0.7, 0.25 }, glow = true, size = 2 })
     Particles.burst(x, y, 16, { speed = 60, life = 1.0, grav = -10, color = { 1, 0.95, 0.7 }, glow = true })
   elseif ev.name == 'cast' then
@@ -136,7 +153,7 @@ local function drawScene(world)
   Render.drawMotes(camx, camy, Render.t)
 end
 
--- Title / ending backdrop ----------------------------------------------------
+-- Ambient backdrop for the menus ---------------------------------------------
 
 local ambient = {}
 
@@ -185,19 +202,61 @@ local function stepAmbient()
   followCamera(ambient.world)
 end
 
-local function glowText(str, font, y, color, alpha, glowColor)
-  gfx.setFont(font)
-  local w = gfx.getWidth()
-  gfx.setBlendMode('add')
-  for _, o in ipairs({ { 0, 0 }, { 3, 0 }, { -3, 0 }, { 0, 3 }, { 0, -3 }, { 6, 6 }, { -6, 6 }, { 6, -6 }, { -6, -6 } }) do
-    gfx.setColor(glowColor[1], glowColor[2], glowColor[3], 0.07 * alpha)
-    gfx.printf(str, o[1], y + o[2], w, 'center')
+local function ambientScene(scene)
+  scene.update = stepAmbient
+  scene.draw = function() drawScene(ambient.world) end
+end
+
+-- Navigation helpers -----------------------------------------------------------
+
+-- Scenes list only the actions they handle; Esc is `back` in menus and `pause` in play.
+local function feedback(event)
+  if event == 'move' then Sfx.play('plate', 1.6)
+  elseif event == 'select' then Sfx.play('cast', 1.3)
+  elseif event == 'adjust' then Sfx.play('plate', 1.25)
+  elseif event == 'back' then Sfx.play('land', 0.8)
+  elseif event == 'denied' then Sfx.play('land', 0.55) end
+end
+
+local function menuActions(getMenu)
+  local t = {}
+  for _, a in ipairs({ 'up', 'down', 'left', 'right', 'confirm' }) do
+    t[a] = function() feedback(Menu.handle(getMenu(), a)) end
   end
-  gfx.setBlendMode('alpha')
-  gfx.setColor(0, 0, 0, 0.5 * alpha)
-  gfx.printf(str, 3, y + 3, w, 'center')
-  gfx.setColor(color[1], color[2], color[3], alpha)
-  gfx.printf(str, 0, y, w, 'center')
+  return t
+end
+
+local function withBack(actions, fn)
+  actions.back = function() feedback('back') fn() end
+  return actions
+end
+
+function S.go(name, ...)
+  S.name = name
+  current = S[name]
+  if current.enter then current.enter(...) end
+end
+
+-- Wipes to black, switches scenes while covered, wipes back open.
+function S.to(name, ...)
+  local args = { n = select('#', ...), ... }
+  return Trans.start(function() S.go(name, unpack(args, 1, args.n)) end)
+end
+
+local function startLevel(index)
+  stats = { deaths = 0 }
+  S.to('playing', index)
+end
+
+local function hints(...)
+  local n = Input.names()
+  local out = {}
+  for _, h in ipairs({ ... }) do out[#out + 1] = { n[h[1]], h[2] } end
+  return out
+end
+
+local function heading(text, y)
+  Ui.glowText(text, Ui.fonts.big, y or 36, C.amber, 1, { 1, 0.6, 0.2 })
 end
 
 -- Title ----------------------------------------------------------------------
@@ -206,60 +265,70 @@ S.title = {}
 
 function S.title.enter()
   loadAmbient()
-  S.title.t = 0
+  local d = data()
+  local self = S.title
+  self.t = 0
+  local resumeAt = Progress.furthest(d, #Levels)
+  self.resumeAt = Progress.started(d) and resumeAt or nil
+  self.menu = Menu.new({
+    { label = self.resumeAt and 'Continue' or 'Play', action = function() startLevel(resumeAt) end },
+    { label = 'Level select', action = function() S.select.returnTo = { 'title' } S.to('select', resumeAt) end },
+    { label = 'Settings', action = function() S.settings.returnTo = { 'title' } S.to('settings') end },
+    { label = 'Quit', action = function() love.event.quit() end },
+  })
 end
+
+ambientScene(S.title)
 
 function S.title.update()
   S.title.t = S.title.t + DT
   stepAmbient()
 end
 
-function S.title.draw()
-  drawScene(ambient.world)
-end
-
 function S.title.drawUI()
-  local t = S.title.t
-  local f = Render.fonts
+  local t, f = S.title.t, Ui.fonts
   local pulse = 0.85 + 0.15 * sin(t * 2)
   gfx.setFont(f.title)
-  local w = gfx.getWidth()
   for i = 3, 1, -1 do
     gfx.setColor(0.35, 0.9, 1, 0.1 * pulse * (4 - i) / 3)
-    gfx.printf('ECHOES', -i * 14, 54, w, 'center')
+    gfx.printf('ECHOES', -i * 14, 40, Ui.W, 'center')
   end
-  glowText('ECHOES', f.title, 54, { 1, 0.88, 0.55 }, 1, { 1, 0.6, 0.2 })
-  Render.text('a small light remembers where it has been', f.mid, 200, COLORS.cyan, 0.8)
-  if (t * 1.6) % 1 < 0.7 then
-    Render.text(Input.confirmLabel(), f.big, 400, COLORS.white, 1)
+  Ui.glowText('ECHOES', f.title, 40, { 1, 0.88, 0.55 }, 1, { 1, 0.6, 0.2 })
+  Ui.text('a small light remembers where it has been', f.mid, 184, C.cyan, 0.8)
+  Ui.panel(Ui.W / 2 - 190, 236, 380, 218, 0.9)
+  Ui.menu(S.title.menu, Ui.W / 2, 250, { rowHeight = 46, width = 320 })
+  if S.title.resumeAt then
+    local l = Levels[S.title.resumeAt]
+    Ui.text(('resume at %d, %s'):format(S.title.resumeAt, l.name), f.tiny, 434, C.dim, 0.8)
   end
-  Render.text(Input.confirmKeys(), f.small, 450, { 0.6, 0.65, 0.85 }, 0.8)
+  Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Select' }))
 end
 
-function S.title.action(action)
-  if action == 'confirm' then
-    run.deaths, run.time = 0, 0
-    S.go('playing', 1)
-  end
-end
+S.title.actions = menuActions(function() return S.title.menu end)
 
 -- Playing --------------------------------------------------------------------
 
 local playing = {}
 S.playing = playing
 
-local function loadLevel()
+local function loadAttempt()
   playing.world = Level.new(Levels[playing.index])
   Render.buildLevel(playing.world)
   Particles.clear()
   followCamera(playing.world, true)
   playing.t = 0
+  playing.attemptT = 0
+end
+
+local function playerFocus(world)
+  local p = world.player
+  return (p.x + p.w / 2 - cam.x) * 2, (p.y + p.h / 2 - cam.y) * 2
 end
 
 function playing.enter(index)
   playing.index = index
   shake = 0
-  loadLevel()
+  loadAttempt()
 end
 
 function playing.update()
@@ -267,12 +336,14 @@ function playing.update()
   stepWorld(world, S.inputSource(world))
   playing.t = playing.t + DT
   local p = world.player
-  if p.state ~= 'cleared' then run.time = run.time + DT end
+  if p.state ~= 'cleared' then playing.attemptT = playing.attemptT + DT end
   followCamera(world)
   if p.state == 'dead' and p.stateT >= Player.DEATH_DELAY then
-    loadLevel()
+    local cx, cy = playerFocus(world)
+    Trans.start(loadAttempt, cx, cy)
   elseif p.state == 'cleared' and p.stateT >= 1.1 then
-    S.go('levelclear', playing.index)
+    local cx, cy = playerFocus(world)
+    Trans.start(function() S.go('levelclear', playing.index, playing.attemptT) end, cx, cy)
   end
 end
 
@@ -281,69 +352,366 @@ function playing.draw()
 end
 
 function playing.drawUI()
-  local world, f = playing.world, Render.fonts
+  local world, f = playing.world, Ui.fonts
   local t = playing.t
   local a = t < 2.8 and 1 or max(0, 1 - (t - 2.8) / 1.4)
   if a > 0 then
-    glowText(('%d. %s'):format(playing.index, world.name), f.big, 36, COLORS.amber, a, { 1, 0.6, 0.2 })
-    Render.text(Input.hint(world.hint), f.mid, 86, COLORS.white, a)
+    Ui.glowText(('%d. %s'):format(playing.index, world.name), f.big, 60, C.amber, a, { 1, 0.6, 0.2 })
+    Ui.text(Input.hint(world.hint), f.mid, 110, C.white, a)
   end
-  gfx.setFont(f.small)
-  gfx.setColor(0.7, 0.75, 0.95, 0.6)
-  gfx.printf(('deaths %d    %s'):format(run.deaths, clock(run.time)), -16, 12, gfx.getWidth(), 'right')
+  Hud.draw(world, {
+    index = playing.index, name = world.name, time = playing.attemptT, deaths = stats.deaths,
+    camx = cam.x, camy = cam.y, nameAlpha = 1 - a,
+  })
   local p = world.player
   if p.state == 'cleared' then
     gfx.setColor(1, 1, 1, min(0.6, p.stateT * 0.7))
-    gfx.rectangle('fill', 0, 0, gfx.getDimensions())
+    gfx.rectangle('fill', 0, 0, Ui.W, Ui.H)
   end
 end
 
-function playing.action(action)
-  if action == 'restart' then loadLevel() end
+playing.actions = {
+  restart = function()
+    local cx, cy = playerFocus(playing.world)
+    Trans.start(loadAttempt, cx, cy)
+  end,
+  pause = function()
+    if playing.world.player.state ~= 'cleared' then S.go('pause', 'playing') end
+  end,
+}
+
+-- Pause: an overlay that keeps drawing the scene beneath it and never steps it ---------
+
+local pause = {}
+S.pause = pause
+
+local function resume()
+  S.name = pause.under
+  current = S[pause.under]
 end
+
+function pause.enter(under)
+  pause.under = under
+  pause.menu = Menu.new({
+    { label = 'Resume', action = resume },
+    { label = 'Restart level', action = function()
+      Trans.start(function() loadAttempt() resume() end)
+    end },
+    { label = 'Level select', action = function()
+      S.select.returnTo = { 'pause', 'playing' }
+      S.to('select', playing.index)
+    end },
+    { label = 'Settings', action = function()
+      S.settings.returnTo = { 'pause', 'playing' }
+      S.to('settings')
+    end },
+    { label = 'Quit game', action = function() love.event.quit() end },
+  })
+end
+
+function pause.update() end
+
+function pause.draw()
+  S[pause.under].draw()
+end
+
+local BLUR = { { -3, 0 }, { 3, 0 }, { 0, -3 }, { 0, 3 } }
+
+function pause.drawUI()
+  gfx.setColor(1, 1, 1, 0.28)
+  for _, o in ipairs(BLUR) do gfx.draw(Render.game, o[1], o[2], 0, 2, 2) end
+  Ui.dim(0.58)
+  local f = Ui.fonts
+  Ui.panel(Ui.W / 2 - 230, 96, 460, 342)
+  heading('PAUSED', 114)
+  Ui.text(('%d. %s'):format(playing.index, playing.world.name), f.small, 160, C.dim, 0.9)
+  Ui.menu(pause.menu, Ui.W / 2, 196, { rowHeight = 46, width = 380 })
+  Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Select' }, { 'pause', 'Resume' }))
+end
+
+pause.actions = withBack(menuActions(function() return pause.menu end), resume)
+pause.actions.pause = resume
+
+-- Level select ---------------------------------------------------------------
+
+local select_ = {}
+S.select = select_
+select_.returnTo = { 'title' }
+
+local CARD_W, CARD_H, CARD_GAP = 206, 84, 16
+local ROW_H, LABEL_H = CARD_H + 14, 28
+local AREA_TOP, AREA_BOTTOM = 92, 488
+
+function select_.enter(index)
+  select_.sel = index or 1
+  select_.rows = Progress.rows(Progress.acts(Levels))
+  select_.scroll = nil
+  loadAmbient()
+end
+
+local function rowTops(rows)
+  local tops, y = {}, 0
+  for i, row in ipairs(rows) do
+    tops[i] = y
+    y = y + ROW_H + (row.label and LABEL_H or 0)
+  end
+  return tops, y
+end
+
+local function selectedRow(rows, sel)
+  for r, row in ipairs(rows) do
+    for _, i in ipairs(row.indices) do
+      if i == sel then return r end
+    end
+  end
+  return 1
+end
+
+function select_.update()
+  stepAmbient()
+  local rows = select_.rows
+  local tops, total = rowTops(rows)
+  local r = selectedRow(rows, select_.sel)
+  local viewH = AREA_BOTTOM - AREA_TOP
+  local bottom = tops[r] + ROW_H + (rows[r].label and LABEL_H or 0)
+  local target = max(0, min(max(0, total - viewH), bottom - viewH))
+  if not select_.scroll then select_.scroll = target end
+  select_.scroll = select_.scroll + (target - select_.scroll) * (1 - math.exp(-14 * DT))
+end
+
+select_.draw = function() drawScene(ambient.world) end
+
+local function drawCheck(x, y, a)
+  gfx.setLineWidth(2.5)
+  gfx.setColor(C.cyan[1], C.cyan[2], C.cyan[3], a)
+  gfx.line(x - 6, y, x - 2, y + 5, x + 7, y - 6)
+end
+
+local function drawLock(x, y, a)
+  gfx.setColor(C.locked[1], C.locked[2], C.locked[3], a)
+  gfx.rectangle('fill', x - 6, y - 1, 12, 9, 2, 2)
+  gfx.setLineWidth(2)
+  gfx.arc('line', 'open', x, y - 1, 4.5, pi, 2 * pi, 12)
+end
+
+local function drawCard(i, x, y, selected, pulse)
+  local d = data()
+  local rec = d.levels[i] or {}
+  local open = Progress.unlocked(d, i)
+  local done = Progress.done(d, i)
+  local f = Ui.fonts
+  gfx.setColor(0.03, 0.04, 0.1, open and 0.85 or 0.7)
+  gfx.rectangle('fill', x, y, CARD_W, CARD_H, 6, 6)
+  if selected then
+    gfx.setColor(1, 0.75, 0.35, 0.1 + 0.06 * pulse)
+    gfx.rectangle('fill', x, y, CARD_W, CARD_H, 6, 6)
+    gfx.setLineWidth(2)
+    gfx.setColor(1, 0.82, 0.45, 0.75 + 0.25 * pulse)
+  else
+    gfx.setLineWidth(1)
+    if done then gfx.setColor(C.cyan[1], C.cyan[2], C.cyan[3], 0.45)
+    elseif open then gfx.setColor(1, 0.82, 0.45, 0.3)
+    else gfx.setColor(C.locked[1], C.locked[2], C.locked[3], 0.3) end
+  end
+  gfx.rectangle('line', x + 0.5, y + 0.5, CARD_W - 1, CARD_H - 1, 6, 6)
+  local numColor = open and (done and C.cyan or C.amber) or C.locked
+  Ui.text(tostring(i), f.big, y + (CARD_H - f.big:getHeight()) / 2, numColor, open and 1 or 0.7, x + 10, 44, 'center')
+  local tx = x + 66
+  if open then
+    Ui.text(Levels[i].name, f.small, y + 12, C.white, 0.95, tx, CARD_W - 76, 'left')
+    if done then
+      Ui.text(rec.bestTime and clock(rec.bestTime) or '--', f.small, y + 38, C.dim, 0.95, tx, CARD_W - 76, 'left')
+      local n = rec.bestDeaths
+      Ui.text(n == nil and '' or (n == 0 and 'no deaths' or (n == 1 and '1 death' or n .. ' deaths')), f.tiny, y + 59, C.dim, 0.8, tx, CARD_W - 76, 'left')
+      drawCheck(x + CARD_W - 20, y + 18, 0.9)
+    else
+      Ui.text('not cleared', f.tiny, y + 40, C.dim, 0.7, tx, CARD_W - 76, 'left')
+    end
+  else
+    Ui.text('locked', f.small, y + 30, C.locked, 0.8, tx, CARD_W - 76, 'left')
+    drawLock(x + CARD_W - 20, y + 18, 0.8)
+  end
+end
+
+function select_.drawUI()
+  Ui.dim(0.62)
+  local f = Ui.fonts
+  heading('SELECT LEVEL', 30)
+  local rows, scroll = select_.rows, select_.scroll or 0
+  local tops = rowTops(rows)
+  local left = (Ui.W - (Progress.COLS * CARD_W + (Progress.COLS - 1) * CARD_GAP)) / 2
+  local pulse = 0.5 + 0.5 * sin(Ui.time() * 4)
+  Ui.scissor(0, AREA_TOP - 6, Ui.W, AREA_BOTTOM - AREA_TOP + 12)
+  local acts = Progress.acts(Levels)
+  for r, row in ipairs(rows) do
+    local y = AREA_TOP + tops[r] - scroll
+    if row.label then
+      local act = acts[row.act]
+      local cleared = 0
+      for _, i in ipairs(act.indices) do
+        if Progress.done(data(), i) then cleared = cleared + 1 end
+      end
+      Ui.text(row.label, f.small, y, C.amber, 0.85, left, 300, 'left')
+      Ui.text(('%d / %d cleared'):format(cleared, #act.indices), f.tiny, y + 2, C.dim, 0.8, left, Progress.COLS * CARD_W + (Progress.COLS - 1) * CARD_GAP, 'right')
+      gfx.setColor(1, 0.82, 0.45, 0.18)
+      gfx.rectangle('fill', left + 64, y + 9, Progress.COLS * CARD_W + (Progress.COLS - 1) * CARD_GAP - 64 - 108, 1)
+      y = y + LABEL_H
+    end
+    for c, i in ipairs(row.indices) do
+      drawCard(i, left + (c - 1) * (CARD_W + CARD_GAP), y, i == select_.sel, pulse)
+    end
+  end
+  gfx.setScissor()
+  Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Play' }, { 'back', 'Back' }))
+end
+
+select_.actions = {
+  confirm = function()
+    local sel = select_.sel
+    if Progress.unlocked(data(), sel) then
+      feedback('select')
+      startLevel(sel)
+    else
+      feedback('denied')
+    end
+  end,
+}
+for _, a in ipairs({ 'up', 'down', 'left', 'right' }) do
+  select_.actions[a] = function()
+    local nxt = Progress.neighbor(select_.rows, select_.sel, a)
+    if nxt ~= select_.sel then feedback('move') end
+    select_.sel = nxt
+  end
+end
+select_.actions.back = function() feedback('back') S.to(unpack(select_.returnTo)) end
+
+-- Settings -------------------------------------------------------------------
+
+local settings = {}
+S.settings = settings
+settings.returnTo = { 'title' }
+
+local function percent(v) return ('%d%%'):format(floor(v * 100 + 0.5)) end
+
+local function slider(key, label)
+  return {
+    label = label,
+    value = function() return percent(data().settings[key]) end,
+    meter = function() return data().settings[key] end,
+    adjust = function(dir)
+      local s = data().settings
+      s[key] = max(0, min(1, floor((s[key] + dir * 0.1) * 10 + 0.5) / 10))
+      S.applySettings()
+      persist()
+    end,
+  }
+end
+
+local function toggle(key, label)
+  return {
+    label = label,
+    value = function() return data().settings[key] and 'On' or 'Off' end,
+    adjust = function()
+      local s = data().settings
+      s[key] = not s[key]
+      S.applySettings()
+      persist()
+    end,
+  }
+end
+
+function settings.enter()
+  loadAmbient()
+  settings.menu = Menu.new({
+    slider('master', 'Master volume'),
+    slider('sfx', 'Sound effects'),
+    toggle('shake', 'Screen shake'),
+    toggle('fullscreen', 'Fullscreen'),
+    { label = 'Back', action = function() feedback('back') S.to(unpack(settings.returnTo)) end },
+  })
+end
+
+ambientScene(settings)
+
+function settings.drawUI()
+  Ui.dim(0.62)
+  heading('SETTINGS', 70)
+  Ui.panel(Ui.W / 2 - 270, 140, 540, 290)
+  Ui.menu(settings.menu, Ui.W / 2, 164, { rowHeight = 50, width = 480 })
+  Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Change' }, { 'back', 'Back' }))
+end
+
+settings.actions = withBack(menuActions(function() return settings.menu end), function() S.to(unpack(settings.returnTo)) end)
 
 -- Level clear ----------------------------------------------------------------
 
-S.levelclear = {}
+local clear = {}
+S.levelclear = clear
 
-function S.levelclear.enter(index)
-  S.levelclear.index = index
-  S.levelclear.t = 0
+function clear.enter(index, time)
+  clear.index, clear.time, clear.t = index, time, 0
+  clear.deaths = stats.deaths
+  clear.result = Save.recordClear(data(), index, time, clear.deaths)
+  persist()
+  local last = index >= #Levels
+  clear.menu = Menu.new({
+    { label = last and 'Finish' or 'Next level', action = function()
+      if last then S.to('ending') else startLevel(index + 1) end
+    end },
+    { label = 'Replay', action = function() startLevel(index) end },
+    { label = 'Level select', action = function() S.select.returnTo = { 'title' } S.to('select', index) end },
+  })
 end
 
-function S.levelclear.update()
-  local lc = S.levelclear
-  lc.t = lc.t + DT
+function clear.update()
+  clear.t = clear.t + DT
   Render.update(playing.world, DT)
   Particles.update(DT)
-  if lc.t >= 2.2 then S.levelclear.advance() end
 end
 
-function S.levelclear.advance()
-  local nextIndex = S.levelclear.index + 1
-  if nextIndex > #Levels then
-    S.go('ending')
-  else
-    S.go('playing', nextIndex)
-  end
-end
-
-function S.levelclear.draw()
+function clear.draw()
   drawScene(playing.world)
 end
 
-function S.levelclear.drawUI()
-  local lc, f = S.levelclear, Render.fonts
-  local a = min(1, lc.t * 2)
-  gfx.setColor(0.03, 0.03, 0.1, 0.55 * a)
-  gfx.rectangle('fill', 0, 0, gfx.getDimensions())
-  glowText('echo kept', f.big, 190, COLORS.cyan, a, { 0.3, 0.9, 1 })
-  Render.text(('deaths %d    time %s'):format(run.deaths, clock(run.time)), f.mid, 250, COLORS.white, a)
-  if sin(lc.t * 5) > -0.2 then Render.text(Input.confirmLabel(), f.small, 310, { 0.7, 0.75, 0.95 }, a) end
+local function statRow(label, value, y, badge, a, x, w)
+  local f = Ui.fonts
+  Ui.text(label, f.mid, y, C.dim, a, x, w, 'left')
+  Ui.text(value, f.mid, y, C.white, a, x, w, 'right')
+  if badge then
+    local tw = f.mid:getWidth(value)
+    Ui.text('NEW BEST', f.tiny, y + 5, C.amber, a * (0.75 + 0.25 * sin(Ui.time() * 6)), x, w - tw - 14, 'right')
+  end
 end
 
-function S.levelclear.action(action)
-  if action == 'confirm' and S.levelclear.t > 0.5 then S.levelclear.advance() end
+function clear.drawUI()
+  local a = min(1, clear.t * 2.5)
+  local f = Ui.fonts
+  Ui.dim(0.55 * a)
+  local px, py, pw, ph = Ui.W / 2 - 230, 70 + (1 - a) * 14, 460, 400
+  Ui.panel(px, py, pw, ph, a)
+  Ui.glowText('LEVEL CLEAR', f.big, py + 22, C.cyan, a, { 0.3, 0.9, 1 })
+  Ui.text(('%d. %s'):format(clear.index, Levels[clear.index].name), f.small, py + 70, C.dim, a)
+  local r, rec = clear.result, data().levels[clear.index]
+  statRow('Time', clock(clear.time), py + 112, r.newTime, a, px + 50, pw - 100)
+  statRow('Deaths', tostring(clear.deaths), py + 148, r.newDeaths, a, px + 50, pw - 100)
+  local best = ('best  %s,  %s'):format(rec.bestTime and clock(rec.bestTime) or '--',
+    rec.bestDeaths == 1 and '1 death' or (rec.bestDeaths or 0) .. ' deaths')
+  Ui.text(best, f.tiny, py + 186, C.dim, a * 0.85)
+  Ui.menu(clear.menu, Ui.W / 2, py + 220, { rowHeight = 46, width = 340 })
+  Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Select' }, { 'restart', 'Replay' }))
+end
+
+local function ready() return clear.t > 0.4 end
+
+clear.actions = menuActions(function() return clear.menu end)
+for name, fn in pairs(clear.actions) do
+  clear.actions[name] = function() if ready() then fn() end end
+end
+clear.actions.restart = function() if ready() then startLevel(clear.index) end end
+clear.actions.back = function()
+  if not ready() then return end
+  S.select.returnTo = { 'title' }
+  S.to('select', clear.index)
 end
 
 -- Ending ---------------------------------------------------------------------
@@ -353,53 +721,59 @@ S.ending = {}
 function S.ending.enter()
   loadAmbient()
   S.ending.t = 0
+  local time, deaths = 0, 0
+  for i = 1, #Levels do
+    local r = data().levels[i]
+    time = time + (r and r.bestTime or 0)
+    deaths = deaths + (r and r.bestDeaths or 0)
+  end
+  S.ending.time, S.ending.deaths = time, deaths
 end
+
+ambientScene(S.ending)
 
 function S.ending.update()
   S.ending.t = S.ending.t + DT
   stepAmbient()
 end
 
-function S.ending.draw()
-  drawScene(ambient.world)
-end
-
 function S.ending.drawUI()
-  local e, f = S.ending, Render.fonts
+  local e, f = S.ending, Ui.fonts
   local a = min(1, e.t * 0.8)
-  gfx.setColor(0.03, 0.03, 0.1, 0.5)
-  gfx.rectangle('fill', 0, 120, gfx.getWidth(), 300)
-  glowText('YOU FOUND THE WAY OUT', f.big, 140, COLORS.amber, a, { 1, 0.6, 0.2 })
-  Render.text(('deaths  %d'):format(run.deaths), f.mid, 230, COLORS.white, a)
-  Render.text(('time  %s'):format(clock(run.time)), f.mid, 265, COLORS.white, a)
-  Render.text('the echoes fade, the light remains', f.small, 320, COLORS.cyan, a * 0.8)
-  if e.t > 1.2 and sin(e.t * 3) > -0.3 then Render.text(Input.confirmLabel(), f.mid, 370, COLORS.white, 1) end
+  Ui.dim(0.5 * a)
+  Ui.glowText('YOU FOUND THE WAY OUT', f.big, 150, C.amber, a, { 1, 0.6, 0.2 })
+  Ui.text(('fewest deaths  %d'):format(e.deaths), f.mid, 240, C.white, a)
+  Ui.text(('best total time  %s'):format(clock(e.time)), f.mid, 275, C.white, a)
+  Ui.text('the echoes fade, the light remains', f.small, 330, C.cyan, a * 0.8)
+  if e.t > 1.2 then Ui.footer(hints({ 'confirm', 'Title' })) end
 end
 
-function S.ending.action(action)
-  if action == 'confirm' and S.ending.t > 1.2 then S.go('title') end
-end
+local function endingDone() if S.ending.t > 1.2 then S.to('title') end end
+S.ending.actions = { confirm = endingDone, back = endingDone }
 
 -- Dispatch -------------------------------------------------------------------
 
-function S.go(name, ...)
-  S.name = name
-  current = S[name]
-  if current.enter then current.enter(...) end
-end
-
 function S.update()
+  Trans.update(DT)
   current.update()
 end
 
 function S.draw()
   current.draw()
   Render.present()
+  Ui.begin()
   if current.drawUI then current.drawUI() end
+  Ui.iris(Trans.coverage(), Trans.cx, Trans.cy)
+  Ui.finish()
 end
 
+-- Returns true when the current scene handled the action; dispatch stops there.
 function S.action(action)
-  if current.action then current.action(action) end
+  if Trans.busy() then return false end
+  local handler = current.actions and current.actions[action]
+  if not handler then return false end
+  handler()
+  return true
 end
 
 return S

@@ -36,12 +36,6 @@ function R.init()
   R.glowImg = gfx.newImage(data)
   R.glowImg:setFilter('linear', 'linear')
 
-  R.fonts = {
-    title = gfx.newFont(120),
-    big = gfx.newFont(34),
-    mid = gfx.newFont(20),
-    small = gfx.newFont(15),
-  }
   R.t = 0
   R.doorOpen = {}
 end
@@ -621,18 +615,6 @@ function R.present()
   gfx.clear(0, 0, 0, 1)
   gfx.setColor(1, 1, 1, 1)
   gfx.draw(R.game, R.ox, R.oy, 0, s, s)
-end
-
--- UI text in window pixels so it stays crisp over the upscaled canvas.
-function R.text(str, font, y, color, alpha, x, limit)
-  gfx.setFont(font)
-  local w = limit or gfx.getWidth()
-  local px = x or 0
-  alpha = alpha or 1
-  gfx.setColor(0, 0, 0, 0.6 * alpha)
-  gfx.printf(str, px + 2, y + 2, w, 'center')
-  gfx.setColor(color[1], color[2], color[3], alpha)
-  gfx.printf(str, px, y, w, 'center')
 end
 
 return R
