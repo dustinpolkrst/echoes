@@ -17,6 +17,9 @@ M.LEGEND = {
   ['='] = { kind = 'oneway' },
   ['t'] = { kind = 'torch' },
   ['G'] = { kind = 'goal' },
+  ['M'] = { kind = 'mirror' },
+  ['~'] = { kind = 'veil' },
+  ['%'] = { kind = 'crumble' },
 }
 for i = 1, 4 do
   local plate, door = string.char(96 + i), string.char(64 + i)
@@ -24,15 +27,21 @@ for i = 1, 4 do
   M.LEGEND[door] = { kind = 'door', id = plate, idx = i }
 end
 
+M.CRACK, M.REGROW = 0.5, 3
+
 -- draw functions are attached by render.lua so the simulation stays headless.
+-- rect is the cell's interaction box; list is the world field that collects cells of the kind.
 M.TILES = {
   solid = { solid = true, static = true },
   oneway = { oneway = true, static = true },
-  spike = { hurts = true, static = true },
+  spike = { hurts = true, static = true, rect = { 2, 8, T - 4, 8 }, list = 'spikes' },
   torch = { light = 64 },
   goal = { light = 78, goal = true },
-  plate = { plate = true },
+  plate = { plate = true, rect = { 1, 12, T - 2, 4 }, list = 'plates' },
   door = { solid = true, openable = true },
+  mirror = { light = 56, mirror = true, list = 'mirrors' },
+  veil = { light = 30, veil = true, rect = { 0, 0, T, T }, list = 'veils' },
+  crumble = { solid = true, crumble = true, list = 'crumbles' },
 }
 local TILES = M.TILES
 
@@ -47,7 +56,8 @@ function M.new(def)
   local w = setmetatable({
     name = def.name, hint = def.hint,
     W = width, H = #rows, cells = {},
-    plates = {}, doorCells = {}, doorOpen = {}, lights = {}, spikes = {},
+    plates = {}, spikes = {}, mirrors = {}, veils = {}, crumbles = {},
+    doorCells = {}, doorOpen = {}, lights = {},
     echoes = {}, rec = Echo.newRecorder(), events = {}, time = 0, castPrev = false,
   }, World)
 
@@ -65,16 +75,15 @@ function M.new(def)
         local c = { kind = def.kind, id = def.id, idx = def.idx, tx = tx, ty = ty, ch = ch }
         w.cells[ty][tx] = c
         local tile = TILES[c.kind]
-        if c.kind == 'plate' then
-          c.rect = { x = tx * T + 1, y = ty * T + 12, w = T - 2, h = 4 }
-          w.plates[#w.plates + 1] = c
-        elseif c.kind == 'door' then
+        if tile.rect then
+          local r = tile.rect
+          c.rect = { x = tx * T + r[1], y = ty * T + r[2], w = r[3], h = r[4] }
+        end
+        if tile.list then table.insert(w[tile.list], c) end
+        if tile.openable then
           w.doorCells[c.id] = w.doorCells[c.id] or {}
           table.insert(w.doorCells[c.id], c)
           w.doorOpen[c.id] = false
-        elseif tile.hurts then
-          c.rect = { x = tx * T + 2, y = ty * T + 8, w = T - 4, h = 8 }
-          w.spikes[#w.spikes + 1] = c
         elseif tile.goal then
           w.goal = c
         end
@@ -106,7 +115,7 @@ function World:solidCell(tx, ty)
   local c = self:cell(tx, ty)
   if not c then return false end
   local t = TILES[c.kind]
-  return t.solid and not (t.openable and self.doorOpen[c.id])
+  return t.solid and not (t.openable and self.doorOpen[c.id]) and not c.gone
 end
 
 function World:hitsSolid(x, y, w, h)
@@ -223,13 +232,61 @@ function World:updateDoors(silent)
   end
 end
 
+function World:touchedMirror()
+  for _, m in ipairs(self.mirrors) do
+    if touchesCell(self.player, m) then return m end
+  end
+end
+
 function World:cast()
   local snap = Echo.snapshot(self.rec)
   if #snap < 2 then return end
   if #self.echoes >= Echo.MAX then table.remove(self.echoes, 1) end
-  self.echoes[#self.echoes + 1] = Echo.new(snap)
+  local mirror = self:touchedMirror()
+  if mirror then Echo.mirror(snap, mirror.tx * T + T / 2) end
+  self.echoes[#self.echoes + 1] = Echo.new(snap, mirror ~= nil)
   local p = self.player
-  self:emit('cast', p.x + p.w / 2, p.y + p.h / 2)
+  self:emit('cast', p.x + p.w / 2, p.y + p.h / 2, mirror ~= nil)
+end
+
+function World:inVeil(x, y, w, h)
+  for _, v in ipairs(self.veils) do
+    if overlaps({ x = x, y = y, w = w, h = h }, v.rect) then return true end
+  end
+  return false
+end
+
+-- A body whose feet rest on a crumble cell starts it cracking; it regrows once nothing stands inside it.
+function World:updateCrumbles(dt)
+  local bodies = self:bodies()
+  for _, c in ipairs(self.crumbles) do
+    local top = c.ty * T
+    if c.gone then
+      c.regrow = c.regrow - dt
+      local blocked = false
+      for _, b in ipairs(bodies) do
+        if touchesCell(b, c) then blocked = true break end
+      end
+      if c.regrow <= 0 and not blocked then
+        c.gone = false
+        self:emit('crumble', c.tx * T + T / 2, top + T / 2, false)
+      end
+    elseif c.crack then
+      c.crack = c.crack - dt
+      if c.crack <= 0 then
+        c.crack, c.gone, c.regrow = nil, true, M.REGROW
+        self:emit('crumble', c.tx * T + T / 2, top + T / 2, true)
+      end
+    else
+      for _, b in ipairs(bodies) do
+        local bottom = b.y + b.h
+        if math.abs(bottom - top) <= 1 and b.x < (c.tx + 1) * T and b.x + b.w > c.tx * T then
+          c.crack = M.CRACK
+          break
+        end
+      end
+    end
+  end
 end
 
 function World:checkHazards()
@@ -249,11 +306,13 @@ function M.step(w, input, dt)
   w.events = {}
   w.time = w.time + dt
 
+  local veiled = function(x, y, ew, eh) return w:inVeil(x, y, ew, eh) end
   for i = #w.echoes, 1, -1 do
     local e = w.echoes[i]
-    e:update(dt)
+    e:update(dt, veiled)
     if not e:isAlive() then table.remove(w.echoes, i) end
   end
+  w:updateCrumbles(dt)
   w:updateDoors()
 
   local p = w.player

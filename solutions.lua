@@ -79,7 +79,7 @@ end
 function C.apex(w) return w.player.state == 'air' and w.player.vy >= 0 end
 function C.echoArrived(w)
   local e = w.echoes[#w.echoes]
-  return e ~= nil and e.i >= #e.frames
+  return e ~= nil and e:arrived()
 end
 function C.onLastEcho(w) return w.player.support == w.echoes[#w.echoes] end
 function C.grounded(w) return w.player.state == 'ground' end

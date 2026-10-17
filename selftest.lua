@@ -224,6 +224,118 @@ local function testStandOnEcho()
     ('minY=%.1f startY=%.1f'):format(minY, startY))
 end
 
+local function testMirror()
+  local rows = {
+    '###########',
+    '#.....#...#',
+    '#.....#...#',
+    '#....A#...#',
+    '#P..M.#a..#',
+    '###########',
+  }
+  local w = arena(rows)
+  run(w, { { 'R', cond.atX(19) }, { 200, '-' } })
+  local standX = w.player.x
+  run(w, { { 'R', cond.atX(4 * 16 + 3) } })
+  idle(w, 1, 'X')
+  local e = w.echoes[1]
+  local axis = 4 * 16 + 8
+  check('cast on the mirror spawns a mirrored echo', e and e.mirrored and math.abs(e.x - (2 * axis - standX - e.w)) < 0.01,
+    e and ('echo.x=%.1f expected %.1f'):format(e.x, 2 * axis - standX - e.w))
+  check('mirrored echo faces the other way', e and e.facing == -1)
+  idle(w, 1)
+  check('mirrored echo holds the plate in the sealed room', w.doorOpen.a == true and w.plates[1].pressed)
+  local inWall = false
+  for _ = 1, 180 do
+    Level.step(w, {})
+    local ex = w.echoes[1].x
+    inWall = inWall or (ex > 6 * 16 - 10 and ex < 7 * 16)
+  end
+  check('mirrored echo walks through the wall', inWall, ('x=%.1f'):format(w.echoes[1].x))
+  w = arena(rows)
+  run(w, { { 'R', cond.atX(19) }, { 200, '-' } })
+  idle(w, 1, 'X')
+  check('cast off the mirror is a plain echo', not w.echoes[1].mirrored and w.doorOpen.a == false)
+end
+
+local function testVeil()
+  local rows = {
+    '##########',
+    '#P.......#',
+    '###......#',
+    '#........#',
+    '#..~~~~..#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '##########',
+  }
+  local w = arena(rows)
+  run(w, { { 'R', cond.atX(4 * 16 + 3) }, { '-', cond.grounded } })
+  check('player falls through a veil', w.player.y + w.player.h == 8 * 16, ('bottom=%.1f'):format(w.player.y + w.player.h))
+  idle(w, 1, 'X')
+  run(w, { { '-', function(c) return c.echoes[1]:arrived() end } })
+  local e = w.echoes[1]
+  local veilTop = 4 * 16
+  check('echo halts just above the veil', e.halted and e.y + e.h <= veilTop and e.y + e.h > veilTop - 6,
+    ('echo bottom=%.1f veil top=%d'):format(e.y + e.h, veilTop))
+  local haltY = e.y
+  idle(w, 30)
+  check('halted echo stays put', w.echoes[1].y == haltY and w.echoes[1]:isSolid())
+  idle(w, 60 * 4 + 20)
+  check('halted echo fades like an arrived one', #w.echoes == 0)
+end
+
+local function testCrumble()
+  local rows = {
+    '##########',
+    '#P.......#',
+    '####%#####',
+    '#........#',
+    '#........#',
+    '##########',
+  }
+  local w = arena(rows)
+  idle(w, 20)
+  local c = w.crumbles[1]
+  run(w, { { 'R', cond.atX(4 * 16) }, { '-', function(c2) return c2.player.state == 'air' end } })
+  check('crumble gives way half a second after it is stood on', c.gone and w.player.y > 2 * 16 - 12,
+    ('gone=%s y=%.1f'):format(tostring(c.gone), w.player.y))
+  run(w, { { '-', cond.grounded } })
+  idle(w, 60 * 3 + 5)
+  check('crumble regrows after three seconds', not c.gone)
+  w = arena(rows)
+  c = w.crumbles[1]
+  idle(w, 20)
+  local pose = { x = 4 * 16 + 3, y = 2 * 16 - 12, facing = 1, state = 'ground' }
+  w.echoes[1] = Echo.new({ pose, pose })
+  idle(w, 40)
+  check('an echo standing on a crumble breaks it too', c.gone)
+  w = arena(rows)
+  c = w.crumbles[1]
+  c.gone, c.regrow = true, 0.01
+  w.player.x, w.player.y = 4 * 16 + 3, 2 * 16 + 2
+  idle(w, 5)
+  check('crumble does not regrow around a body inside it', c.gone)
+end
+
+local function testDoorFloor()
+  local w = arena {
+    '############',
+    '#..........#',
+    '#..........#',
+    '#P....a....#',
+    '######AA####',
+    '######AA####',
+    '#..........#',
+    '#..........#',
+    '############',
+  }
+  run(w, { { 'R', cond.atX(6 * 16 + 3) }, { 190, '-' }, { 1, 'X' }, { 'R', cond.atX(7 * 16) }, { 60, '-' } })
+  check('an open door in the floor drops the player', w.player.y + w.player.h == 8 * 16 and w.player.state == 'ground',
+    ('bottom=%.1f'):format(w.player.y + w.player.h))
+end
+
 local function testStairwayNeedsEcho()
   local w = Level.new(Levels[3])
   run(w, { { 'R', cond.atX(66) }, { 'RJ', cond.onTop(192, 80) } })
@@ -281,6 +393,10 @@ function S.run()
   testDoors()
   testEchoes()
   testStandOnEcho()
+  testMirror()
+  testVeil()
+  testCrumble()
+  testDoorFloor()
   testStairwayNeedsEcho()
   testSolutions()
   print(('%d checks, %d failed'):format(total, failed))

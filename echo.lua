@@ -32,25 +32,44 @@ function Echo.snapshot(rec)
   return out
 end
 
-function Echo.new(frames)
+-- Reflects a recording about the vertical line x = axis, in place.
+function Echo.mirror(frames, axis)
+  for _, f in ipairs(frames) do
+    f.x = 2 * axis - f.x - Echo.W
+    f.facing = -f.facing
+  end
+end
+
+function Echo.new(frames, mirrored)
   local f = frames[1]
   return setmetatable({
-    frames = frames, i = 1, lingerT = 0,
+    frames = frames, i = 1, lingerT = 0, halted = false, mirrored = mirrored or false,
     x = f.x, y = f.y, prevX = f.x, prevY = f.y,
     facing = f.facing, state = f.state,
     w = Echo.W, h = Echo.H,
   }, Echo)
 end
 
-function Echo:update(dt)
+-- blocked(x, y, w, h) says whether the next pose may be taken; a refused pose halts the replay for good.
+function Echo:update(dt, blocked)
   self.prevX, self.prevY = self.x, self.y
-  if self.i < #self.frames then
-    self.i = self.i + 1
-  else
+  if self.i < #self.frames and not self.halted then
+    local n = self.frames[self.i + 1]
+    if blocked and blocked(n.x, n.y, self.w, self.h) then
+      self.halted = true
+    else
+      self.i = self.i + 1
+    end
+  end
+  if self.halted or self.i >= #self.frames then
     self.lingerT = self.lingerT + dt
   end
   local f = self.frames[self.i]
   self.x, self.y, self.facing, self.state = f.x, f.y, f.facing, f.state
+end
+
+function Echo:arrived()
+  return self.halted or self.i >= #self.frames
 end
 
 function Echo:isSolid()
