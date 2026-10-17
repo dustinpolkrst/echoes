@@ -1,4 +1,3 @@
--- Compares two PNGs from the save directory pixel by pixel and writes a mask of the differences.
 local D = {}
 
 function D.run(a, b)
