@@ -13,7 +13,6 @@ local function check(name, ok, detail)
   print(('%s  %s%s'):format(ok and 'PASS' or 'FAIL', name, detail and ('  [' .. detail .. ']') or ''))
 end
 
--- Drives the real scenes through key events the way main.lua does, with an in-memory save.
 function F.run(Scenes)
   local files = {}
   local store = Save.open(Save.memoryIO(files))

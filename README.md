@@ -16,7 +16,8 @@ On Windows with the console build, `"C:/Program Files/LOVE/lovec.exe" echoes` pr
 | Jump | Z, Space, W or Up (hold for height, release to cut the jump) |
 | Cast echo | X or K |
 | Restart level | R |
-| Quit | Esc |
+| Pause | Esc or P |
+| Menus | Arrows or W/S, Z/Space/Enter to confirm, Esc/Backspace to go back |
 
 Any connected Xbox-style controller also works (hot-plug is fine):
 
@@ -26,7 +27,8 @@ Any connected Xbox-style controller also works (hot-plug is fine):
 | Jump | A |
 | Cast echo | X or B |
 | Restart level | Back |
-| Menus | A or Start |
+| Pause | Start |
+| Menus | D-pad or stick, A confirm, B back |
 
 The pad rumbles lightly on death and on cast. On-screen prompts follow whichever device you used last.
 
@@ -57,6 +59,14 @@ Runs the simulation headless (no window), prints PASS or FAIL per check, and exi
     love echoes --shot N
 
 Loads level N (0 is the title), simulates 90 frames of scripted input including an echo cast, and saves `shot_N.png` to the LÖVE save directory (`%APPDATA%/LOVE/echoes` on Windows). The full path is printed. `--shot N F` plays the level's scripted solution for F frames instead.
+
+## Screens and saving
+
+Title, pause, level select, settings and the level-clear card share one menu model (`menu.lua`) and are driven by the same actions on keyboard and pad. Progress (cleared levels, best time, fewest deaths) and settings (volumes, screen shake, fullscreen) are saved to `save.txt` in the LÖVE save directory. A missing or corrupt file falls back to defaults. A level unlocks when the previous one is cleared. The window is resizable and the canvas stays integer-scaled.
+
+    love echoes --flow
+
+Drives the real scenes with key events (title, pause, settings, clear card, level select) against an in-memory save. `--shot` also accepts `title`, `pause [N]`, `select [cleared]`, `settings`, `clear [N]` and `transition`.
 
 ## Assets
 

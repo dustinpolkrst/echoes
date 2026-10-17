@@ -28,7 +28,6 @@ S.inputSource = function() return Input.read() end
 
 local clock = require('hudmodel').clock
 
--- Persistence and settings -----------------------------------------------------
 
 S.store = Save.open({ read = function() return nil end, write = function() return true end })
 
@@ -47,7 +46,6 @@ function S.init(store)
   S.applySettings()
 end
 
--- Camera -------------------------------------------------------------------
 
 local cam = { x = 0, y = 0 }
 local LOOKAHEAD = 30
@@ -73,7 +71,6 @@ local function followCamera(world, snap)
   end
 end
 
--- Event reactions ----------------------------------------------------------
 
 local shake = 0
 local stats = { deaths = 0 }
@@ -124,7 +121,6 @@ local function ambientParticles(world)
   end
 end
 
--- Shared world stepping ------------------------------------------------------
 
 local function stepWorld(world, input)
   Level.step(world, input)
@@ -153,7 +149,6 @@ local function drawScene(world)
   Render.drawMotes(camx, camy, Render.t)
 end
 
--- Ambient backdrop for the menus ---------------------------------------------
 
 local ambient = {}
 
@@ -182,7 +177,6 @@ local function loadAmbient()
   followCamera(ambient.world, true)
 end
 
--- Walks back and forth, hopping and leaving echoes so the menus show the mechanic.
 local function demoInput(f)
   local phase = f % 600
   local going = phase < 300
@@ -207,9 +201,7 @@ local function ambientScene(scene)
   scene.draw = function() drawScene(ambient.world) end
 end
 
--- Navigation helpers -----------------------------------------------------------
 
--- Scenes list only the actions they handle; Esc is `back` in menus and `pause` in play.
 local function feedback(event)
   if event == 'move' then Sfx.play('plate', 1.6)
   elseif event == 'select' then Sfx.play('cast', 1.3)
@@ -237,7 +229,6 @@ function S.go(name, ...)
   if current.enter then current.enter(...) end
 end
 
--- Wipes to black, switches scenes while covered, wipes back open.
 function S.to(name, ...)
   local args = { n = select('#', ...), ... }
   return Trans.start(function() S.go(name, unpack(args, 1, args.n)) end)
@@ -259,7 +250,6 @@ local function heading(text, y)
   Ui.glowText(text, Ui.fonts.big, y or 36, C.amber, 1, { 1, 0.6, 0.2 })
 end
 
--- Title ----------------------------------------------------------------------
 
 S.title = {}
 
@@ -306,7 +296,6 @@ end
 
 S.title.actions = menuActions(function() return S.title.menu end)
 
--- Playing --------------------------------------------------------------------
 
 local playing = {}
 S.playing = playing
@@ -432,7 +421,6 @@ end
 pause.actions = withBack(menuActions(function() return pause.menu end), resume)
 pause.actions.pause = resume
 
--- Level select ---------------------------------------------------------------
 
 local select_ = {}
 S.select = select_
@@ -585,7 +573,6 @@ for _, a in ipairs({ 'up', 'down', 'left', 'right' }) do
 end
 select_.actions.back = function() feedback('back') S.to(unpack(select_.returnTo)) end
 
--- Settings -------------------------------------------------------------------
 
 local settings = {}
 S.settings = settings
@@ -643,7 +630,6 @@ end
 
 settings.actions = withBack(menuActions(function() return settings.menu end), function() S.to(unpack(settings.returnTo)) end)
 
--- Level clear ----------------------------------------------------------------
 
 local clear = {}
 S.levelclear = clear
@@ -714,7 +700,6 @@ clear.actions.back = function()
   S.to('select', clear.index)
 end
 
--- Ending ---------------------------------------------------------------------
 
 S.ending = {}
 
@@ -751,7 +736,6 @@ end
 local function endingDone() if S.ending.t > 1.2 then S.to('title') end end
 S.ending.actions = { confirm = endingDone, back = endingDone }
 
--- Dispatch -------------------------------------------------------------------
 
 function S.update()
   Trans.update(DT)
@@ -775,7 +759,6 @@ local function act(action)
   return true
 end
 
--- One input event yields several candidate actions; the first the scene handles wins.
 function S.dispatch(actions)
   for _, action in ipairs(actions) do
     if act(action) then return true end

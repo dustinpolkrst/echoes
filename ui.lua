@@ -3,7 +3,6 @@ local Render = require 'render'
 local gfx = love.graphics
 local sin, min, max = math.sin, math.min, math.max
 
--- All UI is laid out in a fixed 960x540 space and scaled with the integer-scaled canvas.
 local U = { W = 960, H = 540 }
 
 local SIZES = { title = 120, big = 34, menu = 26, mid = 20, small = 15, tiny = 12 }
@@ -86,7 +85,6 @@ function U.panel(x, y, w, h, alpha)
   gfx.rectangle('fill', x + 18, y, w - 36, 2)
 end
 
--- Circular wipe: coverage 0 shows everything, 1 is solid. cx, cy are in UI space.
 function U.iris(coverage, cx, cy)
   if coverage <= 0 then return end
   gfx.setColor(0.01, 0.01, 0.03, 1)
@@ -104,7 +102,6 @@ function U.iris(coverage, cx, cy)
   gfx.circle('line', cx, cy, r, 64)
 end
 
--- Clips to a rectangle given in UI space.
 function U.scissor(x, y, w, h)
   local s = Render.scale / 2
   gfx.setScissor(Render.ox + x * s, Render.oy + y * s, w * s, h * s)
@@ -114,7 +111,6 @@ local function triangle(x, y, size, dir)
   gfx.polygon('fill', x, y - size, x + dir * size * 1.4, y, x, y + size)
 end
 
--- Rows are centred on cx. Items with a value get a two-column layout; the rest are centred text.
 function U.menu(m, cx, y, o)
   o = o or {}
   local f = U.fonts

@@ -9,7 +9,6 @@ function Model.clock(seconds)
   return ('%d:%04.1f'):format(m, seconds - m * 60)
 end
 
--- Fraction of the 3 second history the recorder holds; a cast now replays exactly that much.
 function Model.memory(world)
   return world.rec.count / Echo.FRAMES
 end

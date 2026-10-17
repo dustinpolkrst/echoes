@@ -3,10 +3,6 @@ local Input = {}
 local DEADZONE = 0.35
 local REPEAT_DELAY, REPEAT_RATE = 0.4, 0.1
 
--- Held actions are polled every step; edge actions arrive from key/button events.
--- Menus read confirm/back/up/down/left/right; gameplay reads jump/cast/restart/pause. A scene
--- handles only the actions it lists, and dispatch stops at the first one handled, so Esc
--- (back, then pause) and Z (confirm, then jump) never act twice.
 local BINDINGS = {
   left = { keys = { 'left', 'a' }, buttons = { 'dpleft' } },
   right = { keys = { 'right', 'd' }, buttons = { 'dpright' } },
@@ -54,7 +50,6 @@ function Input.fromKey(key, isRepeat)
   return out
 end
 
--- Pad directions come from navPoll so a held d-pad or stick repeats with one code path.
 function Input.fromButton(button)
   Input.lastDevice = 'pad'
   local out = {}
@@ -77,7 +72,6 @@ local function padDirections(joysticks)
   return held
 end
 
--- Emits a direction on press, then again after REPEAT_DELAY and every REPEAT_RATE while held.
 function Input.newNavState()
   return { held = {} }
 end
@@ -123,7 +117,6 @@ local function padHeld(joysticks, name)
   return false
 end
 
--- joysticks and keyDown are injectable so the mapping runs headless in the selftest.
 function Input.read(joysticks, keyDown)
   joysticks = joysticks or Input.joysticks()
   keyDown = keyDown or love.keyboard.isDown
@@ -154,7 +147,6 @@ local PAD_WORDS = {
   { 'Press R to restart', 'Press Back to restart' },
 }
 
--- Level hints are written for the keyboard; swap the button names when a pad is in use.
 function Input.hint(text)
   if Input.lastDevice ~= 'pad' then return text end
   for _, w in ipairs(PAD_WORDS) do
@@ -168,7 +160,6 @@ function Input.pad()
   return Input.lastDevice == 'pad'
 end
 
--- Prompt names for the footer hints, following the last device used.
 function Input.names()
   if Input.pad() then
     return { confirm = 'A', back = 'B', pause = 'Start', restart = 'Back', move = 'D-pad' }

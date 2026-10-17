@@ -37,7 +37,6 @@ local function parseSetting(settings, key, value)
   end
 end
 
--- Anything that is not a well-formed save yields defaults; individual bad lines are skipped.
 function Save.decode(text)
   local data = Save.defaults()
   if type(text) ~= 'string' then return data end

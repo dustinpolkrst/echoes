@@ -52,7 +52,6 @@ local function drawMemory(world, x, y)
   Ui.text(label, f, y + 8, Ui.colors.dim, full and 0.5 or 0.9, x, 140, 'left')
 end
 
--- The ring follows the player while the history is still filling, then flashes once and goes.
 local function drawPlayerRing(world, camx, camy, t)
   local frac = Model.memory(world)
   local p = world.player

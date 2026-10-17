@@ -21,7 +21,6 @@ function Progress.started(data)
   return false
 end
 
--- The level to resume: the first one not yet cleared, or the last once everything is.
 function Progress.furthest(data, count)
   for i = 1, count do
     if not Progress.done(data, i) then return i end
@@ -34,7 +33,6 @@ local function actLabel(act)
   return tostring(act):upper()
 end
 
--- Consecutive levels share an act; a level without `act` joins the previous one.
 function Progress.acts(levels)
   local explicit = false
   for _, l in ipairs(levels) do
@@ -58,7 +56,6 @@ function Progress.acts(levels)
   return acts
 end
 
--- Acts wider than COLS wrap; only the first row of an act carries its label.
 function Progress.rows(acts)
   local rows = {}
   for ai, a in ipairs(acts) do
@@ -81,7 +78,6 @@ local function locate(rows, index)
   end
 end
 
--- Left/right walk the levels in order and wrap; up/down keep the column and wrap between rows.
 function Progress.neighbor(rows, index, action)
   local r, c = locate(rows, index)
   if not r then return index end

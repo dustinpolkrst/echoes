@@ -6,7 +6,6 @@ local function shotInput(f)
   return { right = f >= 10, left = false, jump = f >= 30 and f < 46, cast = f >= 62 and f < 64 }
 end
 
--- Progress that never touches the real save file: levels 1..cleared done, with plausible records.
 local function seededStore(cleared, overrides)
   local store = Save.open(Save.memoryIO())
   for i = 1, cleared do
