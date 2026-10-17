@@ -767,13 +767,20 @@ function S.draw()
   Ui.finish()
 end
 
--- Returns true when the current scene handled the action; dispatch stops there.
-function S.action(action)
+local function act(action)
   if Trans.busy() then return false end
   local handler = current.actions and current.actions[action]
   if not handler then return false end
   handler()
   return true
+end
+
+-- One input event yields several candidate actions; the first the scene handles wins.
+function S.dispatch(actions)
+  for _, action in ipairs(actions) do
+    if act(action) then return true end
+  end
+  return false
 end
 
 return S
