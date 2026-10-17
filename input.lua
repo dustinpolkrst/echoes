@@ -21,6 +21,14 @@ local NAV = { 'up', 'down', 'left', 'right' }
 Input.BINDINGS = BINDINGS
 
 Input.lastDevice = 'key'
+Input.sceneEpoch = 0
+
+local freshKeys = {}
+
+function Input.requireRelease()
+  Input.sceneEpoch = Input.sceneEpoch + 1
+  freshKeys = {}
+end
 
 local function contains(list, v)
   for _, x in ipairs(list) do
@@ -39,6 +47,11 @@ end
 
 function Input.fromKey(key, isRepeat)
   Input.lastDevice = 'key'
+  if not isRepeat then
+    freshKeys[key] = true
+  elseif not freshKeys[key] then
+    return {}
+  end
   local out = actionsFor('keys', key)
   if isRepeat then
     local nav = {}
@@ -73,28 +86,30 @@ local function padDirections(joysticks)
 end
 
 function Input.newNavState()
-  return { held = {} }
+  return { held = {}, epoch = Input.sceneEpoch }
 end
 
 function Input.navPoll(state, joysticks, dt)
   joysticks = joysticks or Input.joysticks()
   local now, out = padDirections(joysticks), {}
+  if state.epoch ~= Input.sceneEpoch then
+    state.epoch = Input.sceneEpoch
+    for _, name in ipairs(NAV) do state.held[name] = now[name] and 'blocked' or nil end
+  end
   for _, name in ipairs(NAV) do
-    if now[name] then
-      local t = state.held[name]
-      if t == nil then
-        out[#out + 1] = name
-        state.held[name] = REPEAT_DELAY
-      else
-        t = t - dt
-        if t <= 0 then
-          out[#out + 1] = name
-          t = t + REPEAT_RATE
-        end
-        state.held[name] = t
-      end
-    else
+    local t = state.held[name]
+    if not now[name] then
       state.held[name] = nil
+    elseif t == nil then
+      out[#out + 1] = name
+      state.held[name] = REPEAT_DELAY
+    elseif t ~= 'blocked' then
+      t = t - dt
+      if t <= 0 then
+        out[#out + 1] = name
+        t = t + REPEAT_RATE
+      end
+      state.held[name] = t
     end
   end
   if #out > 0 then Input.lastDevice = 'pad' end

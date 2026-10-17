@@ -229,6 +229,7 @@ end
 
 function S.go(name, ...)
   if current and current.leave then current.leave() end
+  Input.requireRelease()
   S.name = name
   current = S[name]
   if current.enter then current.enter(...) end

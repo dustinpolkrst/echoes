@@ -148,6 +148,39 @@ function F.run(Scenes)
   check('R after touching the goal still shows the clear card', onCard() and Scenes.levelclear.index == 2, Scenes.name)
   check('R after touching the goal still records the clear', Progress.done(store.data, 2))
 
+  local nav = Input.newNavState()
+  local stickDown = {
+    isGamepadDown = function() return false end,
+    getGamepadAxis = function(_, axis) return axis == 'lefty' and 0.9 or 0 end,
+  }
+  local function padFrame(pads)
+    return function()
+      Scenes.dispatch(Input.navPoll(nav, pads, 1 / 60))
+      Scenes.update()
+    end
+  end
+  Scenes.go('playing', 1)
+  Scenes.inputSource = Solutions.provider(1)
+  runUntil(onCard, padFrame({ stickDown }))
+  for _ = 1, 90 do padFrame({ stickDown })() end
+  check('a stick held through the clear card leaves the cursor on Next level', onCard() and Scenes.levelclear.menu.index == 1,
+    'cursor ' .. Scenes.levelclear.menu.index)
+  padFrame({})()
+  Scenes.dispatch(Input.fromButton('a'))
+  settle()
+  check('a fresh A after releasing the stick takes Next level', Scenes.name == 'playing' and Scenes.playing.index == 2)
+
+  Scenes.go('playing', 1)
+  Scenes.inputSource = Solutions.provider(1)
+  key('down')
+  runUntil(onCard)
+  step(40)
+  for _ = 1, 2 do Scenes.dispatch(Input.fromKey('down', true)) end
+  Scenes.dispatch(Input.fromKey('z', true))
+  check('key repeats held over from play do nothing on the clear card', onCard() and Scenes.levelclear.menu.index == 1,
+    'cursor ' .. Scenes.levelclear.menu.index)
+  key('down')
+  check('a fresh key press moves the clear card cursor', Scenes.levelclear.menu.index == 2)
 
   print(('%d flow checks, %d failed'):format(total, failed))
   return failed == 0
