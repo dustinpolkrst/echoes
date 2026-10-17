@@ -7,7 +7,7 @@ local A = {}
 -- par/vpar/valign (backgrounds): horizontal and vertical parallax factors, and which edge the image hangs from.
 A.SLOTS = {
   player  = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'foot', note = 'faces right; flipped when facing left' },
-  echo    = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'foot', note = 'tinted cyan and faded by the game' },
+  echo    = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'foot', note = 'tinted cyan (violet when mirrored) and faded by the game' },
   solid   = { kind = 'sprite', size = { 16, 16 }, mode = 'variant', anchor = 'tile', note = 'strip of variants, one picked per cell' },
   oneway  = { kind = 'sprite', size = { 16, 16 }, mode = 'variant', anchor = 'tile', note = 'draw the platform in the top 5 rows' },
   spike   = { kind = 'sprite', size = { 16, 16 }, fps = 6, anchor = 'tile' },
@@ -15,6 +15,9 @@ A.SLOTS = {
   door    = { kind = 'sprite', size = { 16, 16 }, fps = 6, anchor = 'tile', note = 'one cell, stacked down the door and cropped as it opens; multiplied by the plate colour' },
   goal    = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'tile' },
   torch   = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'tile', note = 'replaces the chain and the flame' },
+  mirror  = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'tile', note = 'the shrine; the procedural one overhangs the cell above' },
+  veil    = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'tile', note = 'drawn with alpha over the background; echoes halt at it' },
+  crumble = { kind = 'sprite', size = { 16, 16 }, mode = 'state', anchor = 'tile', note = 'frame 1 intact, frame 2 cracking, frame 3 gone' },
   bg_far  = { kind = 'sprite', size = { 480, 270 }, fps = 4, par = 0.05, vpar = 0, valign = 'top', note = 'replaces the sky gradient' },
   bg_mid  = { kind = 'sprite', size = { 480, 270 }, fps = 4, par = 0.12, vpar = 0.08, valign = 'bottom', note = 'replaces the arches' },
   bg_near = { kind = 'sprite', size = { 480, 270 }, fps = 4, par = 0.35, vpar = 0.35, valign = 'top', note = 'replaces the hanging vines' },
@@ -29,6 +32,7 @@ A.SOUNDS = {
   door  = { kind = 'sound', note = 'played at two pitches for open and close' },
   death = { kind = 'sound' },
   goal  = { kind = 'sound' },
+  crumble = { kind = 'sound', note = 'played at two pitches for collapse and regrowth' },
 }
 
 A.version = 0

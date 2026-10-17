@@ -84,6 +84,12 @@ local function generate()
     return (saw(deathPhase(t, d)) * 0.5 + deathNoise() * 0.5) * env(t, d, 1.3) * 0.5
   end)
 
+  local grit = lowpassNoise(0.3)
+  generated.crumble = build(0.35, function(t, d)
+    local crack = t < 0.05 and square(2 * math.pi * 70 * t) * 0.5 or 0
+    return (grit() * 2.2 * env(t, d, 1.6) + crack) * 0.5
+  end)
+
   generated.goal = build(0.9, function(t)
     local v = 0
     for i, f in ipairs({ 523.25, 659.25, 783.99, 1046.5 }) do

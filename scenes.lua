@@ -78,9 +78,12 @@ local function react(world, ev)
     Particles.burst(x, y, 34, { speed = 110, life = 0.8, grav = 120, drag = 1.2, color = { 1, 0.7, 0.25 }, glow = true, size = 2 })
     Particles.burst(x, y, 16, { speed = 60, life = 1.0, grav = -10, color = { 1, 0.95, 0.7 }, glow = true })
   elseif ev.name == 'cast' then
-    Sfx.play('cast')
+    Sfx.play('cast', ev.v and 0.8 or 1)
     Input.rumble(0.25, 0.12)
-    Particles.burst(x, y, 26, { speed = 70, life = 0.7, drag = 2, color = { 0.4, 0.95, 1 }, glow = true })
+    Particles.burst(x, y, 26, { speed = 70, life = 0.7, drag = 2, color = ev.v and { 0.85, 0.5, 1 } or { 0.4, 0.95, 1 }, glow = true })
+  elseif ev.name == 'crumble' then
+    Sfx.play('crumble', ev.v and 1 or 1.4)
+    Particles.burst(x, y, ev.v and 14 or 5, { dir = pi / 2, spread = pi * 0.8, speed = 40, life = 0.6, grav = 160, color = { 0.55, 0.42, 0.28 } })
   elseif ev.name == 'plate' then
     Sfx.play('plate', ev.v and 1 or 0.8)
     Particles.burst(x, y - 2, 6, { dir = -pi / 2, spread = pi, speed = 40, life = 0.4, grav = 80, color = { 0.6, 0.95, 1 }, glow = true })

@@ -11,6 +11,15 @@ local R = { W = 480, H = 270, scale = 2, ox = 0, oy = 0 }
 
 local AMBIENT = { 0.26, 0.25, 0.46 }
 local PLATE_COLORS = { { 0.35, 0.95, 1 }, { 1, 0.45, 0.85 }, { 1, 0.85, 0.35 }, { 0.55, 1, 0.5 } }
+local MIRROR = { 0.8, 0.5, 1 }
+local VEIL = { 1, 0.72, 0.3 }
+-- Light colour and motion per light-emitting tile kind.
+local LIGHTS = {
+  torch = { color = { 1, 0.58, 0.25 }, flicker = 3, alpha = 0.92 },
+  goal = { color = { 0.55, 1, 0.95 }, breathe = 3, alpha = 0.95 },
+  mirror = { color = MIRROR, breathe = 4, alpha = 0.8 },
+  veil = { color = VEIL, breathe = 2, alpha = 0.5 },
+}
 
 local function hash(x, y)
   local n = sin(x * 12.9898 + y * 78.233) * 43758.5453
@@ -240,6 +249,86 @@ local function proceduralPlate(world, c, x, y)
   gfx.rectangle('fill', x + 3, y + 12 + drop, T - 6, 1)
 end
 
+local function proceduralMirror(world, c, x, y, t)
+  local cx = x + T / 2
+  gfx.setColor(0.16, 0.14, 0.26)
+  gfx.rectangle('fill', x + 2, y + 13, T - 4, 3)
+  gfx.setColor(0.3, 0.26, 0.42)
+  gfx.rectangle('fill', x + 3, y + 13, T - 6, 1)
+  gfx.setColor(0.2, 0.16, 0.32)
+  gfx.rectangle('fill', cx - 4, y - 6, 8, 19)
+  local pulse = 0.7 + 0.3 * sin(t * 4 + c.tx)
+  gfx.setColor(MIRROR[1] * 0.5, MIRROR[2] * 0.4, MIRROR[3] * 0.7, 0.9)
+  gfx.rectangle('fill', cx - 3, y - 5, 6, 17)
+  gfx.setColor(MIRROR[1], MIRROR[2], MIRROR[3], pulse)
+  gfx.rectangle('fill', cx - 2, y - 4, 4, 15)
+  gfx.setColor(1, 0.92, 1, 0.9)
+  local sweep = floor((t * 9 + c.tx * 2) % 17)
+  gfx.rectangle('fill', cx - 2, y - 4 + sweep, 4, 1)
+  gfx.setColor(1, 1, 1, 0.8)
+  gfx.rectangle('fill', cx - 1, y - 2, 1, 11)
+  gfx.setColor(MIRROR[1], MIRROR[2], MIRROR[3], 0.55)
+  gfx.rectangle('fill', cx - 7, y - 7, 1, 1)
+  gfx.rectangle('fill', cx + 6, y - 7, 1, 1)
+  gfx.rectangle('fill', cx - 6, y + 8, 1, 1)
+  gfx.rectangle('fill', cx + 5, y + 8, 1, 1)
+end
+
+local function proceduralVeil(world, c, x, y, t)
+  gfx.setColor(VEIL[1], VEIL[2], VEIL[3], 0.2)
+  gfx.rectangle('fill', x, y, T, T)
+  for k = 0, 3 do
+    local px = x + 2 + k * 4
+    for yy = 0, T - 1 do
+      local wave = sin(t * 5 + yy * 0.5 + k * 1.7 + c.tx) * 1.2
+      local a = 0.45 + 0.3 * sin(t * 7 + k + yy * 0.3)
+      gfx.setColor(VEIL[1], VEIL[2] + 0.15, VEIL[3] + 0.3, a)
+      gfx.rectangle('fill', floor(px + wave + 0.5), y + yy, 1, 1)
+    end
+  end
+  local spark = floor((t * 13 + c.tx * 5 + c.ty * 3) % T)
+  gfx.setColor(1, 0.97, 0.85, 0.9)
+  gfx.rectangle('fill', x + floor(hash(c.tx, c.ty + spark) * (T - 1)), y + spark, 1, 1)
+end
+
+local function proceduralCrumble(world, c, x, y, t)
+  if c.gone then
+    local soon = c.regrow < 0.6 and (0.6 - c.regrow) / 0.6 or 0
+    gfx.setColor(0.6, 0.48, 0.3, 0.22 + soon * 0.5)
+    gfx.setLineStyle('rough')
+    gfx.setLineWidth(1)
+    gfx.rectangle('line', x + 1.5, y + 1.5, T - 3, T - 3)
+    for k = 0, 2 do
+      gfx.rectangle('fill', x + 3 + k * 5, y + 7, 2, 1)
+    end
+    return
+  end
+  local shake = c.crack and floor(sin(t * 60 + c.tx) * 1.5 + 0.5) or 0
+  x = x + shake
+  gfx.setColor(0.36, 0.28, 0.2)
+  gfx.rectangle('fill', x, y, T, T)
+  gfx.setColor(0.52, 0.42, 0.28)
+  gfx.rectangle('fill', x, y, T, 2)
+  gfx.setColor(0.18, 0.13, 0.1)
+  gfx.rectangle('fill', x, y + T - 2, T, 2)
+  gfx.rectangle('fill', x + T - 1, y, 1, T)
+  local hot = c.crack and (0.6 + 0.4 * sin(t * 40)) or 0
+  gfx.setColor(0.14 + hot * 0.8, 0.1 + hot * 0.6, 0.08 + hot * 0.3)
+  gfx.rectangle('fill', x + 7, y + 2, 1, 4)
+  gfx.rectangle('fill', x + 8, y + 5, 1, 3)
+  gfx.rectangle('fill', x + 6, y + 7, 2, 1)
+  gfx.rectangle('fill', x + 5, y + 8, 1, 4)
+  gfx.rectangle('fill', x + 9, y + 8, 1, 2)
+  gfx.rectangle('fill', x + 10, y + 10, 2, 1)
+  gfx.rectangle('fill', x + 12, y + 11, 1, 4)
+  gfx.rectangle('fill', x + 2, y + 10, 1, 1)
+  gfx.rectangle('fill', x + 3, y + 11, 2, 1)
+  gfx.setColor(0.62, 0.5, 0.34, 0.7)
+  gfx.rectangle('fill', x + 2, y + 3, 3, 1)
+  gfx.rectangle('fill', x + 11, y + 4, 2, 1)
+  gfx.rectangle('fill', x + 3, y + 13, 1, 1)
+end
+
 local function variantOf(c) return { v = hash(c.tx, c.ty) } end
 
 TILES.solid.draw = withSlot('solid', proceduralSolid, variantOf)
@@ -250,22 +339,64 @@ TILES.goal.draw = withSlot('goal', proceduralGoal)
 TILES.plate.draw = withSlot('plate', proceduralPlate, function(c)
   return { frame = c.pressed and 2 or 1, tint = PLATE_COLORS[c.idx] }
 end)
+TILES.mirror.draw = withSlot('mirror', proceduralMirror)
+TILES.veil.draw = withSlot('veil', proceduralVeil)
+TILES.crumble.draw = withSlot('crumble', proceduralCrumble, function(c)
+  return { frame = c.gone and 3 or c.crack and 2 or 1 }
+end)
 
 -- Doors span several cells, so they are drawn as one slab per letter rather than per tile.
+-- A slab taller than wide lifts into its lintel; a hatch (wider than tall) slides into its left jamb.
 local function drawDoor(world, id, cells, open)
   local col = PLATE_COLORS[cells[1].idx]
-  local x, top, bottom = cells[1].tx * T, math.huge, 0
+  local x0, y0, x1, y1 = math.huge, math.huge, 0, 0
   for _, c in ipairs(cells) do
-    top, bottom = min(top, c.ty * T), max(bottom, (c.ty + 1) * T)
+    x0, y0 = min(x0, c.tx * T), min(y0, c.ty * T)
+    x1, y1 = max(x1, (c.tx + 1) * T), max(y1, (c.ty + 1) * T)
   end
-  local h = floor((bottom - top) * (1 - open) + 0.5)
+  local hatch = x1 - x0 > y1 - y0
+  local span = hatch and x1 - x0 or y1 - y0
+  local vis = floor(span * (1 - open) + 0.5)
   if Assets.sprite('door') then
     for _, c in ipairs(cells) do
-      local visible = clamp(h - (c.ty * T - top), 0, T)
-      if visible > 0 then drawSlot('door', x, c.ty * T, { crop = visible, tint = col }) end
+      local along = hatch and c.tx * T - x0 or c.ty * T - y0
+      local visible = clamp(vis - along, 0, T)
+      if hatch and visible >= T or not hatch and visible > 0 then
+        drawSlot('door', c.tx * T, c.ty * T, { crop = hatch and T or visible, tint = col })
+      end
     end
     return
   end
+  local pulse = 0.65 + 0.35 * sin(R.t * 3 + cells[1].idx)
+  if hatch then
+    local h = y1 - y0
+    gfx.setColor(0.09, 0.09, 0.2)
+    gfx.rectangle('fill', x0, y0, 3, h)
+    if vis > 0 then
+      gfx.setColor(0.26, 0.23, 0.36)
+      gfx.rectangle('fill', x0, y0 + 1, vis, h - 2)
+      gfx.setColor(0.36, 0.33, 0.5)
+      gfx.rectangle('fill', x0, y0 + 1, vis, 1)
+      gfx.setColor(0.13, 0.11, 0.22)
+      gfx.rectangle('fill', x0, y1 - 2, vis, 1)
+      for xx = x0 + 8, x0 + vis - 2, T do
+        gfx.rectangle('fill', xx, y0 + 1, 1, h - 2)
+      end
+      gfx.setColor(col[1], col[2], col[3], pulse)
+      gfx.rectangle('fill', x0 + 4, y0 + 7, max(0, vis - 8), 2)
+      gfx.rectangle('fill', x0 + floor(vis / 2) - 1, y0 + 4, 2, 8)
+      gfx.setColor(col[1], col[2], col[3])
+      gfx.rectangle('fill', x0 + vis - 2, y0 + 1, 2, h - 2)
+    end
+    if open > 0 then
+      gfx.setColor(col[1], col[2], col[3], 0.22 * open)
+      gfx.rectangle('fill', x0, y0 + 1, x1 - x0, 1)
+      gfx.rectangle('fill', x0, y1 - 2, x1 - x0, 1)
+    end
+    return
+  end
+  local x, top, bottom = x0, y0, y1
+  local h = vis
   gfx.setColor(0.09, 0.09, 0.2)
   gfx.rectangle('fill', x, top, T, 3)
   if h > 0 then
@@ -278,7 +409,6 @@ local function drawDoor(world, id, cells, open)
     for yy = top + 8, top + h - 2, T do
       gfx.rectangle('fill', x + 1, yy, T - 2, 1)
     end
-    local pulse = 0.65 + 0.35 * sin(R.t * 3 + cells[1].idx)
     gfx.setColor(col[1], col[2], col[3], pulse)
     gfx.rectangle('fill', x + 7, top + 4, 2, max(0, h - 8))
     gfx.rectangle('fill', x + 4, top + floor(h / 2) - 1, 8, 2)
@@ -466,19 +596,30 @@ function R.drawPlayer(p, alpha)
   gfx.pop()
 end
 
-local ECHO_TINT = { 0.55, 0.95, 1 }
+-- Keyed by echo.mirrored: a plain echo is cyan, a mirrored one violet.
+local ECHO_PALETTE = {
+  [false] = { tint = { 0.55, 0.95, 1 }, body = { 0.3, 0.85, 1 }, core = { 0.6, 0.97, 1 }, flame = { 0.45, 0.95, 1 },
+    eyes = { 0.1, 0.35, 0.45 }, edge = { 0.8, 1, 1 }, glow = { 0.3, 0.85, 1 } },
+  [true] = { tint = { 0.9, 0.6, 1 }, body = { 0.75, 0.4, 1 }, core = { 0.95, 0.75, 1 }, flame = { 0.85, 0.5, 1 },
+    eyes = { 0.3, 0.1, 0.45 }, edge = { 1, 0.9, 1 }, glow = { 0.8, 0.45, 1 } },
+}
+
+local function paint(c, a)
+  gfx.setColor(c[1], c[2], c[3], a)
+end
 
 local function drawGhost(e, frame, alpha)
+  local pal = ECHO_PALETTE[e.mirrored]
   local cx, top = floor(frame.x + e.w / 2 + 0.5), floor(frame.y + 0.5)
-  if drawSlot('echo', cx, top + e.h, { flip = frame.facing, tint = ECHO_TINT, alpha = alpha * 0.85 }) then return end
-  gfx.setColor(0.3, 0.85, 1, alpha * 0.55)
+  if drawSlot('echo', cx, top + e.h, { flip = frame.facing, tint = pal.tint, alpha = alpha * 0.85 }) then return end
+  paint(pal.body, alpha * 0.55)
   gfx.circle('fill', cx, top + 7, 5.5, 14)
-  gfx.setColor(0.6, 0.97, 1, alpha * 0.7)
+  paint(pal.core, alpha * 0.7)
   gfx.circle('fill', cx - 1, top + 6, 2.5, 8)
   local fl = sin(R.t * 12 + e.frames[1].x) * 0.8
-  gfx.setColor(0.45, 0.95, 1, alpha * 0.8)
+  paint(pal.flame, alpha * 0.8)
   gfx.polygon('fill', cx - 2, top + 3, cx + fl, top - 2, cx + 2, top + 3)
-  gfx.setColor(0.1, 0.35, 0.45, alpha * 0.8)
+  paint(pal.eyes, alpha * 0.8)
   gfx.rectangle('fill', cx + frame.facing * 1.5 - 2, top + 5, 1, 2)
   gfx.rectangle('fill', cx + frame.facing * 1.5 + 1, top + 5, 1, 2)
 end
@@ -498,10 +639,11 @@ function R.drawEcho(e)
   end
   drawGhost(e, e, alpha)
   if e:isSolid() then
+    local pal = ECHO_PALETTE[e.mirrored]
     local cx, top = floor(e.x + e.w / 2 + 0.5), floor(e.y + 0.5)
-    gfx.setColor(0.8, 1, 1, alpha * 0.9)
+    paint(pal.edge, alpha * 0.9)
     gfx.rectangle('fill', cx - 6, top, 12, 1)
-    gfx.setColor(0.4, 0.9, 1, alpha * 0.35)
+    paint(pal.body, alpha * 0.35)
     gfx.rectangle('fill', cx - 6, top + 1, 12, 1)
   end
 end
@@ -511,14 +653,12 @@ function R.drawWorld(world)
   if R.layerWorld == world and R.layerVersion ~= Assets.version then bakeLayer(world) end
   gfx.setColor(1, 1, 1)
   gfx.draw(R.layer, 0, 0)
-  for _, c in pairs(world.plates) do TILES.plate.draw(world, c, c.tx * T, c.ty * T, t) end
   for id, cells in pairs(world.doorCells) do drawDoor(world, id, cells, R.doorOpen[id] or 0) end
   for ty = 0, world.H - 1 do
     for tx = 0, world.W - 1 do
       local c = world.cells[ty][tx]
-      if c and (c.kind == 'torch' or c.kind == 'goal') then
-        TILES[c.kind].draw(world, c, tx * T, ty * T, t)
-      end
+      local tile = c and TILES[c.kind]
+      if tile and tile.draw and not tile.static then tile.draw(world, c, tx * T, ty * T, t) end
     end
   end
   for _, e in ipairs(world.echoes) do R.drawEcho(e) end
@@ -546,15 +686,18 @@ function R.drawLighting(world, camx, camy, extra)
   end
   for _, e in ipairs(world.echoes) do
     local a = e.lingerT > Echo.LINGER and clamp(1 - (e.lingerT - Echo.LINGER) / Echo.FADE, 0, 1) or 1
-    glow(e.x + e.w / 2, e.y + 6, 52, 0.3, 0.85, 1, 0.9 * a)
+    local g = ECHO_PALETTE[e.mirrored].glow
+    glow(e.x + e.w / 2, e.y + 6, 52, g[1], g[2], g[3], 0.9 * a)
   end
   for _, l in ipairs(world.lights) do
-    if l.kind == 'goal' then
-      glow(l.x, l.y, l.r + sin(t * 2) * 3, 0.55, 1, 0.95, 0.95)
+    local spec = LIGHTS[l.kind]
+    local r = l.r
+    if spec.flicker then
+      r = r + (sin(t * 11 + l.x) * 0.5 + sin(t * 17 + l.y) * 0.5) * spec.flicker
     else
-      local flick = sin(t * 11 + l.x) * 0.5 + sin(t * 17 + l.y) * 0.5
-      glow(l.x, l.y, l.r + flick * 3, 1, 0.58, 0.25, 0.92)
+      r = r + sin(t * 2 + l.x * 0.1) * spec.breathe
     end
+    glow(l.x, l.y, r, spec.color[1], spec.color[2], spec.color[3], spec.alpha)
   end
   for id, cells in pairs(world.doorCells) do
     local open = R.doorOpen[id] or 0
@@ -589,14 +732,13 @@ function R.drawGlows(world, camx, camy)
     glow(p.x + p.w / 2, p.y + 6, 24, 1, 0.7, 0.3, 0.55 * k)
   end
   for _, e in ipairs(world.echoes) do
-    glow(e.x + e.w / 2, e.y + 6, 20, 0.3, 0.9, 1, 0.5)
+    local g = ECHO_PALETTE[e.mirrored].glow
+    glow(e.x + e.w / 2, e.y + 6, 20, g[1], g[2], g[3], 0.5)
   end
   for _, l in ipairs(world.lights) do
-    if l.kind == 'goal' then
-      glow(l.x, l.y, 26, 0.6, 1, 0.95, 0.6)
-    else
-      glow(l.x, l.y - 4, 16, 1, 0.6, 0.2, 0.55)
-    end
+    local spec = LIGHTS[l.kind]
+    local lift = spec.flicker and 4 or 0
+    glow(l.x, l.y - lift, spec.flicker and 16 or 24, spec.color[1], spec.color[2], spec.color[3], 0.55)
   end
   gfx.pop()
 end

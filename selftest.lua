@@ -277,8 +277,8 @@ local function testVeil()
   run(w, { { '-', function(c) return c.echoes[1]:arrived() end } })
   local e = w.echoes[1]
   local veilTop = 4 * 16
-  check('echo halts just above the veil', e.halted and e.y + e.h <= veilTop and e.y + e.h > veilTop - 6,
-    ('echo bottom=%.1f veil top=%d'):format(e.y + e.h, veilTop))
+  check('echo halts touching the veil', e.halted and math.abs(e.y + e.h - veilTop) < 0.05,
+    ('echo bottom=%.3f veil top=%d'):format(e.y + e.h, veilTop))
   local haltY = e.y
   idle(w, 30)
   check('halted echo stays put', w.echoes[1].y == haltY and w.echoes[1]:isSolid())
@@ -350,6 +350,123 @@ local function testStairwayNeedsEcho()
     ('best bottom=%.1f ledge top=%d'):format(highest, ledgeTop))
 end
 
+local function prefix(script, n)
+  local out = {}
+  for i = 1, n do out[i] = script[i] end
+  return out
+end
+
+local function bestBottom(w, frames, input)
+  local best = w.player.y + w.player.h
+  for _ = 1, frames do
+    Level.step(w, input)
+    best = math.min(best, w.player.y + w.player.h)
+  end
+  return best
+end
+
+local function testOtherSideNeedsMirror()
+  local w = Level.new(Levels[6])
+  run(w, { { 'R', cond.atX(66) }, { 200, '-' }, { 1, 'X' }, { 'R', cond.atX(300) } })
+  check('level 6: a plain echo on the reflection spot leaves the door shut',
+    w.doorOpen.a == false and w.player.x <= 11 * 16 - 10 + 0.01, ('x=%.1f'):format(w.player.x))
+  w = Level.new(Levels[6])
+  run(w, { { 'R', cond.atX(100) }, { 200, '-' }, { 'R', cond.atX(163) }, { 1, 'X' }, { 'R', cond.atX(300) } })
+  check('level 6: a mirrored echo from the wrong spot misses the plate',
+    w.doorOpen.a == false and w.player.x <= 11 * 16 - 10 + 0.01, ('x=%.1f'):format(w.player.x))
+end
+
+local function testTrapdoorNeedsCast()
+  local w = Level.new(Levels[7])
+  run(w, { { 'R', cond.atX(190) }, { 90, '-' } })
+  check('level 7: waiting on the plate drops you before the door can matter',
+    w.player.y + w.player.h > 8 * 16 + 16 and w.doorOpen.a == false, ('bottom=%.1f'):format(w.player.y + w.player.h))
+  run(w, { { '-', cond.grounded }, { 'R', cond.atX(400) } })
+  check('level 7: the lower corridor is sealed by the door', w.player.x <= 17 * 16 - 10 + 0.01, ('x=%.1f'):format(w.player.x))
+end
+
+local function testUndertowNeedsVeilEcho()
+  local w = Level.new(Levels[8])
+  run(w, { { 'R', cond.atX(70) }, { '-', cond.onTop(224) }, { 200, '-' } })
+  local best = bestBottom(w, 60, { jump = true })
+  check('level 8: the exit ledge is out of jumping reach from the pit floor', best > 9 * 16 + 16, ('best bottom=%.1f ledge top=%d'):format(best, 9 * 16))
+  run(w, { { '-', cond.grounded }, { 30, '-' }, { 1, 'J' }, { 'J', cond.apex }, { 1, 'JX' }, { '-', cond.echoArrived } })
+  local e = w.echoes[#w.echoes]
+  check('level 8: an echo cast at the apex from the floor parks under the veil',
+    e.halted and e.y >= 13 * 16 - 0.05, ('echo top=%.1f veil bottom=%d'):format(e.y, 13 * 16))
+end
+
+local function testUnderfootNeedsEcho()
+  local w = Level.new(Levels[9])
+  run(w, { { 'R', cond.atX(296) }, { 120, '-' } })
+  check('level 9: without an echo the hatch holds you up',
+    w.player.y + w.player.h == 8 * 16 and w.doorOpen.a == false, ('bottom=%.1f'):format(w.player.y + w.player.h))
+end
+
+local function testFerryPitIsTooWide()
+  local w = Level.new(Levels[10])
+  local ok, why = run(w, { { 'R', cond.atX(228) }, { 'RJ', cond.atX(1000) } })
+  check('level 10: a running jump lands in the spikes', not ok and w.player.state == 'dead' and w.player.x < 20 * 16,
+    ('%s'):format(tostring(why)))
+end
+
+local function testShortMemoryNeedsPatience()
+  local w = Level.new(Levels[11])
+  run(w, { { 'R', cond.atX(26) }, { 'RJ', cond.onTop(208, 54, 102) }, { 30, '-' },
+    { 'R', cond.atX(163) }, { 1, 'X' }, { 200, 'R' } })
+  local e = w.echoes[1]
+  check('level 11: a short pause leaves the approach in memory, so the echo halts at the veil',
+    e and e.halted and e.x >= 17 * 16 and w.doorOpen.a == false and w.player.x <= 11 * 16 - 10 + 0.01,
+    e and ('echo.x=%.1f halted=%s x=%.1f'):format(e.x, tostring(e.halted), w.player.x))
+end
+
+local function testConfluenceTiming()
+  local w = Level.new(Levels[12])
+  local ok, why = run(w, { { 'R', cond.atX(228) }, { 'RJ', cond.atX(1000) } })
+  check('level 12: a running jump lands in the spikes', not ok and w.player.state == 'dead' and w.player.x < 19 * 16, tostring(why))
+  w = Level.new(Levels[12])
+  local script = prefix(Solutions.scripts[12], 7)
+  script[#script + 1] = { 200, '-' }
+  script[#script + 1] = { 'R', cond.atX(376) }
+  script[#script + 1] = { 1, 'X' }
+  script[#script + 1] = { 240, '-' }
+  run(w, script)
+  check('level 12: dawdling on the landing lets the crossing fade, the second echo misses the plate',
+    w.doorOpen.a == false and w.player.x <= 25 * 16 - 10 + 0.01, ('x=%.1f'):format(w.player.x))
+end
+
+-- Timed segments shift by dt frames; each condition segment keeps its direction keys held for hold
+-- more frames (a re-held J or X would be a fresh press, which no human does by accident).
+local function perturbed(script, dt, hold)
+  local out = {}
+  for _, seg in ipairs(script) do
+    if type(seg[1]) == 'number' then
+      out[#out + 1] = { math.max(1, seg[1] + dt), seg[2] }
+    else
+      out[#out + 1] = seg
+      if hold > 0 then out[#out + 1] = { hold, seg[1]:gsub('[JX]', '') } end
+    end
+  end
+  return out
+end
+
+local VARIANTS = { { 3, 0 }, { -3, 0 }, { 0, 3 }, { 3, 3 }, { -3, 3 } }
+
+local function testSolutionSlack()
+  for i = 6, #Levels do
+    local failures = {}
+    for _, v in ipairs(VARIANTS) do
+      local w = Level.new(Levels[i])
+      local ok, outcome = run(w, perturbed(Solutions.scripts[i], v[1], v[2]))
+      if not (ok and outcome == 'cleared') then
+        failures[#failures + 1] = ('dt=%+d hold=%d: %s'):format(v[1], v[2], tostring(outcome))
+      end
+    end
+    check(('level %d "%s" solution survives timing perturbed by 3 frames'):format(i, Levels[i].name),
+      #failures == 0, #failures > 0 and table.concat(failures, '; ') or ('%d variants'):format(#VARIANTS))
+  end
+end
+
 local function testSolutions()
   for i, def in ipairs(Levels) do
     local w = Level.new(def)
@@ -398,7 +515,15 @@ function S.run()
   testCrumble()
   testDoorFloor()
   testStairwayNeedsEcho()
+  testOtherSideNeedsMirror()
+  testTrapdoorNeedsCast()
+  testUndertowNeedsVeilEcho()
+  testUnderfootNeedsEcho()
+  testFerryPitIsTooWide()
+  testShortMemoryNeedsPatience()
+  testConfluenceTiming()
   testSolutions()
+  testSolutionSlack()
   print(('%d checks, %d failed'):format(total, failed))
   return failed == 0
 end

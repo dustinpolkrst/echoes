@@ -83,9 +83,18 @@ function C.echoArrived(w)
 end
 function C.onLastEcho(w) return w.player.support == w.echoes[#w.echoes] end
 function C.grounded(w) return w.player.state == 'ground' end
+function C.doorOpen(id) return function(w) return w.doorOpen[id] end end
+-- The newest echo is heading right and has drawn level with the player (within lag pixels behind).
+function C.lastEchoPassing(lag)
+  return function(w)
+    local e = w.echoes[#w.echoes]
+    return e ~= nil and e.x > e.prevX and e.x >= w.player.x - lag
+  end
+end
 
 local atX, atXLeft, onTop = C.atX, C.atXLeft, C.onTop
-local apex, echoArrived, onLastEcho, grounded = C.apex, C.echoArrived, C.onLastEcho, C.grounded
+local apex, echoArrived, onLastEcho, grounded, doorOpen = C.apex, C.echoArrived, C.onLastEcho, C.grounded, C.doorOpen
+local lastEchoPassing = C.lastEchoPassing
 
 -- Coordinates are pixels (tile = 16). Each list is a full playthrough of the level at that index.
 M.scripts = {
@@ -150,6 +159,40 @@ M.scripts = {
     { 'LJ', onLastEcho }, { 2, '-' }, { 'LJ', onTop(144, 0, 250) },
     { 'L', atXLeft(176) }, { 'LJ', atXLeft(116) }, { 'L', grounded },
     { 'L', atXLeft(40) },
+  },
+  -- 6 Other Side
+  {
+    { 'R', atX(66) }, { 100, '-' }, { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
+  },
+  -- 7 Trapdoor
+  {
+    { 'R', atX(190) }, { 1, 'X' }, { '-', onTop(224) },
+    { 'R', atX(255) }, { '-', doorOpen('a') }, { 'R', atX(340) },
+  },
+  -- 8 Undertow
+  {
+    { 'R', atX(70) }, { '-', onTop(224) }, { 1, 'X' }, { '-', echoArrived },
+    { 'J', onLastEcho }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
+  },
+  -- 9 Underfoot
+  {
+    { 'R', atX(48) }, { 190, '-' }, { 1, 'X' }, { 'R', atX(296) }, { '-', onTop(224) },
+  },
+  -- 10 Ferry
+  {
+    { 'R', atX(208) }, { 'L', atXLeft(80) }, { 'R', atX(209) }, { 1, 'X' },
+    { '-', lastEchoPassing(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(400) },
+  },
+  -- 11 Short Memory
+  {
+    { 'R', atX(26) }, { 'RJ', onTop(208, 54, 102) }, { 130, '-' },
+    { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
+  },
+  -- 12 Confluence
+  {
+    { 'R', atX(208) }, { 'L', atXLeft(80) }, { 'R', atX(209) }, { 1, 'X' },
+    { '-', lastEchoPassing(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(376) }, { 1, 'X' },
+    { '-', doorOpen('a') }, { 'R', atX(440) },
   },
 }
 

@@ -50,6 +50,17 @@ function Echo.new(frames, mirrored)
   }, Echo)
 end
 
+-- Slides the current pose toward the refused one until it just touches the blocker.
+local function settle(self, blocked)
+  local f, n = self.frames[self.i], self.frames[self.i + 1]
+  local lo, hi = 0, 1
+  for _ = 1, 10 do
+    local mid = (lo + hi) / 2
+    if blocked(f.x + (n.x - f.x) * mid, f.y + (n.y - f.y) * mid, self.w, self.h) then hi = mid else lo = mid end
+  end
+  f.x, f.y = f.x + (n.x - f.x) * lo, f.y + (n.y - f.y) * lo
+end
+
 -- blocked(x, y, w, h) says whether the next pose may be taken; a refused pose halts the replay for good.
 function Echo:update(dt, blocked)
   self.prevX, self.prevY = self.x, self.y
@@ -57,6 +68,7 @@ function Echo:update(dt, blocked)
     local n = self.frames[self.i + 1]
     if blocked and blocked(n.x, n.y, self.w, self.h) then
       self.halted = true
+      settle(self, blocked)
     else
       self.i = self.i + 1
     end
