@@ -1,0 +1,20 @@
+local selftest = false
+for _, a in pairs(arg or {}) do
+  if a == '--selftest' then selftest = true end
+end
+
+function love.conf(t)
+  t.identity = 'echoes'
+  t.version = '11.5'
+  t.window.title = 'ECHOES'
+  t.window.width = 960
+  t.window.height = 540
+  t.window.vsync = 1
+  t.window.resizable = false
+  if selftest then
+    t.window = false
+    for _, m in ipairs({ 'graphics', 'window', 'audio', 'sound', 'joystick', 'video', 'touch', 'mouse' }) do
+      t.modules[m] = false
+    end
+  end
+end
