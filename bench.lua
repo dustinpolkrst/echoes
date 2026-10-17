@@ -275,6 +275,13 @@ function B.run(Scenes, label, opts)
     tostring(love.window.isMinimized())))
   assert(love.window.getVSync() == 0, 'bench needs vsync off')
   lastPresent = getTime()
+  if opts.size then
+    -- The driver stalls one present for about 18 ms some 0.2 s after a mode change; keep it out of the numbers.
+    Scenes.init(Shot.seededStore(0))
+    Scenes.go('title')
+    local t0 = getTime()
+    while getTime() - t0 < 1 do frame(Scenes) end
+  end
   local results, rows = {}, {}
   for _, sc in ipairs(scenarios(Scenes)) do
     local r = runScenario(Scenes, sc)
