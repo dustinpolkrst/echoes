@@ -110,6 +110,26 @@ function F.run(Scenes)
   check('Esc in select returns to pause', Scenes.name == 'pause')
   check('Quit is the last pause entry', Scenes.pause.menu.items[#Scenes.pause.menu.items].label == 'Quit game')
 
+  local realQuit, quits = love.event.quit, 0
+  love.event.quit = function() quits = quits + 1 end
+  Scenes.go('title')
+  key('up')
+  key('z')
+  settle()
+  check('Up then Z on the title plays instead of quitting', quits == 0 and Scenes.name == 'playing')
+  key('escape')
+  key('up')
+  key('space')
+  check('Esc, Up, Space in play resumes instead of quitting', quits == 0 and Scenes.name == 'playing')
+  key('escape')
+  for _ = 1, 4 do key('down') end
+  key('z')
+  check('the first confirm on Quit game only asks', quits == 0 and Scenes.pause.menu.index == 5)
+  key('z')
+  check('the second confirm on Quit game quits', quits == 1)
+  love.event.quit = realQuit
+
+
   print(('%d flow checks, %d failed'):format(total, failed))
   return failed == 0
 end

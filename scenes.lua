@@ -269,7 +269,7 @@ function S.title.enter()
     { label = self.resumeAt and 'Continue' or 'Play', action = function() startLevel(resumeAt) end },
     { label = 'Level select', action = function() S.select.returnTo = { 'title' } S.to('select', resumeAt) end },
     { label = 'Settings', action = function() S.settings.returnTo = { 'title' } S.to('settings') end },
-    { label = 'Quit', action = function() love.event.quit() end },
+    { label = 'Quit', confirm = 'Really quit?', action = function() love.event.quit() end },
   })
 end
 
@@ -427,7 +427,7 @@ function pause.enter(under)
       S.settings.returnTo = { 'pause', 'playing' }
       S.to('settings')
     end },
-    { label = 'Quit game', action = function() love.event.quit() end },
+    { label = 'Quit game', confirm = 'Really quit?', action = function() love.event.quit() end },
   })
 end
 

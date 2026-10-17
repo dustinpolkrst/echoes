@@ -86,9 +86,12 @@ return function(check)
     { label = 'c', action = function() fired[#fired + 1] = 'c' end },
   })
   Menu.handle(menu, 'up')
-  check('menu up from the first item wraps to the last', menu.index == 3)
+  check('menu up from the first item stays on the first', menu.index == 1)
   Menu.handle(menu, 'down')
-  check('menu down from the last item wraps to the first', menu.index == 1)
+  Menu.handle(menu, 'down')
+  Menu.handle(menu, 'down')
+  check('menu down from the last item stays on the last', menu.index == 3)
+  menu.index = 1
   check('confirm fires the item action', Menu.handle(menu, 'confirm') == 'select' and fired[1] == 'a')
   check('left on an item without adjust does nothing', Menu.handle(menu, 'left') == nil)
   Menu.handle(menu, 'down')
@@ -98,6 +101,28 @@ return function(check)
   check('left and right adjust the value', value == 6)
   Menu.handle(menu, 'confirm')
   check('confirm on an adjust-only item steps it forward', value == 7)
+
+  local now, quits, realClock = 0, 0, Menu.clock
+  Menu.clock = function() return now end
+  local guarded = Menu.new({
+    { label = 'Play', action = function() end },
+    { label = 'Quit', confirm = 'Really quit?', action = function() quits = quits + 1 end },
+  }, 2)
+  Menu.handle(guarded, 'confirm')
+  check('first confirm on a guarded item only asks', quits == 0 and Menu.label(guarded, 2) == 'Really quit?')
+  Menu.handle(guarded, 'confirm')
+  check('second confirm on a guarded item runs it', quits == 1)
+  Menu.handle(guarded, 'confirm')
+  Menu.handle(guarded, 'up')
+  Menu.handle(guarded, 'down')
+  check('moving away disarms the guard', Menu.label(guarded, 2) == 'Quit')
+  Menu.handle(guarded, 'confirm')
+  check('moving away means confirming again only asks', quits == 1)
+  now = 2.5
+  check('the guard times out', Menu.label(guarded, 2) == 'Quit')
+  Menu.handle(guarded, 'confirm')
+  check('after the timeout a confirm only asks again', quits == 1)
+  Menu.clock = realClock
 
   local esc = Input.fromKey('escape')
   check('Esc maps to back then pause', esc[1] == 'back' and esc[2] == 'pause')
@@ -128,7 +153,6 @@ return function(check)
   check('releasing re-arms the press', #Input.navPoll(nav, { held }, 1 / 60) == 1)
   check('left stick down past deadzone navigates down', Input.navPoll(Input.newNavState(), { pad({}, 0.8) }, 1 / 60)[1] == 'down')
   check('left stick inside deadzone does not', #Input.navPoll(Input.newNavState(), { pad({}, 0.2) }, 1 / 60) == 0)
-
   Trans.reset()
   local calls, coverAtCall = 0, nil
   Trans.start(function() calls = calls + 1 coverAtCall = Trans.coverage() end)

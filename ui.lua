@@ -1,4 +1,5 @@
 local Render = require 'render'
+local Menu = require 'menu'
 
 local gfx = love.graphics
 local sin, min, max = math.sin, math.min, math.max
@@ -137,7 +138,7 @@ function U.menu(m, cx, y, o)
       triangle(left + 16, ry + (rh - 4) / 2, 5, 1)
     end
     if twoCol then
-      U.text(item.label, font, ty, color, a, left + 34, w, 'left')
+      U.text(Menu.label(m, i), font, ty, color, a, left + 34, w, 'left')
       if item.value then
         local text = item.value()
         local vx = right - 16
@@ -166,7 +167,7 @@ function U.menu(m, cx, y, o)
         end
       end
     else
-      U.text(item.label, font, ty, color, a, left, w, 'center')
+      U.text(Menu.label(m, i), font, ty, color, a, left, w, 'center')
     end
   end
 end
