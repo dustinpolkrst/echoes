@@ -42,7 +42,15 @@ The pad rumbles lightly on death and on cast. On-screen prompts follow whichever
 
 Standing on a plate for 3 seconds before you cast gives an echo that sits on the plate for about 7 seconds. Casting at the peak of a jump leaves a platform in mid-air.
 
+Three kinds of tile change what an echo does:
+
+- Mirror shrine (violet). Cast while touching it and the echo replays reflected about the shrine, so it walks where you did not, through walls included. Mirrored echoes are violet.
+- Veil (amber). You walk through it. An echo whose next step would enter it stops right there and stays for 4 seconds, so a veil is where you park a ghost.
+- Crumble stone (ochre). Half a second after any body stands on it, you or an echo, it gives way, and it grows back 3 seconds after nothing is left inside it. Echoes replay positions, so a ghost keeps standing where the stone used to be.
+
 ## Levels
+
+Act one teaches the echo:
 
 1. Wake: movement, gaps, spikes.
 2. First Echo: a plate and a door.
@@ -50,11 +58,24 @@ Standing on a plate for 3 seconds before you cast gives an echo that sits on the
 4. Two Minds: two plates, two doors, two echoes.
 5. Ascent: a tall climb that combines everything.
 
+Act two introduces one tile each:
+
+6. Other Side: a plate in a sealed room, pressed by a reflected echo.
+7. Trapdoor: a plate on crumble stone. Cast, then fall; the ghost holds what you could not.
+8. Undertow: drop through a veil, cast, and climb the ghost that stopped there.
+9. Underfoot: the door is the floor.
+
+Act three combines them:
+
+10. Ferry: a reflected walk carries you over spikes.
+11. Short Memory: an echo starts three seconds back, so the wait before casting decides which side of a veil it begins on.
+12. Confluence: the ride, the veil and the sealed plate in one recording.
+
 ## Verification
 
     love echoes --selftest
 
-Runs the simulation headless (no window), prints PASS or FAIL per check, and exits nonzero on any failure. It covers physics, hazards, doors and plates, echo recording and carry, and a scripted solution for every level (`solutions.lua`).
+Runs the simulation headless (no window), prints PASS or FAIL per check, and exits nonzero on any failure. It covers physics, hazards, doors and plates, echo recording and carry, the mirror, veil and crumble tiles, and a scripted solution for every level (`solutions.lua`). For levels 6 to 12 it also proves the naive approach fails (the jump falls short, the door stays shut, the echo parks in the wrong place) and reruns each solution with its timings shifted by three frames, so no level needs frame-perfect play.
 
     love echoes --shot N
 
@@ -78,7 +99,7 @@ Put PNGs in `assets/sprites` and sounds in `assets/sfx`, named after a slot (`pl
 - `level.lua`: level parsing, tile behavior table, collision, plates and doors, world step.
 - `player.lua`: player state machine (`ground`, `air`, `dead`, `cleared`).
 - `echo.lua`: ring-buffer recorder and the echo.
-- `levels.lua`: the five ASCII levels.
+- `levels.lua`: the twelve ASCII levels.
 - `render.lua`, `particles.lua`, `sfx.lua`, `scenes.lua`: drawing, lighting, effects, sound, menus.
 - `assets.lua`: slot registry and loader for the optional files under `assets/`.
 - `selftest.lua`, `solutions.lua`: headless checks and the scripted level solutions.
