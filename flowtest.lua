@@ -129,6 +129,25 @@ function F.run(Scenes)
   check('the second confirm on Quit game quits', quits == 1)
   love.event.quit = realQuit
 
+  local function runUntil(done, frame)
+    for _ = 1, 3000 do
+      if done() then return end
+      if frame then frame() else Scenes.update() end
+    end
+  end
+  local function onCard() return Scenes.name == 'levelclear' end
+
+  Scenes.go('playing', 2)
+  Scenes.inputSource = Solutions.provider(2)
+  runUntil(function() return Scenes.playing.world.player.state == 'cleared' end)
+  key('r')
+  for _ = 1, 200 do
+    if onCard() then break end
+    Scenes.update()
+  end
+  check('R after touching the goal still shows the clear card', onCard() and Scenes.levelclear.index == 2, Scenes.name)
+  check('R after touching the goal still records the clear', Progress.done(store.data, 2))
+
 
   print(('%d flow checks, %d failed'):format(total, failed))
   return failed == 0

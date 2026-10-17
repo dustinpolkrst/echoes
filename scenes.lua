@@ -364,13 +364,16 @@ function playing.drawUI()
   end
 end
 
+local function cleared() return playing.world.player.state == 'cleared' end
+
 playing.actions = {
   restart = function()
+    if cleared() then return end
     local cx, cy = playerFocus(playing.world)
     Trans.start(loadAttempt, cx, cy)
   end,
   pause = function()
-    if playing.world.player.state ~= 'cleared' then S.go('pause', 'playing') end
+    if not cleared() then S.go('pause', 'playing') end
   end,
 }
 
