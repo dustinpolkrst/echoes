@@ -740,8 +740,8 @@ function R.beginFrame()
   gfx.origin()
 end
 
-function R.present()
-  gfx.setCanvas()
+function R.present(target)
+  gfx.setCanvas(target)
   gfx.origin()
   gfx.setBlendMode('alpha')
   local ww, wh = gfx.getDimensions()

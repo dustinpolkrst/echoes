@@ -11,6 +11,7 @@ local Menu = require 'menu'
 local Trans = require 'transition'
 local Ui = require 'ui'
 local Hud = require 'hud'
+local Assets = require 'assets'
 
 local gfx = love.graphics
 local floor, sin, pi, min, max = math.floor, math.sin, math.pi, math.min, math.max
@@ -227,6 +228,7 @@ local function withBack(actions, fn)
 end
 
 function S.go(name, ...)
+  if current and current.leave then current.leave() end
   S.name = name
   current = S[name]
   if current.enter then current.enter(...) end
@@ -377,7 +379,35 @@ playing.actions = {
 local pause = {}
 S.pause = pause
 
+local BLUR = { { -3, 0 }, { 3, 0 }, { 0, -3 }, { 0, 3 } }
+
+-- Nothing beneath the pause steps, so its frame, blur and dim are composed once into `still`.
+local still, stillVersion
+
+local function frozen()
+  local w, h = gfx.getDimensions()
+  return still and still:getWidth() == w and still:getHeight() == h and stillVersion == Assets.version
+end
+
+local function freeze()
+  if frozen() then return end
+  still, stillVersion = gfx.newCanvas(gfx.getDimensions()), Assets.version
+  gfx.push('all')
+  Render.present(still)
+  Ui.begin()
+  gfx.setColor(1, 1, 1, 0.28)
+  for _, o in ipairs(BLUR) do gfx.draw(Render.game, o[1], o[2], 0, 2, 2) end
+  Ui.dim(0.58)
+  Ui.finish()
+  gfx.pop()
+end
+
+function pause.leave()
+  still = nil
+end
+
 local function resume()
+  pause.leave()
   S.name = pause.under
   current = S[pause.under]
 end
@@ -404,15 +434,16 @@ end
 function pause.update() end
 
 function pause.draw()
-  S[pause.under].draw()
+  if not frozen() then S[pause.under].draw() end
 end
 
-local BLUR = { { -3, 0 }, { 3, 0 }, { 0, -3 }, { 0, 3 } }
-
 function pause.drawUI()
-  gfx.setColor(1, 1, 1, 0.28)
-  for _, o in ipairs(BLUR) do gfx.draw(Render.game, o[1], o[2], 0, 2, 2) end
-  Ui.dim(0.58)
+  freeze()
+  gfx.push('all')
+  gfx.origin()
+  gfx.setColor(1, 1, 1, 1)
+  gfx.draw(still)
+  gfx.pop()
   local f = Ui.fonts
   Ui.panel(Ui.W / 2 - 230, 96, 460, 342)
   heading('PAUSED', 114)
