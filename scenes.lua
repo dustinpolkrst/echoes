@@ -429,7 +429,7 @@ local select_ = {}
 S.select = select_
 select_.returnTo = { 'title' }
 
-local CARD_W, CARD_H, CARD_GAP = 206, 84, 16
+local CARD_W, CARD_H, CARD_GAP = 172, 84, 10
 local ROW_H, LABEL_H = CARD_H + 14, 28
 local AREA_TOP, AREA_BOTTOM = 92, 488
 
@@ -507,20 +507,20 @@ local function drawCard(i, x, y, selected, pulse)
   gfx.rectangle('line', x + 0.5, y + 0.5, CARD_W - 1, CARD_H - 1, 6, 6)
   local numColor = open and (done and C.cyan or C.amber) or C.locked
   Ui.text(tostring(i), f.big, y + (CARD_H - f.big:getHeight()) / 2, numColor, open and 1 or 0.7, x + 10, 44, 'center')
-  local tx = x + 66
+  local tx = x + 60
   if open then
-    Ui.text(Levels[i].name, f.small, y + 12, C.white, 0.95, tx, CARD_W - 76, 'left')
+    Ui.text(Levels[i].name, f.small, y + 12, C.white, 0.95, tx, CARD_W - 64, 'left')
     if done then
-      Ui.text(rec.bestTime and clock(rec.bestTime) or '--', f.small, y + 38, C.dim, 0.95, tx, CARD_W - 76, 'left')
+      Ui.text(rec.bestTime and clock(rec.bestTime) or '--', f.small, y + 38, C.dim, 0.95, tx, CARD_W - 64, 'left')
       local n = rec.bestDeaths
-      Ui.text(n == nil and '' or (n == 0 and 'no deaths' or (n == 1 and '1 death' or n .. ' deaths')), f.tiny, y + 59, C.dim, 0.8, tx, CARD_W - 76, 'left')
-      drawCheck(x + CARD_W - 20, y + 18, 0.9)
+      Ui.text(n == nil and '' or (n == 0 and 'no deaths' or (n == 1 and '1 death' or n .. ' deaths')), f.tiny, y + 59, C.dim, 0.8, tx, CARD_W - 64, 'left')
+      drawCheck(x + CARD_W - 20, y + CARD_H - 18, 0.9)
     else
-      Ui.text('not cleared', f.tiny, y + 40, C.dim, 0.7, tx, CARD_W - 76, 'left')
+      Ui.text('not cleared', f.tiny, y + 40, C.dim, 0.7, tx, CARD_W - 64, 'left')
     end
   else
-    Ui.text('locked', f.small, y + 30, C.locked, 0.8, tx, CARD_W - 76, 'left')
-    drawLock(x + CARD_W - 20, y + 18, 0.8)
+    Ui.text('locked', f.small, y + 30, C.locked, 0.8, tx, CARD_W - 64, 'left')
+    drawLock(x + CARD_W - 20, y + CARD_H - 18, 0.8)
   end
 end
 

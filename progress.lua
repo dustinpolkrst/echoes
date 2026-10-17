@@ -1,7 +1,7 @@
 local Progress = {}
 
 Progress.ACT_SIZE = 4
-Progress.COLS = 4
+Progress.COLS = 5
 
 local ROMAN = { 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X' }
 

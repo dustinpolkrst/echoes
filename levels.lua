@@ -2,6 +2,7 @@
 -- M mirror shrine, ~ veil, % crumble stone.
 return {
   {
+    act = 1,
     name = 'Wake',
     hint = 'Arrows move. Jump with Z, Space or Up. Hold jump to go higher.',
     map = {
@@ -138,6 +139,7 @@ return {
     },
   },
   {
+    act = 2,
     name = 'Other Side',
     hint = 'A shrine reflects your echo. Where is the reflection of the plate?',
     map = {
@@ -230,6 +232,7 @@ return {
     },
   },
   {
+    act = 3,
     name = 'Ferry',
     hint = 'Record a walk you can take. Let the reflection take the one you cannot.',
     map = {
