@@ -52,6 +52,22 @@ function F.run(Scenes)
   settle()
   check('pause Restart level returns to play with a fresh world', Scenes.name == 'playing' and Scenes.playing.world ~= world)
 
+  local Render = require 'render'
+  local function playingFrame()
+    Scenes.draw()
+    return { pixels = Render.game:newImageData():getString(), t = Render.t }
+  end
+  local function differingBytes(a)
+    Render.t = a.t
+    local b = playingFrame().pixels
+    local n = 0
+    for i = 1, #a.pixels do
+      if a.pixels:byte(i) ~= b:byte(i) then n = n + 1 end
+    end
+    return n
+  end
+
+  local beforeSettings = playingFrame()
   key('p')
   for _ = 1, 3 do key('down') end
   key('return')
@@ -69,6 +85,8 @@ function F.run(Scenes)
   check('Esc in settings returns to pause', Scenes.name == 'pause')
   key('escape')
   check('Esc resumes the level', Scenes.name == 'playing')
+  local changed = differingBytes(beforeSettings)
+  check('the level draws the same after pause, Settings, back, resume', changed == 0, changed .. ' bytes differ')
 
   Scenes.inputSource = Solutions.provider(1)
   for _ = 1, 3000 do
@@ -100,6 +118,8 @@ function F.run(Scenes)
   settle()
   check('an unlocked level starts from the grid', Scenes.name == 'playing' and Scenes.playing.index == 2)
 
+  step(30)
+  local beforeSelect = playingFrame()
   key('p')
   key('down')
   key('down')
@@ -109,6 +129,9 @@ function F.run(Scenes)
   settle()
   check('Esc in select returns to pause', Scenes.name == 'pause')
   check('Quit is the last pause entry', Scenes.pause.menu.items[#Scenes.pause.menu.items].label == 'Quit game')
+  key('escape')
+  changed = differingBytes(beforeSelect)
+  check('the level draws the same after pause, Level select, back, resume', changed == 0, changed .. ' bytes differ')
 
   local realQuit, quits = love.event.quit, 0
   love.event.quit = function() quits = quits + 1 end

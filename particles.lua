@@ -1,14 +1,13 @@
 local M = {}
 
-local list = {}
 local rand = love.math.random
 
-function M.clear()
-  list = {}
+function M.new()
+  return {}
 end
 
 -- opts: speed, spread (radians around dir), dir, life, grav, size, color {r,g,b}, glow
-function M.burst(x, y, n, opts)
+function M.burst(list, x, y, n, opts)
   local speed = opts.speed or 40
   local dir = opts.dir or 0
   local spread = opts.spread or math.pi * 2
@@ -27,7 +26,7 @@ function M.burst(x, y, n, opts)
   end
 end
 
-function M.update(dt)
+function M.update(list, dt)
   for i = #list, 1, -1 do
     local p = list[i]
     p.life = p.life - dt
@@ -44,7 +43,7 @@ function M.update(dt)
   end
 end
 
-function M.draw()
+function M.draw(list)
   local gfx = love.graphics
   for _, p in ipairs(list) do
     local a = math.min(1, p.life / p.max * 1.5)

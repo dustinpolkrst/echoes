@@ -45,7 +45,6 @@ function R.init()
   R.glowImg:setFilter('linear', 'linear')
 
   R.t = 0
-  R.doorOpen = {}
 end
 
 local function glow(x, y, r, cr, cg, cb, a)
@@ -416,7 +415,7 @@ end
 
 -- Level layer --------------------------------------------------------------
 
-local function bakeLayer(world)
+local function bake(world)
   local canvas = gfx.newCanvas(world.W * T, world.H * T)
   canvas:setFilter('nearest', 'nearest')
   gfx.push('all')
@@ -432,22 +431,35 @@ local function bakeLayer(world)
     end
   end
   gfx.pop()
-  R.layer = canvas
-  R.layerWorld, R.layerVersion = world, Assets.version
+  return canvas
 end
 
-function R.buildLevel(world)
-  bakeLayer(world)
-  R.doorOpen = {}
-  for id in pairs(world.doorCells) do R.doorOpen[id] = 0 end
+local viewsByWorld = setmetatable({}, { __mode = 'k' })
+
+local function view(world)
+  local v = viewsByWorld[world]
+  if not v then
+    v = { doors = {} }
+    viewsByWorld[world] = v
+  end
+  return v
+end
+
+local function layer(world)
+  local v = view(world)
+  if v.version ~= Assets.version then
+    v.canvas, v.version = bake(world), Assets.version
+  end
+  return v.canvas
 end
 
 function R.update(world, dt)
   R.t = R.t + dt
+  local doors = view(world).doors
   for id, open in pairs(world.doorOpen) do
     local target = open and 1 or 0
-    local cur = R.doorOpen[id] or 0
-    R.doorOpen[id] = cur + clamp(target - cur, -dt * 3, dt * 3)
+    local cur = doors[id] or 0
+    doors[id] = cur + clamp(target - cur, -dt * 3, dt * 3)
   end
 end
 
@@ -639,10 +651,10 @@ end
 
 function R.drawWorld(world)
   local t = R.t
-  if R.layerWorld == world and R.layerVersion ~= Assets.version then bakeLayer(world) end
   gfx.setColor(1, 1, 1)
-  gfx.draw(R.layer, 0, 0)
-  for id, cells in pairs(world.doorCells) do drawDoor(world, id, cells, R.doorOpen[id] or 0) end
+  gfx.draw(layer(world), 0, 0)
+  local doors = view(world).doors
+  for id, cells in pairs(world.doorCells) do drawDoor(world, id, cells, doors[id] or 0) end
   for ty = 0, world.H - 1 do
     for tx = 0, world.W - 1 do
       local c = world.cells[ty][tx]
@@ -688,8 +700,9 @@ function R.drawLighting(world, camx, camy, extra)
     end
     glow(l.x, l.y, r, spec.color[1], spec.color[2], spec.color[3], spec.alpha)
   end
+  local doors = view(world).doors
   for id, cells in pairs(world.doorCells) do
-    local open = R.doorOpen[id] or 0
+    local open = doors[id] or 0
     if open < 0.95 then
       local col = PLATE_COLORS[cells[1].idx]
       local c = cells[floor(#cells / 2) + 1]

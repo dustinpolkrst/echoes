@@ -48,7 +48,6 @@ function S.init(store)
 end
 
 
-local cam = { x = 0, y = 0 }
 local LOOKAHEAD = 30
 
 local function camTarget(world)
@@ -61,8 +60,9 @@ local function camTarget(world)
   return tx, ty
 end
 
-local function followCamera(world, snap)
-  local tx, ty = camTarget(world)
+local function followCamera(stage, snap)
+  local cam = stage.cam
+  local tx, ty = camTarget(stage.world)
   if snap then
     cam.x, cam.y = tx, ty
   else
@@ -73,69 +73,77 @@ local function followCamera(world, snap)
 end
 
 
-local shake = 0
 local stats = { deaths = 0 }
 
 local DUST = { 0.55, 0.55, 0.8 }
-local function react(world, ev)
+local function react(stage, ev)
   local x, y = ev.x, ev.y
+  local function burst(n, opts) Particles.burst(stage.particles, x, y, n, opts) end
   if ev.name == 'jump' then
     Sfx.play('jump')
-    Particles.burst(x, y, 6, { dir = -pi / 2, spread = pi * 0.9, speed = 30, life = 0.35, grav = 60, color = DUST })
+    burst(6, { dir = -pi / 2, spread = pi * 0.9, speed = 30, life = 0.35, grav = 60, color = DUST })
   elseif ev.name == 'land' then
     Sfx.play('land', 0.9 + min(0.3, ev.v / 1500))
-    Particles.burst(x, y, 4 + floor(ev.v / 60), { dir = -pi / 2, spread = pi * 0.95, speed = 45, life = 0.4, grav = 80, color = DUST })
+    burst(4 + floor(ev.v / 60), { dir = -pi / 2, spread = pi * 0.95, speed = 45, life = 0.4, grav = 80, color = DUST })
   elseif ev.name == 'death' then
     Sfx.play('death')
     Input.rumble(0.6, 0.25)
     stats.deaths = stats.deaths + 1
-    shake = data().settings.shake and 5 or 0
-    Particles.burst(x, y, 34, { speed = 110, life = 0.8, grav = 120, drag = 1.2, color = { 1, 0.7, 0.25 }, glow = true, size = 2 })
-    Particles.burst(x, y, 16, { speed = 60, life = 1.0, grav = -10, color = { 1, 0.95, 0.7 }, glow = true })
+    stage.shake = data().settings.shake and 5 or 0
+    burst(34, { speed = 110, life = 0.8, grav = 120, drag = 1.2, color = { 1, 0.7, 0.25 }, glow = true, size = 2 })
+    burst(16, { speed = 60, life = 1.0, grav = -10, color = { 1, 0.95, 0.7 }, glow = true })
   elseif ev.name == 'cast' then
     Sfx.play('cast', ev.v and 0.8 or 1)
     Input.rumble(0.25, 0.12)
-    Particles.burst(x, y, 26, { speed = 70, life = 0.7, drag = 2, color = ev.v and { 0.85, 0.5, 1 } or { 0.4, 0.95, 1 }, glow = true })
+    burst(26, { speed = 70, life = 0.7, drag = 2, color = ev.v and { 0.85, 0.5, 1 } or { 0.4, 0.95, 1 }, glow = true })
   elseif ev.name == 'crumble' then
     Sfx.play('crumble', ev.v and 1 or 1.4)
-    Particles.burst(x, y, ev.v and 14 or 5, { dir = pi / 2, spread = pi * 0.8, speed = 40, life = 0.6, grav = 160, color = { 0.55, 0.42, 0.28 } })
+    burst(ev.v and 14 or 5, { dir = pi / 2, spread = pi * 0.8, speed = 40, life = 0.6, grav = 160, color = { 0.55, 0.42, 0.28 } })
   elseif ev.name == 'plate' then
     Sfx.play('plate', ev.v and 1 or 0.8)
-    Particles.burst(x, y - 2, 6, { dir = -pi / 2, spread = pi, speed = 40, life = 0.4, grav = 80, color = { 0.6, 0.95, 1 }, glow = true })
+    Particles.burst(stage.particles, x, y - 2, 6, { dir = -pi / 2, spread = pi, speed = 40, life = 0.4, grav = 80, color = { 0.6, 0.95, 1 }, glow = true })
   elseif ev.name == 'door' then
     Sfx.play('door', ev.v and 1 or 0.85)
-    Particles.burst(x, y, 12, { dir = pi / 2, spread = pi, speed = 25, life = 0.7, grav = 40, color = DUST, jitter = 8 })
+    burst(12, { dir = pi / 2, spread = pi, speed = 25, life = 0.7, grav = 40, color = DUST, jitter = 8 })
   elseif ev.name == 'goal' then
     Sfx.play('goal')
-    Particles.burst(x, y, 30, { speed = 90, life = 1.0, drag = 1.5, color = { 0.7, 1, 0.95 }, glow = true })
+    burst(30, { speed = 90, life = 1.0, drag = 1.5, color = { 0.7, 1, 0.95 }, glow = true })
   end
 end
 
-local function ambientParticles(world)
+local function ambientParticles(stage)
   local rand = love.math.random
+  local world = stage.world
   for _, e in ipairs(world.echoes) do
     if rand() < 0.2 then
-      Particles.burst(e.x + e.w / 2 + (rand() - 0.5) * 6, e.y + 8, 1, { dir = -pi / 2, spread = 0.6, speed = 14, life = 0.7, color = { 0.4, 0.95, 1 }, glow = true })
+      Particles.burst(stage.particles, e.x + e.w / 2 + (rand() - 0.5) * 6, e.y + 8, 1, { dir = -pi / 2, spread = 0.6, speed = 14, life = 0.7, color = { 0.4, 0.95, 1 }, glow = true })
     end
   end
   for _, l in ipairs(world.lights) do
     if rand() < 0.06 then
-      Particles.burst(l.x, l.y - 2, 1, { dir = -pi / 2, spread = 0.8, speed = 18, life = 0.9, color = { 1, 0.6, 0.2 }, glow = true })
+      Particles.burst(stage.particles, l.x, l.y - 2, 1, { dir = -pi / 2, spread = 0.8, speed = 18, life = 0.9, color = { 1, 0.6, 0.2 }, glow = true })
     end
   end
 end
 
 
-local function stepWorld(world, input)
-  Level.step(world, input)
-  for _, ev in ipairs(world.events) do react(world, ev) end
-  ambientParticles(world)
-  Particles.update(DT)
-  Render.update(world, DT)
-  shake = shake * 0.88
+local function setStage(stage, world)
+  stage.world, stage.cam, stage.particles, stage.shake = world, {}, Particles.new(), 0
+  followCamera(stage, true)
 end
 
-local function drawScene(world)
+local function stepStage(stage, input)
+  local world = stage.world
+  Level.step(world, input)
+  for _, ev in ipairs(world.events) do react(stage, ev) end
+  ambientParticles(stage)
+  Particles.update(stage.particles, DT)
+  Render.update(world, DT)
+  stage.shake = stage.shake * 0.88
+end
+
+local function drawScene(stage)
+  local world, cam, shake = stage.world, stage.cam, stage.shake
   Render.beginFrame()
   local sx, sy = 0, 0
   if shake > 0.3 then
@@ -146,7 +154,7 @@ local function drawScene(world)
   gfx.push()
   gfx.translate(-camx, -camy)
   Render.drawWorld(world)
-  Particles.draw()
+  Particles.draw(stage.particles)
   gfx.pop()
   Render.drawLighting(world, camx, camy)
   Render.drawGlows(world, camx, camy)
@@ -174,11 +182,8 @@ local HALL = {
 }
 
 local function loadAmbient()
-  ambient.world = Level.new({ name = 'hall', map = HALL })
-  Render.buildLevel(ambient.world)
+  setStage(ambient, Level.new({ name = 'hall', map = HALL }))
   ambient.frame = 0
-  Particles.clear()
-  followCamera(ambient.world, true)
 end
 
 local function demoInput(f)
@@ -194,15 +199,15 @@ end
 
 local function stepAmbient()
   ambient.frame = ambient.frame + 1
-  stepWorld(ambient.world, demoInput(ambient.frame))
+  stepStage(ambient, demoInput(ambient.frame))
   local p = ambient.world.player
   if p.y > 400 or p.state == 'dead' then loadAmbient() end
-  followCamera(ambient.world)
+  followCamera(ambient)
 end
 
 local function ambientScene(scene)
   scene.update = stepAmbient
-  scene.draw = function() drawScene(ambient.world) end
+  scene.draw = function() drawScene(ambient) end
 end
 
 
@@ -307,43 +312,39 @@ local playing = {}
 S.playing = playing
 
 local function loadAttempt()
-  playing.world = Level.new(Levels[playing.index])
-  Render.buildLevel(playing.world)
-  Particles.clear()
-  followCamera(playing.world, true)
+  setStage(playing, Level.new(Levels[playing.index]))
   playing.t = 0
   playing.attemptT = 0
 end
 
-local function playerFocus(world)
-  local p = world.player
+local function playerFocus()
+  local p, cam = playing.world.player, playing.cam
   return (p.x + p.w / 2 - cam.x) * 2, (p.y + p.h / 2 - cam.y) * 2
 end
 
 function playing.enter(index)
   playing.index = index
-  shake = 0
   loadAttempt()
 end
 
 function playing.update()
   local world = playing.world
-  stepWorld(world, S.inputSource(world))
+  stepStage(playing, S.inputSource(world))
   playing.t = playing.t + DT
   local p = world.player
   if p.state ~= 'cleared' then playing.attemptT = playing.attemptT + DT end
-  followCamera(world)
+  followCamera(playing)
   if p.state == 'dead' and p.stateT >= Player.DEATH_DELAY then
-    local cx, cy = playerFocus(world)
+    local cx, cy = playerFocus()
     Trans.start(loadAttempt, cx, cy)
   elseif p.state == 'cleared' and p.stateT >= 1.1 then
-    local cx, cy = playerFocus(world)
+    local cx, cy = playerFocus()
     Trans.start(function() S.go('levelclear', playing.index, playing.attemptT) end, cx, cy)
   end
 end
 
 function playing.draw()
-  drawScene(playing.world)
+  drawScene(playing)
 end
 
 function playing.drawUI()
@@ -356,7 +357,7 @@ function playing.drawUI()
   end
   Hud.draw(world, {
     index = playing.index, name = world.name, time = playing.attemptT, deaths = stats.deaths,
-    camx = cam.x, camy = cam.y, nameAlpha = 1 - a,
+    camx = playing.cam.x, camy = playing.cam.y, nameAlpha = 1 - a,
   })
   local p = world.player
   if p.state == 'cleared' then
@@ -370,7 +371,7 @@ local function cleared() return playing.world.player.state == 'cleared' end
 playing.actions = {
   restart = function()
     if cleared() then return end
-    local cx, cy = playerFocus(playing.world)
+    local cx, cy = playerFocus()
     Trans.start(loadAttempt, cx, cy)
   end,
   pause = function()
@@ -505,7 +506,7 @@ function select_.update()
   select_.scroll = select_.scroll + (target - select_.scroll) * (1 - math.exp(-14 * DT))
 end
 
-select_.draw = function() drawScene(ambient.world) end
+select_.draw = function() drawScene(ambient) end
 
 local function drawCheck(x, y, a)
   gfx.setLineWidth(2.5)
@@ -690,11 +691,11 @@ end
 function clear.update()
   clear.t = clear.t + DT
   Render.update(playing.world, DT)
-  Particles.update(DT)
+  Particles.update(playing.particles, DT)
 end
 
 function clear.draw()
-  drawScene(playing.world)
+  drawScene(playing)
 end
 
 local function statRow(label, value, y, badge, a, x, w)
