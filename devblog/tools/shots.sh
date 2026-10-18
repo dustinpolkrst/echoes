@@ -53,7 +53,13 @@ SHOTS='
 07-ferry      1b2f9ce  ferry-cast              10 280
 07-ferry      1b2f9ce  ferry-boarding          10 340
 07-ferry      1b2f9ce  ferry-across            10 420
+07-ferry      1afca9f  ferry-new-wait          10 150
+07-ferry      1afca9f  ferry-new-cast          10 330
+07-ferry      1afca9f  ferry-new-ride          10 400
+07-ferry      1afca9f  ferry-new-across        10 450
 08-next       1b2f9ce  select-ferry-next       select 9
+09-layout     1afca9f  select-flat-folder      select 12
+09-layout     eccb521  select-game-folder      select 12
 '
 
 game_dir() {
@@ -111,12 +117,18 @@ while read -r post commit name args; do
 done <<< "$SHOTS"
 echo "$count shots"
 
-# Post 05 claims the pause fix left the picture unchanged. af3114f's own --diff checks that.
-if [ -z "$ONLY" ] || [ "$ONLY" = "05-bench" ]; then
-	[ -n "${exported[af3114f]:-}" ] || export_commit af3114f
-	save=$(cygpath -u "$APPDATA")/LOVE/blogshot-af3114f
+# Posts claim some pairs are pixel-identical. The named commit's own --diff checks each one and fails the run if not.
+diff_pair() {
+	local post=$1 commit=$2 a=$3 b=$4 save
+	[ -z "$ONLY" ] || [ "$ONLY" = "$post" ] || return 0
+	[ -n "${exported[$commit]:-}" ] || export_commit "$commit"
+	save=$(cygpath -u "$APPDATA")/LOVE/blogshot-$commit
 	mkdir -p "$save"
-	cp "$BLOG/static/images/05-bench/pause-before-fix.png" "$save/before.png"
-	cp "$BLOG/static/images/05-bench/pause-after-fix.png" "$save/after.png"
-	(cd "$WORK" && "$LOVE" "$(game_dir af3114f)" --diff before.png after.png) | grep '^DIFF'
-fi
+	cp "$BLOG/static/images/$post/$a.png" "$save/before.png"
+	cp "$BLOG/static/images/$post/$b.png" "$save/after.png"
+	(cd "$WORK" && "$LOVE" "$(game_dir "$commit")" --diff before.png after.png) | grep '^DIFF'
+}
+
+# Post 05: the pause fix left the picture unchanged. Post 09: moving the files changed no pixel.
+diff_pair 05-bench af3114f pause-before-fix pause-after-fix
+diff_pair 09-layout eccb521 select-flat-folder select-game-folder

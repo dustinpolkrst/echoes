@@ -59,11 +59,16 @@ A level unlocks when the previous one is cleared. Progress (cleared levels, best
 
 Runs `--selftest`, `--flow` and `--slack` in turn, stops at the first failure and exits nonzero.
 
+## Dev blog
+
+`devblog/` is a Hugo site with one post per milestone of the build. Preview it with `hugo server --source devblog` from the repo root. `devblog/README.md` covers building it and regenerating its screenshots.
+
 ## Folder map
 
 ```
 README.md
 scripts/            play and test launchers (.cmd for Windows, .sh elsewhere)
+devblog/            the Hugo dev blog, separate from the game
 game/               the LÖVE project root (love loads this folder)
   main.lua          fixed-step loop and the command-line modes (--selftest, --flow, --shot, ...)
   conf.lua          window and save identity; switches off graphics and audio for headless modes

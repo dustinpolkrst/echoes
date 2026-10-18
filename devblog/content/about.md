@@ -5,17 +5,18 @@ description: "What Echoes is, how to play it, and how an echo behaves."
 
 Echoes is a puzzle platformer for LÖVE 11.5. You are a small lantern-spirit in a ruin lit by hanging torches. You cannot jump very high and you cannot cross wide pits. What you can do is remember.
 
-{{< figure src="images/07-ferry/ferry-boarding.png" caption="Level 10, Ferry. The light rides a violet, mirrored echo across a row of spikes it could not jump." >}}
+{{< figure src="images/07-ferry/ferry-new-ride.png" caption="Level 10, Ferry. The light rides a violet, mirrored echo across a row of spikes it could not jump." >}}
 
 ## Run it
 
-With LÖVE installed, run the game folder:
+With LÖVE 11.5 installed, run the play script from the repository root:
 
 ```
-love echoes
+scripts\play.cmd        (Windows)
+scripts/play.sh         (macOS, Linux)
 ```
 
-On Windows, `"C:/Program Files/LOVE/lovec.exe" echoes` also prints the console output.
+LÖVE loads the `game/` folder, so `love game` from the repository root also works. On Windows, `"C:/Program Files/LOVE/lovec.exe" game` also prints the console output.
 
 ## Controls
 
