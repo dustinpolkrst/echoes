@@ -1,5 +1,5 @@
 -- Legend: # solid, ^ spike, = one-way, P start, G goal, t torch, a-d plates, A-D matching doors,
--- M mirror shrine, ~ veil, % crumble stone, c checkpoint.
+-- M mirror shrine, ~ veil, % crumble stone, w waystone (checkpoint).
 --
 -- Each act lives in its own file under content/acts so two people can build two acts at once without
 -- touching the same file. The first level of each file starts that act; an empty file is an act with no

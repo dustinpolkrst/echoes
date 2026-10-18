@@ -13,12 +13,20 @@ local AMBIENT = { 0.26, 0.25, 0.46 }
 local PLATE_COLORS = { { 0.35, 0.95, 1 }, { 1, 0.45, 0.85 }, { 1, 0.85, 0.35 }, { 0.55, 1, 0.5 } }
 local MIRROR = { 0.8, 0.5, 1 }
 local VEIL = { 1, 0.72, 0.3 }
+local BEACON = { 0.6, 1, 0.8 }
+-- idle: the alpha while the tile is not active (checkpoints); the light carries its cell for that.
 local LIGHTS = {
   torch = { color = { 1, 0.58, 0.25 }, flicker = 3, alpha = 0.92 },
   goal = { color = { 0.55, 1, 0.95 }, breathe = 3, alpha = 0.95 },
   mirror = { color = MIRROR, breathe = 4, alpha = 0.8 },
   veil = { color = VEIL, breathe = 2, alpha = 0.5 },
+  checkpoint = { color = BEACON, breathe = 3, alpha = 0.85, idle = 0.18 },
 }
+
+local function lightAlpha(spec, l)
+  if spec.idle and not l.cell.active then return spec.idle end
+  return spec.alpha
+end
 
 local function hash(x, y)
   local n = sin(x * 12.9898 + y * 78.233) * 43758.5453
@@ -321,6 +329,37 @@ local function proceduralCrumble(world, c, x, y, t)
   gfx.rectangle('fill', x + 3, y + 13, 1, 1)
 end
 
+-- A waystone: a cairn of three stones with a crystal set in the top one. Dark until touched, then it burns.
+local function proceduralCheckpoint(world, c, x, y, t)
+  local cx = x + T / 2
+  gfx.setColor(0.14, 0.13, 0.24)
+  gfx.rectangle('fill', cx - 6, y + 11, 12, 5)
+  gfx.setColor(0.2, 0.18, 0.32)
+  gfx.rectangle('fill', cx - 5, y + 11, 10, 1)
+  gfx.rectangle('fill', cx - 4, y + 6, 8, 5)
+  gfx.setColor(0.27, 0.25, 0.4)
+  gfx.rectangle('fill', cx - 3, y + 6, 6, 1)
+  gfx.rectangle('fill', cx - 3, y + 2, 6, 4)
+  gfx.setColor(0.34, 0.32, 0.48)
+  gfx.rectangle('fill', cx - 2, y + 2, 4, 1)
+  if c.active then
+    local pulse = 0.75 + 0.25 * sin(t * 5 + c.tx)
+    gfx.setColor(BEACON[1], BEACON[2], BEACON[3], pulse)
+    gfx.rectangle('fill', cx - 1, y - 1, 2, 7)
+    gfx.rectangle('fill', cx - 2, y + 1, 4, 3)
+    gfx.setColor(1, 1, 1, 0.9)
+    gfx.rectangle('fill', cx - 1, y + 1, 1, 2)
+    local spark = floor((t * 7 + c.tx) % 4)
+    gfx.setColor(BEACON[1], BEACON[2], BEACON[3], 0.6)
+    gfx.rectangle('fill', cx - 4 + (spark % 2) * 7, y - 3 + floor(spark / 2) * 2, 1, 1)
+  else
+    gfx.setColor(0.3, 0.42, 0.4, 0.9)
+    gfx.rectangle('fill', cx - 1, y, 2, 6)
+    gfx.setColor(0.45, 0.6, 0.55, 0.7)
+    gfx.rectangle('fill', cx - 1, y + 1, 1, 2)
+  end
+end
+
 local function variantOf(c) return { v = hash(c.tx, c.ty) } end
 
 TILES.solid.draw = withSlot('solid', proceduralSolid, variantOf)
@@ -335,6 +374,9 @@ TILES.mirror.draw = withSlot('mirror', proceduralMirror)
 TILES.veil.draw = withSlot('veil', proceduralVeil)
 TILES.crumble.draw = withSlot('crumble', proceduralCrumble, function(c)
   return { frame = c.gone and 3 or c.crack and 2 or 1 }
+end)
+TILES.checkpoint.draw = withSlot('checkpoint', proceduralCheckpoint, function(c)
+  return { frame = c.active and 2 or 1 }
 end)
 
 -- Doors span several cells, so they are drawn as one slab per letter rather than per tile.
@@ -698,7 +740,7 @@ function R.drawLighting(world, camx, camy, extra)
     else
       r = r + sin(t * 2 + l.x * 0.1) * spec.breathe
     end
-    glow(l.x, l.y, r, spec.color[1], spec.color[2], spec.color[3], spec.alpha)
+    glow(l.x, l.y, r, spec.color[1], spec.color[2], spec.color[3], lightAlpha(spec, l))
   end
   local doors = view(world).doors
   for id, cells in pairs(world.doorCells) do
@@ -740,7 +782,7 @@ function R.drawGlows(world, camx, camy)
   for _, l in ipairs(world.lights) do
     local spec = LIGHTS[l.kind]
     local lift = spec.flicker and 4 or 0
-    glow(l.x, l.y - lift, spec.flicker and 16 or 24, spec.color[1], spec.color[2], spec.color[3], 0.55)
+    glow(l.x, l.y - lift, spec.flicker and 16 or 24, spec.color[1], spec.color[2], spec.color[3], 0.65 * lightAlpha(spec, l))
   end
   gfx.pop()
 end

@@ -336,6 +336,53 @@ local function testDoorFloor()
     ('bottom=%.1f'):format(w.player.y + w.player.h))
 end
 
+local CHECKPOINT_ROWS = {
+  '################',
+  '#..............#',
+  '#.......A......#',
+  '#P.a.w..A..w.^G#',
+  '############%###',
+  '#..............#',
+  '################',
+}
+
+local function testCheckpoint()
+  local def = { name = 'waystones', map = CHECKPOINT_ROWS }
+  local w = Level.new(def)
+  idle(w, 5)
+  check('a fresh level has no respawn point', w.respawn == nil and #w.checkpoints == 2 and not w.checkpoints[1].active)
+  local lit = 0
+  run(w, { { 'R', cond.atX(5 * 16 + 3) } }, function(c)
+    for _, ev in ipairs(c.events) do if ev.name == 'checkpoint' then lit = lit + 1 end end
+  end)
+  check('touching a waystone lights it and sets the respawn point', w.respawn == 1 and w.checkpoints[1].active and lit == 1)
+  run(w, { { 'L', cond.atXLeft(60) }, { 'R', cond.atX(5 * 16 + 3) } }, function(c)
+    for _, ev in ipairs(c.events) do if ev.name == 'checkpoint' then lit = lit + 1 end end
+  end)
+  check('touching the lit waystone again does nothing', lit == 1 and w.respawn == 1)
+
+  run(w, { { 'L', cond.atXLeft(3 * 16 + 3) }, { 190, '-' }, { 1, 'X' }, { 'R', cond.atX(11 * 16 + 3) } })
+  check('a later waystone takes over as the respawn point', w.respawn == 2 and w.checkpoints[2].active and not w.checkpoints[1].active)
+  run(w, { { 'R', cond.atX(12 * 16 - 4) }, { 40, '-' } })
+  check('the arena is spent before respawning: echo out, door held, crumble gone',
+    #w.echoes == 1 and w.doorOpen.a == true and w.crumbles[1].gone, ('echoes=%d door=%s gone=%s'):format(#w.echoes, tostring(w.doorOpen.a), tostring(w.crumbles[1].gone)))
+
+  local r = Level.new(def, { checkpoint = w.respawn })
+  idle(r, 2)
+  local stand = Level.standingOn(r.checkpoints[2])
+  check('respawn stands the player on the lit waystone', r.respawn == 2 and r.checkpoints[2].active
+    and math.abs(r.player.x - stand.x) < 0.01 and math.abs(r.player.y - stand.y) < 0.01 and r.player.state == 'ground',
+    ('x=%.1f y=%.1f state=%s'):format(r.player.x, r.player.y, r.player.state))
+  check('respawn carries nothing in: no echoes, empty memory, door shut, crumble intact',
+    #r.echoes == 0 and r.rec.count <= 2 and r.doorOpen.a == false and not r.crumbles[1].gone and not r.crumbles[1].crack)
+  local back = Level.new(def)
+  run(back, { { 'R', cond.atX(3 * 16 + 3) }, { 190, '-' }, { 1, 'X' }, { 'R', cond.atX(11 * 16 + 3) }, { 'L', cond.atXLeft(5 * 16 + 3) } })
+  check('walking back onto an earlier waystone makes it the respawn point',
+    back.respawn == 1 and back.checkpoints[1].active and not back.checkpoints[2].active, 'respawn=' .. tostring(back.respawn))
+  local okNew = pcall(Level.new, def, { checkpoint = 3 })
+  check('a respawn at a checkpoint the level lacks is refused', not okNew)
+end
+
 local function testStairwayNeedsEcho()
   local w = Level.new(Levels[3])
   run(w, { { 'R', cond.atX(66) }, { 'RJ', cond.onTop(192, 80) } })
@@ -571,6 +618,7 @@ function S.run()
   testVeil()
   testCrumble()
   testDoorFloor()
+  testCheckpoint()
   testStairwayNeedsEcho()
   testOtherSideNeedsMirror()
   testTrapdoorNeedsCast()
