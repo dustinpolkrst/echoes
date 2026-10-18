@@ -1,0 +1,16 @@
+{{ define "main" }}
+<article class="post">
+  <header>
+    {{ with .Params.part }}<p class="kicker">Part {{ . }}</p>{{ end }}
+    <h1>{{ .Title }}</h1>
+    {{ with .Params.commits }}<p class="meta">Commits {{ range $i, $c := . }}{{ if $i }}, {{ end }}<code>{{ $c }}</code>{{ end }}</p>{{ end }}
+  </header>
+  {{ .Content }}
+  {{ if eq .Section "posts" }}
+  <nav class="pager">
+    {{ with .NextInSection }}<a class="prev" href="{{ .RelPermalink }}">← {{ .Title }}</a>{{ end }}
+    {{ with .PrevInSection }}<a class="next" href="{{ .RelPermalink }}">{{ .Title }} →</a>{{ end }}
+  </nav>
+  {{ end }}
+</article>
+{{ end }}

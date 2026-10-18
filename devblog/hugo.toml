@@ -1,0 +1,24 @@
+baseURL = "/"
+languageCode = "en-us"
+title = "Echoes dev blog"
+disableKinds = ["taxonomy", "term"]
+
+[params]
+description = "Building Echoes, a LÖVE puzzle platformer about replaying your last three seconds."
+
+[markup.highlight]
+style = "github-dark"
+tabWidth = 2
+
+[markup.goldmark.renderer]
+unsafe = true
+
+[menus]
+[[menus.main]]
+name = "Posts"
+pageRef = "/"
+weight = 1
+[[menus.main]]
+name = "About the game"
+pageRef = "/about"
+weight = 2

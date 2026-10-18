@@ -1,0 +1,8 @@
+{{- $src := .Get "src" -}}
+{{- if not (fileExists (printf "static/%s" $src)) -}}
+  {{- errorf "figure: %s does not exist under static/ (%s)" $src .Position -}}
+{{- end -}}
+<figure class="shot{{ with .Get "class" }} {{ . }}{{ end }}">
+  <a href="{{ $src | relURL }}"><img src="{{ $src | relURL }}" alt="{{ .Get "alt" | default (.Get "caption" | plainify) }}" loading="lazy" class="game" width="960" height="540"></a>
+  {{ with .Get "caption" }}<figcaption>{{ . | markdownify }}</figcaption>{{ end }}
+</figure>

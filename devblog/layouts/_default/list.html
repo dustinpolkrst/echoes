@@ -1,0 +1,7 @@
+{{ define "main" }}
+<section class="intro">
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+</section>
+{{ partial "postlist.html" .Pages.ByWeight }}
+{{ end }}
