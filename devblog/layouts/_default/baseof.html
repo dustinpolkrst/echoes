@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="masthead">
-    <a class="brand" href="{{ "/" | relURL }}"><span class="flame" aria-hidden="true"></span>ECHOES <small>dev blog</small></a>
+    <a class="brand" href="{{ site.Home.RelPermalink }}"><span class="flame" aria-hidden="true"></span>ECHOES <small>dev blog</small></a>
     <nav>
       {{ range site.Menus.main }}<a href="{{ .URL }}">{{ .Name }}</a>{{ end }}
     </nav>

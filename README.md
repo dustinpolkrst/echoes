@@ -65,7 +65,7 @@ Runs `--selftest`, `--flow` and `--slack` in turn, stops at the first failure an
 
 ## Dev blog
 
-`devblog/` is a Hugo site with one post per milestone of the build. Preview it with `hugo server --source devblog` from the repo root. `devblog/README.md` covers building it and regenerating its screenshots.
+`devblog/` is a Hugo site with one post per milestone of the build, live at https://dustinpolkrst.github.io/echoes/. Every push to `main` that touches `devblog/` rebuilds and deploys it through `.github/workflows/devblog.yml`. Preview it with `hugo server --source devblog` from the repo root. `devblog/README.md` covers building it and regenerating its screenshots.
 
 ## Folder map
 
