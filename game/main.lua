@@ -1,6 +1,6 @@
 local selftest, flow, bench, shotTarget, shotArg = false, false, nil, nil, nil
 local benchOpts = {}
-local diffPair, slackArgs
+local diffPair, slackArgs, recordLevel
 local args = arg or {}
 for i, a in pairs(args) do
   if a == '--selftest' then selftest = true end
@@ -19,6 +19,7 @@ for i, a in pairs(args) do
   end
   if a == '--profile' then benchOpts.profile = true end
   if a == '--diff' then diffPair = { args[i + 1], args[i + 2] } end
+  if a == '--record' then recordLevel = tonumber(args[i + 1]) or 1 end
   if a == '--shot' then
     shotTarget = args[i + 1] or '1'
     shotArg = tonumber(args[i + 2])
@@ -79,6 +80,8 @@ function love.load()
     local ok = require('dev.bench').run(Scenes, bench or nil, benchOpts)
     io.stdout:flush()
     love.event.quit(ok and 0 or 1)
+  elseif recordLevel then
+    require('dev.record').start(Scenes, recordLevel)
   elseif shot.target then
     shot.file = require('dev.shot').setup(Scenes, shot.target, shotArg)
     love.audio.setVolume(0)

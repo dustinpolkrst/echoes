@@ -2,6 +2,10 @@
 
 A side-scrolling puzzle platformer built with LÖVE 11.5. You play a small lantern-spirit in a dark, glowing ruin. Press the echo key and a ghost of your last three seconds appears. Echoes are solid on top and press plates, so you can leave yourself behind to hold a door open or to climb on.
 
+![Level 10, Ferry: the player waits by a mirror shrine, casts, and rides their violet reflection over a spike pit to the veil.](docs/media/ferry.gif)
+
+*Level 10, Ferry. Cast at the shrine and your reflection replays your last three seconds mirrored. It waits as long as you waited, so you can step onto it and ride it over the spikes.*
+
 ## Play
 
 You need [LÖVE 11.5](https://love2d.org). On Windows the scripts expect it in `C:\Program Files\LOVE`. On other systems they call `love` from your PATH, or the binary named in `$LOVE`.
@@ -103,6 +107,7 @@ game/               the LÖVE project root (love loads this folder)
     bench.lua       frame-time and allocation benchmark (--bench)
     shot.lua        deterministic screenshots (--shot)
     imgdiff.lua     pixel diff of two screenshots (--diff)
+    record.lua      numbered frames of a scripted playthrough (--record)
   assets/           optional PNG and sound overrides, see game/assets/README.md
 ```
 
@@ -131,6 +136,7 @@ Pass these to `scripts/play` or run `love game <flag>` from the repo root.
 | `--slack [N] [name=value ...]` | Measures how forgiving a level is. Sweeps each human decision in the level's strategy (how long to wait, where to turn back) and prints the width of the winning window. `N` picks one level and `turnX=120` moves a nominal value. Every decision needs at least 30 frames or 24 px of slack to pass. |
 | `--bench LABEL [--size WxH] [--profile]` | Plays the title, menus and every level's solution with vsync off. Prints median, p95, p99 and max frame time, draw calls and allocation per scene, and writes CSVs under `bench/` in the save directory. `--profile` adds a per-function breakdown. |
 | `--shot TARGET [F]` | Saves a PNG to the save directory and prints its path. TARGET is a level number (0 is the title), `title`, `pause [N]`, `select [cleared]`, `settings`, `clear [N]` or `transition`. For a level, F plays its scripted solution for F frames. Shots are deterministic. |
+| `--record N` | Plays level N's scripted solution and saves every second frame (30 fps) to `record/` in the save directory, stopping just after the clear card appears. The README GIF came from `--record 10`, cropped and encoded with ffmpeg: `ffmpeg -framerate 30 -i record/f%05d.png -vf "crop=860:290:40:190,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=none" ferry.gif`. |
 | `--diff A.png B.png` | Compares two PNGs in the save directory pixel by pixel, writes `B_diff.png` with differing pixels in red, and prints how many differ. |
 
 To check that a change left the visuals alone, take a shot before and after, then diff them: `love game --shot 10 330`, then `love game --diff before.png shot_10_f330.png`.
