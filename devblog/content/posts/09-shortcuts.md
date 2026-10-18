@@ -1,6 +1,6 @@
 ---
 title: "Searching the levels for shortcuts"
-description: "A search that plays every shallow strategy against a level found shortcuts in three shipped levels, and each shortcut became a test that has to fail."
+description: "A search that plays every shallow strategy against a level found shortcuts in three shipped levels, and each shortcut became a check that has to fail."
 part: 9
 weight: 9
 date: 2026-10-18
@@ -8,11 +8,11 @@ commits: ["0d796be", "ea2d3dc", "d3180c1", "f61491b", "ae96d2c"]
 cover: "images/09-shortcuts/other-side-before.png"
 ---
 
-Acts IV and V were next. Before any new level got drawn, the rules for drawing one got written down in `docs/level-design.md`, in commit `ea2d3dc`. Writing them meant measuring what a player can actually do. Measuring that turned up three shipped levels a player could finish without understanding them.
+Acts IV and V were next. Before any new level got drawn, the rules for drawing one had to be settled, and that meant measuring what a player can actually do. Measuring it turned up three shipped levels a player could finish without understanding them.
 
-## The numbers first
+## What a player can do
 
-Every number in the doc came from the headless simulation, not from a guess. These are the ones the rest of this post leans on:
+Every number here was measured in the simulation, not guessed. They are the ones the rest of this post leans on:
 
 - A full jump rises 50.8 px and keeps you in the air for 37 frames. That clears a wall 3 tiles high and never one 4 tiles high.
 - A running jump travels 60 px, plus up to 10 px of coyote time. A 3-tile gap is jumpable, a 4-tile gap needs an echo, and 5 tiles or more stops every shallow strategy.
@@ -23,7 +23,7 @@ The last one matters most. A ghost doesn't have to stand on a plate to open its 
 
 ## Eight rules
 
-The doc then sets eight rules, R1 to R8, that every new level follows:
+Every new level follows eight rules:
 
 1. One insight per room, and one room per screen.
 2. Rooms chain as teach, test and twist. The first room shows the idea cheaply, the second takes away the weaker method, and the third changes one parameter.
@@ -34,22 +34,47 @@ The doc then sets eight rules, R1 to R8, that every new level follows:
 7. Failure is cheap. A full retry of the twist room takes under 15 seconds.
 8. Shortcuts are detected, not hoped against.
 
-The last rule needed a tool.
+Rule 5 is the lesson from [Ferry]({{< relref "07-ferry" >}}), and `--slack` enforces it. Rule 8 needed a tool of its own.
 
 ## --cheese
 
-Commit `0d796be` added `love game --cheese N`. It isn't a solver. It plays the moves a player tries before understanding anything, which are running, jumping and pressing X somewhere, and it reports any that reach the end of a room. There are four families of these shallow strategies:
+`love game --cheese N` isn't a solver. It plays the moves a player tries before understanding anything, which are running, jumping and pressing X somewhere, and it reports any that reach the end of a room. There are four families of these shallow strategies:
 
 - Autoruns, and single jumps swept along the way.
 - One cast, swept along the natural path by frame, or by height up a jump.
 - A ladder of two mid-air casts.
 - Stacks of one or two standing echoes, used as a step.
 
-Rerun for this post at `37c1380`, it plays 1180 of these on Other Side in 1.7 s, and 2760 per room on the four-room finale, 11,040 in all, in 21.2 s. To check the search itself, the selftest plants walls in a test corridor. A 5-tile wall has to be caught by the single cast and a 9-tile wall by the ladder, and a 10-tile wall has to come back clean.
+Each family is a small policy that turns the world into one frame of input. The autorun is the base the others build on. It holds one direction and jumps at every wall, drop, spike or stall:
+
+```lua
+-- Runs one way and jumps, holding for `hold` frames, at every wall, drop, spike or stall.
+local function autorun(dir, hold)
+  return function(w, s)
+    local p = w.player
+    local input = { right = dir > 0, left = dir < 0 }
+    if s.holdLeft > 0 then
+      s.holdLeft = s.holdLeft - 1
+      input.jump = true
+    elseif p.state == 'ground' and s.frame > 1 and not s.prevJump
+        and (solidAhead(w, p, dir) or dropAhead(w, p, dir) or spikeAhead(w, p, dir) or (s.frame > 20 and p.vx == 0)) then
+      s.holdLeft = hold - 1
+      s.jumps, s.jumpY, s.jumpFromEcho = s.jumps + 1, p.y, type(p.support) == 'table'
+      input.jump = true
+    end
+    s.prevJump = input.jump or false
+    return input
+  end
+end
+```
+
+The cast families wrap it. `withCast(policy, castAt, wait)` presses X on one frame and stands still for a while, and the search sweeps `castAt` along the whole run. `withRiseCasts` casts partway up a jump, at a swept height, because a frozen echo is only a step if it hangs low enough to land on.
+
+The search plays 1180 of these on Other Side in 1.7 s, and 2760 per room on the four-room finale, 11,040 in all, in 21.2 s. To check the search itself, the game plants walls in a test corridor. A 5-tile wall has to be caught by the single cast and a 9-tile wall by the ladder, and a 10-tile wall has to come back clean.
 
 ## Three levels fell to it
 
-Run against the first twelve levels, the tutorials hit as expected, because their solutions are meant to be shallow. Ferry and Confluence came back clean. Three levels that were supposed to be puzzles didn't. Rerun for this post at `d4f6eca`, the last commit before the fixes, level 6 shows the problem in one line:
+Run against the first twelve levels, the tutorials hit as expected, because their solutions are meant to be shallow. Ferry and Confluence came back clean. Three levels that were supposed to be puzzles didn't. Level 6 shows the problem in one line:
 
 ```
 level 6 "Other Side": 1 rooms, 533 runs in 0.7 s
@@ -63,33 +88,37 @@ The search prints up to four hits per family, and level 6 filled all four. Each 
 Level 6 asks you to find where the plate's reflection lies. It lay on the floor between the start and the shrine. Running to the door and casting at the shrine replayed that run in mirror image, so the ghost crossed the plate on the other side of the wall for 14 frames. The door opened in front of the player, who never had to look for the reflection.
 
 {{< pair >}}
-{{< figure src="images/09-shortcuts/other-side-before.png" caption="At `d4f6eca`, run right and cast once at the shrine. 21 frames after the cast, the violet ghost crosses the plate behind the wall and the door beside the light is open." >}}
-{{< figure src="images/09-shortcuts/other-side-after.png" caption="The same keys at `d3180c1`, 21 frames after the cast. The plate now sits on a ledge at the right, the reflection stays on the floor, and the door is shut." >}}
+{{< figure src="images/09-shortcuts/other-side-before.png" caption="Before the fix, run right and cast once at the shrine. A moment after the cast, the violet ghost crosses the plate behind the wall and the door beside the light is open." >}}
+{{< figure src="images/09-shortcuts/other-side-after.png" caption="After the fix, the same keys at the same moment. The plate now sits on a ledge at the right, the reflection stays on the floor, and the door is shut." >}}
 {{< /pair >}}
 
-The fix, `d3180c1`, puts the plate on a ledge in the sealed room and a matching ledge on the player's side. A body on the floor passes under the plate's reflection, and a jump past the ledge hits it. Only standing on the ledge presses the plate.
+The fix puts the plate on a ledge in the sealed room and a matching ledge on the player's side. A body on the floor passes under the plate's reflection, and a jump past the ledge hits it. Only standing on the ledge presses the plate.
 
-{{< figure src="images/09-shortcuts/other-side-ledge.png" caption="The intended solve at `37c1380`, frame 288. The light stood on its own ledge before casting, so the reflection is up on the sealed room's ledge by the plate, and the door is open." >}}
+{{< figure src="images/09-shortcuts/other-side-ledge.png" caption="The intended solve. The light stood on its own ledge before casting, so the reflection is up on the sealed room's ledge by the plate, and the door is open." >}}
 
 ### Underfoot
 
 Level 9's door is a hatch in the floor. A ghost replays a crossing of the plate exactly 3 seconds after it happened, and the hatch was 2.5 seconds of running from the plate. So you could run across the plate, stand on the hatch and cast. The replayed run opened the hatch under you, with no ghost ever left on the plate.
 
-Commit `f61491b` puts the plate on a pedestal behind the start, off the run, and moves the hatch 4 seconds of running away across crumble bridges. Now the replayed crossing comes while you're still on the bridge, 45 frames too early. Only a ghost left standing on the plate holds the hatch open long enough.
+The fix puts the plate on a pedestal behind the start, off the run, and moves the hatch 4 seconds of running away across crumble bridges. Now the replayed crossing comes while you're still on the bridge, 45 frames too early. Only a ghost left standing on the plate holds the hatch open long enough.
 
-{{< figure src="images/09-shortcuts/underfoot-pedestal.png" caption="Underfoot at `37c1380`, frame 260. The ghost stands on the plate on the pedestal behind the start, and the light heads right toward the crumble bridges." >}}
+{{< figure src="images/09-shortcuts/underfoot-pedestal.png" caption="Underfoot after the fix. The ghost stands on the plate on the pedestal behind the start, and the light heads right toward the crumble bridges." >}}
 
 ### Short Memory
 
-At `d4f6eca` the search found one cast, at frame 230 of a plain run to the right. The doc reads it as the move a player who mashes X at the door would find. That ghost's memory began while the player ran across the block, its first frames ran over the three-plate pad, and the plate next to the veil let a ghost frozen in the veil stand on it. That left a 24-frame window that needed no insight.
+The search found one cast, about four seconds into a plain run to the right. That's the move a player who mashes X at the door would find. That ghost's memory began while the player ran across the block, its first frames ran over the three-plate pad, and the plate next to the veil let a ghost frozen in the veil stand on it. That left a 24-frame window that needed no insight.
 
-Commit `ae96d2c` shrinks the pad to one plate, two tiles clear of the veil. Past the door, the way on is now a hatch in a one-tile shaft that takes 28 frames to reach from the door. A running ghost holds the plate for 14 frames, or 18 counting the frames the player holds the door open themselves. The spot where the player has to stand is one plate wide, 22 px, and the level declares that it needs 20.
+The fix shrinks the pad to one plate, two tiles clear of the veil. Past the door, the way on is now a hatch in a one-tile shaft that takes 28 frames to reach from the door. A running ghost holds the plate for 14 frames, or 18 counting the frames the player holds the door open themselves. Neither is enough. The spot where the player has to stand is one plate wide, 22 px. That's under rule 5's 24 px, so the level states the 20 px it needs, with the reason next to it:
 
-{{< figure src="images/09-shortcuts/short-memory-hatch.png" caption="Short Memory at `df9c112`, frame 295. The ghost holds the single plate on its block, two tiles from the veil, and the light is past the door on its way down the shaft." >}}
+```lua
+{ name = 'standX', unit = 'px', nominal = 87, min = 55, max = 111, step = 2, need = 20, note = 'one plate: a wider pad would let a running ghost hold the door' },
+```
 
-## Each shortcut became a test
+{{< figure src="images/09-shortcuts/short-memory-hatch.png" caption="Short Memory after the fix. The ghost holds the single plate on its block, two tiles from the veil, and the light is past the door on its way down the shaft." >}}
 
-Finding a shortcut once isn't enough, because the next map edit can bring it back. So each fixed level now declares its rooms, and each room lists its naive approaches next to its solve. Here is level 6's list from `game/dev/solutions/act2.lua`, with the scripts left out:
+## Each shortcut became a check
+
+Finding a shortcut once isn't enough, because the next map edit can bring it back. So each fixed level now declares its rooms, and each room lists its naive approaches next to its solve. Here is level 6's list, with the scripts left out:
 
 ```lua
 naive = {
@@ -100,8 +129,8 @@ naive = {
 },
 ```
 
-The selftest plays each naive and fails if any of them reaches the exit. Underfoot has three naives and Short Memory has five, including mashing X every 2, 10 and 30 frames. Rerun for this post at `37c1380`, the selftest has 125 naive checks among its 369, and all of them pass.
+The game plays each naive and fails if any of them reaches the exit. Underfoot has three naives and Short Memory has five, including mashing X every 2, 10 and 30 frames.
 
-`--cheese` agrees. At `37c1380` it plays 1180 runs on Other Side, 1400 on Underfoot and 1180 on Short Memory, and finds no shallow strategy that reaches the goal in any of them.
+`--cheese` agrees. It plays 1180 runs on Other Side, 1400 on Underfoot and 1180 on Short Memory, and finds no shallow strategy that reaches the goal in any of them.
 
-A clean result means none of the four families works. It doesn't mean no shortcut exists, so R8 also has builders walk a catalogue of known shortcuts by hand. Every new room in acts IV and V had to pass both.
+A clean result means none of the four families works. It doesn't mean no shortcut exists. That's why each room's naive list is written by hand as well, from what a player would try at that room in particular. Every new room in acts IV and V had to pass both.

@@ -1,74 +1,116 @@
 ---
-title: "Sorting 27 files into folders"
-description: "The game's 27 Lua files moved from the repository root into folders under game/, and the checks and screenshots came out the same."
+title: "A simulation that never draws"
+description: "The game's code is split by what each part does in the game, and the simulation that replays your echoes never calls LÖVE."
 part: 8
 weight: 8
 date: 2026-10-17
 commits: ["7ae145b", "eb0d82c", "0c8fcda", "eccb521"]
-cover: "images/08-layout/select-game-folder.png"
+cover: "images/01-pitch/wake-first-build.png"
 ---
 
-Up to `1afca9f`, all 27 of the game's Lua files sat in the repository root, next to `README.md` and the `assets/` folder. The game grew that way, one file at a time. The layout made sense to whoever had just added a file. It made no sense to someone opening the project for the first time, so the files moved into folders.
+Every puzzle in Echoes rests on one promise. A ghost does exactly what you did. That promise is easiest to keep if the code that moves you and your ghosts can't see the screen, the speakers or the clock. This post is about how the game's code is split to keep the simulation that blind, and what the game gets out of it.
 
-## What the flat folder didn't show
+## Split by what it does in the game
 
-Sorted alphabetically, `level.lua` sits next to `levels.lua`, `hud.lua` next to `hudmodel.lua`, and `shot.lua` next to `slack.lua` and `solutions.lua`. The listing doesn't tell you that `level.lua` is the simulation and `levels.lua` is data. It doesn't tell you that eight of the 27 files are developer tools the game loads only for a command-line flag, or which three files make up the simulation the selftest replays headless. To learn any of that, you had to open `main.lua` and follow every `require`.
-
-## The new folder tree
-
-Commit `7ae145b` moved the files into folders under `game/`, and `game/` is now the folder LÖVE loads. The repository root holds only `README.md`, `scripts/`, `game/` and `devblog/`.
+The game's Lua lives in folders named for what each part is in the game:
 
 ```
 game/
   main.lua  conf.lua
   world/      the simulation: level.lua, player.lua, echo.lua
-  content/    levels.lua, the twelve maps
-  screens/    scenes.lua, progress.lua, menu.lua, transition.lua
+  content/    levels.lua and acts/, the maps and hints
+  screens/    scenes.lua, menu.lua, progress.lua, transition.lua
   gfx/        render.lua, particles.lua, ui.lua, hud.lua, hudmodel.lua
   platform/   input.lua, save.lua, assets.lua, sfx.lua
-  dev/        selftest.lua, uitest.lua, flowtest.lua, solutions.lua,
-              slack.lua, bench.lua, shot.lua, imgdiff.lua
+  dev/        the tools that play the game without a window
   assets/     optional art and sound overrides
 ```
 
-Modules require each other by dotted path from `game/`, as in `require 'world.level'`, so a file's folder tells you what it's for before you open it.
+`world/` is the rules: tiles, bodies, echoes, plates, doors. `content/` is the twelve, later twenty-two, maps as text. `screens/` is the title, play, pause and the other scenes a player moves between. `gfx/` turns a world into pixels. `platform/` is everything that touches the machine: keys and pads, the save file, art files, sound.
 
 ## world/ requires nothing outside itself
 
-The whole folder has two `require` lines, both in `level.lua`, pointing at `world.player` and `world.echo`. Drawing hooks in from the other side. `gfx/render.lua` attaches a draw function to each entry of `Level.TILES`, so the simulation never loads graphics code. `content/levels.lua` requires nothing at all.
+The whole `world/` folder has two `require` lines, both in `level.lua`, pointing at `world.player` and `world.echo`. It never calls `love.*`. It uses no random numbers and never reads the clock. A step is a function of the world and one frame of input:
 
-That's why `--selftest` and `--slack` can run with LÖVE's graphics, window and audio modules switched off in `conf.lua`. The README says "Keep it that way." Nothing enforces it yet. For now the check is one command someone has to remember to run:
-
-```
-grep -rn require game/world game/content
-```
-
-## Two scripts
-
-Commit `eb0d82c` adds `scripts/play` and `scripts/test`, each as a `.cmd` for Windows and a `.sh` for macOS and Linux. `play` starts the game and passes extra arguments through, so `scripts/play.sh --shot title` works. `test` runs `--selftest`, `--flow` and `--slack` in turn and stops at the first failure with a nonzero exit code. Commit `0c8fcda` rewrote the README around the new folder map.
-
-## Checking that nothing changed
-
-A move like this should change where code lives and nothing else, so the check covered the diff, the test counts and the pixels.
-
-Besides the renames, commit `7ae145b` removes 80 lines and adds 80, and every one of those 160 lines is a `require`:
-
-```
-git diff -M 1afca9f 7ae145b | grep '^[-+][^-+]' | grep -vc require
-0
+```lua
+function M.step(w, input, dt)
+  dt = dt or M.DT
+  w.events = {}
+  w.time = w.time + dt
+  -- echoes, crumble stone, doors, then the player
 ```
 
-At `1afca9f` and at `eccb521`, the merge that brought the move to `main`, `--selftest` reports 155 checks with 0 failed and `--flow` reports 33 with 0 failed. The output of `--slack 10` is byte for byte the same at both commits.
+`dt` is always 1/60 s. The game loop in `main.lua` turns real time into whole steps with an accumulator, so a slow frame runs two steps and never one long one:
 
-For this post, 23 `--shot` targets were also rendered at both commits: the title, pause, level select, settings, clear card and iris transition, every level at frame 90, and three frames from the middle of scripted solutions. All 23 pairs match pixel for pixel. That sweep was a one-off, but one pair stays checked. `devblog/tools/shots.sh` renders the level select at both commits, runs `eccb521`'s own `--diff` on them, and fails if any pixel differs:
-
+```lua
+accumulator = math.min(accumulator + dt, MAX_FRAME)
+while accumulator >= DT do
+  Scenes.dispatch(Input.navPoll(navState, nil, DT))
+  Scenes.update()
+  accumulator = accumulator - DT
+end
 ```
-DIFF before.png after.png  0 of 518400 pixels differ, max channel delta 0/255
+
+That's what makes a recording replayable. Three seconds is always 180 steps, and the same 180 inputs always put you in the same 180 places, at any frame rate.
+
+## Drawing hooks in from outside
+
+The tile registry from [part 1]({{< relref "01-the-pitch" >}}) says what a tile does. It doesn't say how a tile looks:
+
+```lua
+-- draw functions are attached by gfx/render.lua so the simulation stays headless.
+M.TILES = {
+  solid = { solid = true, static = true },
+  oneway = { oneway = true, static = true },
+  spike = { hurts = true, static = true, rect = { 2, 8, T - 4, 8 }, worldList = 'spikes' },
 ```
 
-{{< pair >}}
-{{< figure src="images/08-layout/select-flat-folder.png" caption="Level select at `1afca9f`, before the move. The records are seeded test data." >}}
-{{< figure src="images/08-layout/select-game-folder.png" caption="At `eccb521`, after the move. 0 of 518,400 pixels differ." >}}
-{{< /pair >}}
+`gfx/render.lua` loads after the simulation and adds the looks onto the same rows:
 
-The blog's screenshot script needed no change for the move. It exports each commit whole with `git archive`, and when a commit keeps `main.lua` in `game/` instead of the root, it runs that folder.
+```lua
+TILES.solid.draw = withSlot('solid', proceduralSolid, variantOf)
+TILES.oneway.draw = withSlot('oneway', proceduralOneway, variantOf)
+TILES.spike.draw = withSlot('spike', proceduralSpike)
+```
+
+`withSlot` is where the drop-in art from [part 2]({{< relref "02-controllers-and-assets" >}}) comes in. If `assets/sprites/spike.png` exists, it draws that, and otherwise it runs the procedural spike.
+
+{{< figure src="images/01-pitch/wake-first-build.png" caption="Wake, just after the first cast. To the simulation, the light and its ghost are two 10 by 12 px rectangles. The flame, the cyan glow, the lightmap and the drifting dust are all drawn from outside it." >}}
+
+## The world reports, the screens react
+
+A jump, a landing, a death, a cast, a plate going down, a door opening and a waystone lighting all make a sound, some particles, and sometimes a rumble. The simulation does none of that. It appends an event to a list:
+
+```lua
+function World:emit(name, x, y, v)
+  self.events[#self.events + 1] = { name = name, x = x, y = y, v = v }
+end
+```
+
+After each step, the playing scene reads the list and decides what the player sees and hears:
+
+```lua
+elseif ev.name == 'cast' then
+  Sfx.play('cast', ev.v and 0.8 or 1)
+  Input.rumble(0.25, 0.12)
+  burst(26, { speed = 70, life = 0.7, drag = 2, color = ev.v and { 0.85, 0.5, 1 } or { 0.4, 0.95, 1 }, glow = true })
+```
+
+`ev.v` is true for a cast at a mirror shrine, so a mirrored cast plays a lower note and throws violet sparks instead of cyan. The HUD works the same way from the other direction. `hudmodel.lua` reads the world and returns plain numbers, and `hud.lua` draws them.
+
+## What the game gets out of it
+
+Because nothing in `world/` or `content/` needs a window, the game can play itself with LÖVE's graphics, window and audio switched off:
+
+```lua
+if selftest then
+  t.window = false
+  for _, m in ipairs({ 'graphics', 'window', 'audio', 'sound', 'joystick', 'video', 'touch', 'mouse' }) do
+    t.modules[m] = false
+  end
+end
+```
+
+With no drawing, a run of a level is just a loop over `Level.step`, and it's fast. The shortcut search in [part 9]({{< relref "09-shortcuts" >}}) plays 1180 attempts at Other Side in 1.7 seconds. The slack sweeps in [part 7]({{< relref "07-ferry" >}}) replay Ferry hundreds of times with one decision changed each time. Every level design question in the rest of this blog, from "can a person board this ghost" to "does mashing X win", got answered that way.
+
+It also keeps the replay honest. If the simulation could read a frame time or a random number, the ghost would only be roughly what you did. Here it's the same 180 poses, every time.

@@ -47,18 +47,21 @@ Two tricks fall out of that. Stand on a plate for 3 seconds before you cast and 
 
 ## Tiles that change an echo
 
-The second and third acts add three tiles.
+The second and third acts add three tiles, and the fourth adds a checkpoint.
 
 - The mirror shrine is violet. Cast while touching it and the echo replays reflected about the shrine, so it walks where you did not, even through walls. Mirrored echoes are violet too.
 - The veil is amber. You walk through it. An echo whose next step would enter it stops there and stays for 4 seconds. A veil is where you park a ghost.
 - Crumble stone is ochre. Half a second after anything stands on it, you or an echo, it gives way. It grows back 3 seconds after nothing is left inside it. An echo replays positions, so it keeps standing where the stone used to be.
+- The waystone is a cairn with a crystal on top. Touch it and it lights. Death and <kbd>R</kbd> put you back on the waystone you lit last, with no echoes, an empty memory, doors shut and crumble stone whole. The pause menu's Restart level starts the whole level over.
 
-## The twelve levels
+## The twenty-two levels
 
 | Act | Levels |
 | --- | --- |
 | I. Learning the echo | 1 Wake, 2 First Echo, 3 Stairway, 4 Two Minds, 5 Ascent |
 | II. One new tile each | 6 Other Side, 7 Trapdoor, 8 Undertow, 9 Underfoot |
 | III. Combinations | 10 Ferry, 11 Short Memory, 12 Confluence |
+| IV. Two ideas per level | 13 Relay, 14 Plumb Line, 15 Undercroft, 16 Crawlspace, 17 Ferryman's Toll |
+| V. Three ideas and a budget | 18 Clockwork, 19 Hall of Mirrors, 20 Three Steps Behind, 21 Let Go, 22 The Last Light |
 
-Progress, best times and fewest deaths save to `save.txt` in the LÖVE save directory. Clearing a level unlocks the next one.
+Acts IV and V are long levels of two to four rooms, each room starting at a waystone. Progress, best times and fewest deaths save to `save.txt` in the LÖVE save directory. Clearing a level unlocks the next one.

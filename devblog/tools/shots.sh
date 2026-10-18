@@ -57,8 +57,6 @@ SHOTS='
 07-ferry      1afca9f  ferry-new-cast          10 330
 07-ferry      1afca9f  ferry-new-ride          10 400
 07-ferry      1afca9f  ferry-new-across        10 450
-08-layout     1afca9f  select-flat-folder      select 12
-08-layout     eccb521  select-game-folder      select 12
 09-shortcuts  d4f6eca  other-side-before       othersiderun 104
 09-shortcuts  d3180c1  other-side-after        othersiderun 56
 09-shortcuts  37c1380  other-side-ledge        6 288
@@ -159,6 +157,5 @@ diff_pair() {
 	(cd "$WORK" && "$LOVE" "$(game_dir "$commit")" --diff before.png after.png) | grep '^DIFF'
 }
 
-# Post 05: the pause fix left the picture unchanged. Post 08: moving the files changed no pixel.
+# Post 05: the pause fix left the picture unchanged.
 diff_pair 05-bench af3114f pause-before-fix pause-after-fix
-diff_pair 08-layout eccb521 select-flat-folder select-game-folder

@@ -8,7 +8,7 @@ commits: ["a72332d"]
 cover: "images/01-pitch/first-echo-holding.png"
 ---
 
-Echoes started as a side-scrolling platformer in LÖVE. Everything in this post comes from the first build, commit `a72332d`.
+Echoes is a side-scrolling puzzle platformer in LÖVE. This post covers the first build: one mechanic, five levels, and the data structures the mechanic needed.
 
 {{< figure src="images/01-pitch/title-first-build.png" caption="The first title screen. Just \"press jump\", over a ruin drawn in code with no image files." >}}
 
@@ -22,9 +22,9 @@ That turned out to be enough to build puzzles from. A plate you would have to st
 
 ## Writing the data down first
 
-Replays punish loose state, so the data came first. Before any logic existed, the first build settled what levels, tiles and recordings would look like.
+A replay is only worth trusting if the same inputs always put you in the same places. Loose state breaks that, so the data came before the logic: what a level is, what a tile is, and what a recording is.
 
-Levels are ASCII maps. `#` is stone, `^` is spikes, `=` is a one-way ledge, and lowercase `a` to `d` are the plates for doors `A` to `D`. Editing a level means editing text, and a level change shows up as a diff you can read.
+Levels are ASCII maps. `#` is stone, `^` is spikes, `=` is a one-way ledge, and lowercase `a` to `d` are the plates for doors `A` to `D`. Editing a level means editing text.
 
 Every tile kind is a row of flags in one registry, so collision, rendering and lighting don't each grow their own `if kind == 'spike' then ... elseif ...` chain:
 
@@ -42,7 +42,7 @@ M.TILES = {
 
 Collision asks `TILES[c.kind].solid` and the light pass asks for `light`. When three new tiles came along in [part 3]({{< relref "03-three-acts" >}}), each one was mostly a new row here.
 
-The recorder is a ring buffer of 180 frames. The simulation steps at a fixed 1/60 s, so three seconds is always exactly 180 frames, and the same inputs always put you in the same places. A replay is only worth trusting if that holds. Each step overwrites the oldest slot and reuses its table:
+The recorder is a ring buffer of 180 frames. The simulation steps at a fixed 1/60 s, so three seconds is always exactly 180 frames. Each step overwrites the oldest slot and reuses its table:
 
 ```lua
 function Echo.record(rec, x, y, facing, state)
@@ -57,7 +57,7 @@ function Echo.record(rec, x, y, facing, state)
 end
 ```
 
-A cast copies the buffer out, oldest frame first, so nothing you record afterwards can change a ghost that's already walking.
+A cast copies the buffer out, oldest frame first, so nothing you do afterwards can change a ghost that's already walking.
 
 The player and the scenes are state machines. The player is `ground`, `air`, `dead` or `cleared`. Doors are never toggled. Every step, each door looks at whether anything is standing on its plate. A toggled flag can miss an event and drift. A door recomputed from the world every step can't.
 
@@ -68,7 +68,7 @@ The player and the scenes are state machines. The player is `ground`, `air`, `de
 The first build has no PNGs and no sound files. Everything is `love.graphics` primitives on a 480x270 canvas scaled up 2x. Behind the level are three parallax layers: ruined arches, hanging chains and vines, and drifting dust. Stone has a bevel and moss on top. The flame leans with your velocity and squashes and stretches. A lightmap canvas darkens the scene and cuts light out around the player, each echo and each torch. Sounds come from `love.sound.newSoundData`, filled one sample at a time.
 
 {{< pair >}}
-{{< figure src="images/01-pitch/wake-first-build.png" caption="Wake, 90 frames in, right after the first cast." >}}
+{{< figure src="images/01-pitch/wake-first-build.png" caption="Wake, level 1, just after the first cast. The cyan ghost carries its own small light." >}}
 {{< figure src="images/01-pitch/two-minds.png" caption="Two Minds, level 4. Both plates held, both doors open." >}}
 {{< /pair >}}
 
@@ -84,10 +84,8 @@ The first five levels each add one idea:
 
 {{< figure src="images/01-pitch/ascent.png" caption="Ascent. The ghost at the bottom left holds the plate that keeps the tall column's door open while the light climbs." >}}
 
-## A test that plays the game
+## Keeping every level beatable
 
-It's easy to break a platformer without noticing. Change the jump height a little and a ledge three levels away goes out of reach. So the first build also came with a way to check that every level still works.
+It's easy to break a platformer without noticing. Change the jump height a little and a ledge three levels away goes out of reach.
 
-`love echoes --selftest` runs the simulation with no window. The simulation doesn't know about rendering or the keyboard, so a script can feed it input. Each level has a scripted solution in `solutions.lua`, made of segments like "hold right until x is 202, then jump", and the selftest plays each one to the goal. It also checks the physics directly: jump height, coyote time, spikes, plates, doors, and being carried by an echo. The first build ran 29 checks.
-
-`--shot N` loads a level, plays some scripted input and saves a screenshot. `--shot N F` plays the level's solution for F frames first. Every image on this blog comes from that mode, run against the commit the post is about.
+So each level ships with a scripted solution, made of segments like "hold right until x is 202, then jump". The game can play every solution to the goal with no window open, because the simulation doesn't know about rendering or the keyboard. The same run also checks the physics directly: jump height, coyote time, spikes, plates, doors, and being carried by an echo. A tuning change that cuts a level off shows up as a failed solution, not as a stuck player.
