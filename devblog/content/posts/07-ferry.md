@@ -1,6 +1,6 @@
 ---
 title: "When the tests pass and the level is still impossible"
-description: "Ferry passed every check we had, and a person still couldn't reliably beat it. A probe found a 9 to 10 frame window from one spot. A redesign and a tool that measures human slack widened it to 52 frames."
+description: "Ferry passed every check, and I still couldn't get past it. A probe found a 9 to 10 frame window from one spot. A redesign and a tool that measures human slack widened it to 52 frames."
 part: 7
 weight: 7
 date: 2026-10-17
@@ -27,11 +27,11 @@ The intended solution is the best idea in the game. Walk right to the shrine, tu
 
 Ferry shipped with all three checks from [part 3]({{< relref "03-three-acts" >}}). The scripted solution clears it. A running jump lands in the spikes, as the negative check requires. The perturbation check shifts the solution's timings by 3 frames in five ways, and all five clear.
 
-Then Dustin played it and reported that level 10 seems impossible.
+Then I played it, and I couldn't get past level 10. I told Claude "the level ferry seems impossible."
 
 ## Measuring the window
 
-So we measured it. A probe swept every jump timing across the strategies a person would naturally try, and recorded which attempts landed on the moving ghost.
+So Claude measured it. Its probe swept every jump timing across the strategies a person would naturally try, and recorded which attempts landed on the moving ghost.
 
 Only a 9 to 10 frame window boards the ghost, about 0.16 seconds, and only from one turn-back spot. Turn back a little earlier or later and there's no window at all. So to beat Ferry, you had to find one particular place to turn around, which nothing on screen marks, and then jump inside those 0.16 seconds while judging the speed of a ghost replaying your walk in mirror image.
 
@@ -48,13 +48,13 @@ The scripted solution doesn't search for anything. It already knows the spot:
 
 It turns back at exactly x = 80 and starts the jump on the exact frame the ghost comes within 8 pixels. The perturbation check then nudged those timings by 3 frames. Three frames either side of the centre of a 9 to 10 frame window stays inside the window, so every variant cleared. The check measured how much slack the *script* had, and nothing about how much a *person* has. A person starts from a guess, not from the centre.
 
-That's the part of this we'd apply anywhere. Test human slack, not script slack. To know whether a player can find the run at all, you have to model what a person actually varies, like where they turn around and when they react, and measure how much of that space wins.
+That's the part of this that applies anywhere. Test human slack, not script slack. To know whether a player can find the run at all, you have to model what a person actually varies, like where they turn around and when they react, and measure how much of that space wins.
 
 ## Measuring a person's slack
 
-So we built that first. Commit `1afca9f` adds `--slack`. It reads a strategy from `solutions.lua`, which is a solution written the way a person would play it. Every decision a player has to time or place, such as where to turn back or how long to wait, is a parameter with the range a player might plausibly pick. `--slack` sweeps each parameter over its range, holds the others at their usual values, and prints the run of values that clears the level.
+So Claude built that first. Commit `1afca9f` adds `--slack`. It reads a strategy from `solutions.lua`, which is a solution written the way a person would play it. Every decision a player has to time or place, such as where to turn back or how long to wait, is a parameter with the range a player might plausibly pick. `--slack` sweeps each parameter over its range, holds the others at their usual values, and prints the run of values that clears the level.
 
-On the old Ferry it measured a 10-frame boarding window, which agrees with the probe. It also showed why that window could never grow. An echo counts as landed on only while your 10 px body overlaps its 10 px body, which is a 20 px span. The old ghost moved at the player's own top speed, 100 px per second or 1.67 px per frame, so it crossed that span in 12 frames. No turn-back spot, spike count or shrine position could get the window past 12 frames, and we wanted 30. The level needed a different idea, not a better map.
+On the old Ferry it measured a 10-frame boarding window, which agrees with the probe. It also showed why that window could never grow. An echo counts as landed on only while your 10 px body overlaps its 10 px body, which is a 20 px span. The old ghost moved at the player's own top speed, 100 px per second or 1.67 px per frame, so it crossed that span in 12 frames. No turn-back spot, spike count or shrine position could get the window past 12 frames, and the target was 30. The level needed a different idea, not a better map.
 
 ## The new Ferry
 
@@ -108,7 +108,7 @@ Confluence, level 12, opens with the same crossing and got the same pedestal and
 
 The selftest now runs these sweeps for both levels and fails if any decision drops under 30 frames or 24 px, or under the smaller limit a capped decision states. That took it from 149 checks to 155. The scripted solution isn't written by hand anymore either. `solutions.lua` builds it from the strategy's usual values, so the script and the slack numbers can't drift apart.
 
-## What we still don't know
+## What the numbers can't say yet
 
 `--slack` measures only the decisions someone thought to model. It can't tell whether a person will think of waiting at the foot of a pedestal at all. The new hint says it outright: "A reflection waits as long as you did." Whether that's enough takes a person at the keyboard, and that playtest is the first item in [part 9]({{< relref "09-whats-next" >}}).
 

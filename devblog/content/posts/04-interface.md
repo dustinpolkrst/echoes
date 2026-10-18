@@ -70,4 +70,4 @@ Scene changes close the screen down to a circle, swap the scene while it's fully
 
 Scripted solutions never reach the menus. The selftest drives the simulation, and nothing in it presses Esc halfway through a level. So commit `96bcc4f` added `love echoes --flow`. It boots the real scenes against an in-memory save and sends them key events. It opens pause and checks the simulation is frozen, resumes, opens settings, lowers the volume and checks the save text changed, then clears a level and checks the next one unlocked. At that commit it runs 21 checks, and all 21 pass when rerun for this post.
 
-We leaned on it hard in [part 6]({{< relref "06-review" >}}), where every fix added a `--flow` check that failed on the old code first.
+Claude leaned on it hard in [part 6]({{< relref "06-review" >}}), where every fix added a `--flow` check that failed on the old code first.

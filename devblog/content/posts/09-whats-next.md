@@ -1,6 +1,6 @@
 ---
 title: "What's next"
-description: "A playtest of the new Ferry and Confluence, slack strategies for the other ten levels, and three cleanups we can already see."
+description: "A playtest of the new Ferry and Confluence, slack strategies for the other ten levels, and three cleanups the code already points to."
 part: 9
 weight: 9
 date: 2026-10-17
@@ -24,7 +24,7 @@ Only Ferry and Confluence have a strategy in `game/dev/solutions.lua`, so `--sla
 
 Adding a tile today means editing five places. In `game/world/level.lua`, `LEGEND` maps the map character to a kind and `TILES` holds the kind's behavior flags. `game/gfx/render.lua` attaches the draw function with one line per kind, such as `TILES.veil.draw = withSlot('veil', proceduralVeil)`. `game/platform/assets.lua` has a matching entry in `SLOTS`. And the comment at the top of `game/content/levels.lua` lists the characters again.
 
-We want one `TILES` entry per tile that also names its character, with `LEGEND` built from it and the render code finding each draw function by kind. The simulation still must not require anything from `gfx/`, so the draw functions stay in `render.lua`.
+The plan is one `TILES` entry per tile that also names its character, with `LEGEND` built from it and the render code finding each draw function by kind. The simulation still must not require anything from `gfx/`, so the draw functions stay in `render.lua`.
 
 ## Split the two largest files
 
