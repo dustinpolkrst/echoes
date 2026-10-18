@@ -2,7 +2,7 @@
 
 A side-scrolling puzzle platformer built with LÖVE 11.5. You play a small lantern-spirit in a dark, glowing ruin. Press the echo key and a ghost of your last three seconds appears. Echoes are solid on top and press plates, so you can leave yourself behind to hold a door open or to climb on.
 
-![Level 10, Ferry: the player waits by a mirror shrine, casts, and rides their violet reflection over a spike pit to the veil.](docs/media/ferry.gif)
+![Level 10, Ferry: the player waits by a mirror shrine, casts, and rides their violet reflection over a spike pit to the veil.](docs/media/ferry-playthrough.gif)
 
 *Level 10, Ferry. Cast at the shrine and your reflection replays your last three seconds mirrored. It waits as long as you waited, so you can step onto it and ride it over the spikes.*
 
