@@ -556,7 +556,12 @@ local function drawCard(i, x, y, selected, pulse)
   Ui.text(tostring(i), f.big, y + (CARD_H - f.big:getHeight()) / 2, numColor, open and 1 or 0.7, x + 10, 44, 'center')
   local tx = x + 60
   if open then
-    Ui.text(Levels[i].name, f.small, y + 12, C.white, 0.95, tx, CARD_W - 64, 'left')
+    local name = Levels[i].name
+    if f.small:getWidth(name) <= CARD_W - 64 then
+      Ui.text(name, f.small, y + 12, C.white, 0.95, tx, CARD_W - 64, 'left')
+    else
+      Ui.text(name, f.tiny, y + 1, C.white, 0.95, tx, CARD_W - 64, 'left')
+    end
     if done then
       Ui.text(rec.bestTime and clock(rec.bestTime) or '--', f.small, y + 38, C.dim, 0.95, tx, CARD_W - 64, 'left')
       local n = rec.bestDeaths
@@ -579,7 +584,7 @@ function select_.drawUI()
   local tops = rowTops(rows)
   local left = (Ui.W - (Progress.COLS * CARD_W + (Progress.COLS - 1) * CARD_GAP)) / 2
   local pulse = 0.5 + 0.5 * sin(Ui.time() * 4)
-  Ui.scissor(0, AREA_TOP - 6, Ui.W, AREA_BOTTOM - AREA_TOP + 12)
+  Ui.scissor(0, AREA_TOP - 6, Ui.W, AREA_BOTTOM - AREA_TOP + 6)
   local acts = Progress.acts(Levels)
   for r, row in ipairs(rows) do
     local y = AREA_TOP + tops[r] - scroll
