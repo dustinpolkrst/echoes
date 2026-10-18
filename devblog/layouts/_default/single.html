@@ -1,15 +1,17 @@
 {{ define "main" }}
-<article class="post">
-  <header>
-    {{ with .Params.part }}<p class="kicker">Part {{ . }}</p>{{ end }}
+<article class="page post">
+  <header class="head">
+    <div class="note">
+      {{ with .Params.part }}<p class="part">Part {{ . }}</p>{{ end }}
+      {{ with .Params.commits }}<p class="commits">Commits{{ range . }} <a href="{{ site.Params.repo }}/commit/{{ . }}"><code>{{ . }}</code></a>{{ end }}</p>{{ end }}
+    </div>
     <h1>{{ .Title }}</h1>
-    {{ with .Params.commits }}<p class="meta">Commits {{ range $i, $c := . }}{{ if $i }}, {{ end }}<a href="{{ site.Params.repo }}/commit/{{ $c }}"><code>{{ $c }}</code></a>{{ end }}</p>{{ end }}
   </header>
   {{ .Content }}
   {{ if eq .Section "posts" }}
-  <nav class="pager">
-    {{ with .NextInSection }}<a class="prev" href="{{ .RelPermalink }}">← {{ .Title }}</a>{{ end }}
-    {{ with .PrevInSection }}<a class="next" href="{{ .RelPermalink }}">{{ .Title }} →</a>{{ end }}
+  <nav class="pager" aria-label="More parts">
+    {{ with .NextInSection }}<a class="prev" href="{{ .RelPermalink }}"><span>Previous part</span>{{ .Title }}</a>{{ end }}
+    {{ with .PrevInSection }}<a class="next" href="{{ .RelPermalink }}"><span>Next part</span>{{ .Title }}</a>{{ end }}
   </nav>
   {{ end }}
 </article>

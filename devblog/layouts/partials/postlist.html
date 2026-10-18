@@ -1,13 +1,13 @@
 <ol class="postlist">
   {{ range . }}
   <li>
+    <span class="num" aria-hidden="true">{{ .Params.part }}</span>
     <a href="{{ .RelPermalink }}">
-      {{ with .Params.cover }}<img src="{{ . | relURL }}" alt="" loading="lazy" class="game">{{ end }}
       <span class="text">
-        {{ with .Params.part }}<span class="kicker">Part {{ . }}</span>{{ end }}
-        <span class="title">{{ .Title }}</span>
+        <span class="title">{{ with .Params.part }}<span class="visually-hidden">Part {{ . }}. </span>{{ end }}{{ .Title }}</span>
         <span class="summary">{{ .Description }}</span>
       </span>
+      {{ with .Params.cover }}<img src="{{ . | relURL }}" alt="" loading="lazy" class="game" width="960" height="540">{{ end }}
     </a>
   </li>
   {{ end }}

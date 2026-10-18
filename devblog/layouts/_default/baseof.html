@@ -5,19 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
   <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.description }}{{ end }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
   <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
 </head>
 <body>
   <header class="masthead">
-    <a class="brand" href="{{ site.Home.RelPermalink }}"><span class="flame" aria-hidden="true"></span>ECHOES <small>dev blog</small></a>
-    <nav>
-      {{ range site.Menus.main }}<a href="{{ .URL }}">{{ .Name }}</a>{{ end }}
-    </nav>
+    <div class="wrap">
+      <a class="brand" href="{{ site.Home.RelPermalink }}"><img src="{{ "img/wordmark.svg" | relURL }}" alt="Echoes" width="180" height="40"><span>dev blog</span></a>
+      <nav aria-label="Site">
+        {{ range site.Menus.main }}<a href="{{ .URL }}">{{ .Name }}</a>{{ end }}
+      </nav>
+    </div>
   </header>
-  <main>
+  <main class="wrap">
     {{ block "main" . }}{{ end }}
   </main>
-  <footer class="footer">
+  <footer class="footer wrap">
     <p>Echoes is built with LÖVE 11.5. Every screenshot here comes from <code>devblog/tools/shots.sh</code>, which renders it from the commit the post describes. The game, its tests and this blog are open source at <a href="{{ site.Params.repo }}">github.com/dustinpolkrst/echoes</a>.</p>
   </footer>
 </body>
