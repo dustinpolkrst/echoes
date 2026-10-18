@@ -51,4 +51,27 @@ local strategies = {
   },
 }
 
-return { scripts = scripts, strategies = strategies }
+-- Rooms: where a room starts (from = nil for the level start, k for the k-th waystone in map order), what counts as its
+-- exit (a tile rect { tx0, ty0, tx1, ty1 }, or nil for the goal), the insight it tests, a solve from a fresh respawn at
+-- its start, and the naive approaches that must not reach the exit. The selftest proves every solve and every naive.
+local rooms = {
+  ['Ferry'] = {
+    {
+      name = 'Crossing',
+      insight = 'a reflection waits as long as you did, so wait at the foot before casting from on top',
+      solve = strategies['Ferry'].build(S.decisions(strategies['Ferry'])),
+      naive = {
+        { 'cast on the shrine without waiting at its foot', {
+          { 'R', atX(130) }, { 6, 'RJ' }, { 'R', onTop(208, 134, 208) }, { 'R', atX(190) },
+          { 10, '-' }, { 1, 'X' }, { 20, '-' }, { 150, 'R' },
+        } },
+        { 'cast at the foot of the shrine, where nothing reflects', {
+          { 'R', atX(166) }, { 120, '-' }, { 'L', atXLeft(104) }, { 'R', atX(166) }, { 1, 'X' },
+          { 'L', atXLeft(130) }, { 'R', atX(130) }, { 6, 'RJ' }, { 'R', onTop(208, 134, 208) }, { 20, '-' }, { 150, 'R' },
+        } },
+      },
+    },
+  },
+}
+
+return { scripts = scripts, strategies = strategies, rooms = rooms }

@@ -1,6 +1,6 @@
 local selftest, bench = false, false
 for _, a in pairs(arg or {}) do
-  if a == '--selftest' or a == '--slack' then selftest = true end
+  if a == '--selftest' or a == '--slack' or a == '--cheese' then selftest = true end
   if a == '--bench' then bench = true end
 end
 
