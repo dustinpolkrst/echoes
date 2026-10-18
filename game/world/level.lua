@@ -29,7 +29,7 @@ end
 
 M.CRACK, M.REGROW = 0.5, 3
 
--- draw functions are attached by render.lua so the simulation stays headless.
+-- draw functions are attached by gfx/render.lua so the simulation stays headless.
 M.TILES = {
   solid = { solid = true, static = true },
   oneway = { oneway = true, static = true },

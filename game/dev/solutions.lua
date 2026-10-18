@@ -169,7 +169,7 @@ M.scripts = {
 }
 
 -- A strategy is a solution written as a human would play it: every decision a human has to time or place is a
--- parameter with the range a player might plausibly pick. slack.lua sweeps each one and reports the winning window,
+-- parameter with the range a player might plausibly pick. dev/slack.lua sweeps each one and reports the winning window,
 -- which the selftest holds to 30 frames or 24 px unless the decision says what it needs instead.
 local FERRY_DECISIONS = {
   { name = 'footX', unit = 'px', nominal = 166, min = 130, max = 166, step = 2, need = 4, note = 'the pedestal wall stops you here' },

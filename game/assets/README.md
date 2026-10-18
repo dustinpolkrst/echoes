@@ -1,6 +1,6 @@
 # Assets
 
-Drop files here and the game uses them. A slot with no file keeps its built-in procedural art or generated sound, so an empty folder plays exactly like the original. Files are found in this folder or in the LÖVE save directory (`%APPDATA%/LOVE/echoes/assets/...`). Restart to pick up changes, or call `require('assets').reload()` (F5 if the game binds it). Files that match no slot are reported in the console.
+Drop files here (`game/assets` in the repo) and the game uses them. A slot with no file keeps its built-in procedural art or generated sound, so an empty folder plays exactly like the original. Files are found in this folder or in the LÖVE save directory (`%APPDATA%/LOVE/echoes/assets/...`). Restart to pick up changes, or press F5 in game (it calls `require('platform.assets').reload()`). Files that match no slot are reported in the console.
 
 ## Sprites: `assets/sprites/<slot>.png`
 
