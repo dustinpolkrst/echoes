@@ -3,7 +3,7 @@
   <header>
     {{ with .Params.part }}<p class="kicker">Part {{ . }}</p>{{ end }}
     <h1>{{ .Title }}</h1>
-    {{ with .Params.commits }}<p class="meta">Commits {{ range $i, $c := . }}{{ if $i }}, {{ end }}<code>{{ $c }}</code>{{ end }}</p>{{ end }}
+    {{ with .Params.commits }}<p class="meta">Commits {{ range $i, $c := . }}{{ if $i }}, {{ end }}<a href="{{ site.Params.repo }}/commit/{{ $c }}"><code>{{ $c }}</code></a>{{ end }}</p>{{ end }}
   </header>
   {{ .Content }}
   {{ if eq .Section "posts" }}

@@ -1,5 +1,7 @@
 # ECHOES
 
+**[Read the dev blog](https://dustinpolkrst.github.io/echoes/)**: how this game was built, one post per milestone, with screenshots.
+
 A side-scrolling puzzle platformer built with LÖVE 11.5. You play a small lantern-spirit in a dark, glowing ruin. Press the echo key and a ghost of your last three seconds appears. Echoes are solid on top and press plates, so you can leave yourself behind to hold a door open or to climb on.
 
 ![Level 10, Ferry: the player waits by a mirror shrine, casts, and rides their violet reflection over a spike pit to the veil.](docs/media/ferry-playthrough.gif)
