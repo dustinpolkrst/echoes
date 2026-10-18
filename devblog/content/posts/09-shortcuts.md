@@ -85,7 +85,7 @@ At `d4f6eca` the search found one cast, at frame 230 of a plain run to the right
 
 Commit `ae96d2c` shrinks the pad to one plate, two tiles clear of the veil. Past the door, the way on is now a hatch in a one-tile shaft that takes 28 frames to reach from the door. A running ghost holds the plate for 14 frames, or 18 counting the frames the player holds the door open themselves. The spot where the player has to stand is one plate wide, 22 px, and the level declares that it needs 20.
 
-{{< figure src="images/09-shortcuts/short-memory-hatch.png" caption="Short Memory at `37c1380`, frame 295. The ghost holds the single plate on its block, two tiles from the veil, and the light is past the door on its way down the shaft." >}}
+{{< figure src="images/09-shortcuts/short-memory-hatch.png" caption="Short Memory at `df9c112`, frame 295. The ghost holds the single plate on its block, two tiles from the veil, and the light is past the door on its way down the shaft." >}}
 
 ## Each shortcut became a test
 
