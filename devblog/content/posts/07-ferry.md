@@ -110,6 +110,6 @@ The selftest now runs these sweeps for both levels and fails if any decision dro
 
 ## What this does not prove
 
-`--slack` measures the decisions someone thought to model. It cannot tell whether a person will think of waiting at the foot of a pedestal at all. The new hint says so directly: "A reflection waits as long as you did." Whether that is enough is a question only a person at the keyboard can answer, and that playtest is the first item in [part 8]({{< relref "08-whats-next" >}}).
+`--slack` measures the decisions someone thought to model. It cannot tell whether a person will think of waiting at the foot of a pedestal at all. The new hint says so directly: "A reflection waits as long as you did." Whether that is enough is a question only a person at the keyboard can answer, and that playtest is the first item in [part 9]({{< relref "09-whats-next" >}}).
 
 The other honest note is about the earlier parts of this blog. Part 3 presented the perturbation check as the guard against frame-perfect levels. It is a guard, but a weaker one than it looked, and Ferry is the level that showed the difference. Only Ferry and Confluence have strategies so far, so the other ten levels are still guarded only by the perturbation check.

@@ -1,14 +1,14 @@
 ---
 title: "What's next"
 description: "A playtest of the new Ferry and Confluence, slack strategies for the other ten levels, and three pieces of cleanup the code is asking for."
-part: 8
-weight: 8
+part: 9
+weight: 9
 date: 2026-10-17
 commits: ["1afca9f", "eccb521"]
 cover: "images/08-next/select-ferry-next.png"
 ---
 
-Echoes now has twelve levels in three acts, a full set of menus, saved progress, controller support, and four tools that rerun its claims: `--selftest` (155 checks), `--flow` (33 checks), `--slack`, and `--bench`. Ferry and Confluence were rebuilt around a reflection that waits for you ([part 7]({{< relref "07-ferry" >}})), and the game's files moved into a folder tree ([part 9]({{< relref "09-layout" >}})). This is the list of what is left.
+Echoes now has twelve levels in three acts, a full set of menus, saved progress, controller support, and four tools that rerun its claims: `--selftest` (155 checks), `--flow` (33 checks), `--slack`, and `--bench`. Ferry and Confluence were rebuilt around a reflection that waits for you ([part 7]({{< relref "07-ferry" >}})), and the game's files moved into a folder tree ([part 8]({{< relref "08-layout" >}})). This is the list of what is left.
 
 {{< figure src="images/08-next/select-ferry-next.png" caption="Level select at `1b2f9ce` with the first two acts cleared and Ferry next. Ferry has been rebuilt since this frame. The records are seeded test data." >}}
 
@@ -36,4 +36,4 @@ The goal is one `TILES` entry per tile that also names its character, with `LEGE
 
 ## Check the folder rule
 
-[Part 9]({{< relref "09-layout" >}}) describes the rule that `world/` requires nothing outside itself. Today a person has to remember to check it. A selftest check that reads the `require` lines in `world/` and `content/` would fail the build the first time someone breaks it.
+[Part 8]({{< relref "08-layout" >}}) describes the rule that `world/` requires nothing outside itself. Today a person has to remember to check it. A selftest check that reads the `require` lines in `world/` and `content/` would fail the build the first time someone breaks it.

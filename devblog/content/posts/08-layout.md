@@ -1,8 +1,8 @@
 ---
 title: "Moving 27 files without changing a pixel"
 description: "The game's Lua files moved from one flat folder into a tree under game/. Same checks, same counts, and screenshots that match pixel for pixel."
-part: 9
-weight: 9
+part: 8
+weight: 8
 date: 2026-10-17
 commits: ["7ae145b", "eb0d82c", "0c8fcda", "eccb521"]
 cover: "images/09-layout/select-game-folder.png"
