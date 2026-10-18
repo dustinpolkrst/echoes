@@ -350,12 +350,6 @@ local function testStairwayNeedsEcho()
     ('best bottom=%.1f ledge top=%d'):format(highest, ledgeTop))
 end
 
-local function prefix(script, n)
-  local out = {}
-  for i = 1, n do out[i] = script[i] end
-  return out
-end
-
 local function bestBottom(w, frames, input)
   local best = w.player.y + w.player.h
   for _ = 1, frames do
@@ -403,11 +397,58 @@ local function testUnderfootNeedsEcho()
     w.player.y + w.player.h == 8 * 16 and w.doorOpen.a == false, ('bottom=%.1f'):format(w.player.y + w.player.h))
 end
 
-local function testFerryPitIsTooWide()
+local SPIKES_END = 18 * 16 - 2
+
+-- The farthest any body gets by jumping from the tunnel mouth, over every press point and hold length.
+local function farthestJump(def, prepare, jumpXs, holds)
+  local farthest, survivors = 0, 0
+  for _, jumpX in ipairs(jumpXs) do
+    for _, hold in ipairs(holds) do
+      local w = Level.new(def)
+      if prepare then prepare(w) end
+      local script = { { 'R', cond.atX(jumpX) }, { hold, 'RJ' }, { 120, 'R' } }
+      run(w, script, function(c) farthest = math.max(farthest, c.player.x) end)
+      if w.player.state ~= 'dead' and w.player.x >= SPIKES_END then survivors = survivors + 1 end
+    end
+  end
+  return farthest, survivors
+end
+
+local function range(lo, hi, step)
+  local out = {}
+  for v = lo, hi, step do out[#out + 1] = v end
+  return out
+end
+
+local function testTunnelJumps(index)
+  local def = Levels[index]
+  local jumpXs, holds = range(150, 232, 2), range(1, 40, 3)
+  local far, survivors = farthestJump(def, nil, jumpXs, holds)
+  check(('level %d: no running jump from the tunnel mouth clears the spikes'):format(index),
+    survivors == 0 and far < SPIKES_END, ('farthest x=%.1f of %d jumps, spikes end at %d'):format(far, #jumpXs * #holds, SPIKES_END))
+
+  local function perch(w)
+    local pose = { x = 240, y = 204, facing = 1, state = 'ground' }
+    w.echoes[1] = Echo.new({ pose, pose })
+    w.player.x, w.player.y = 240, 192
+  end
+  far, survivors = farthestJump(def, perch, { 246 }, holds)
+  check(('level %d: a jump from the highest echo you can stand on in the tunnel still lands in the spikes'):format(index),
+    survivors == 0 and far < SPIKES_END, ('farthest x=%.1f'):format(far))
+end
+
+local function testFerryNeedsTheWait()
   local w = Level.new(Levels[10])
-  local ok, why = run(w, { { 'R', cond.atX(228) }, { 'RJ', cond.atX(1000) } })
-  check('level 10: a running jump lands in the spikes', not ok and w.player.state == 'dead' and w.player.x < 20 * 16,
-    ('%s'):format(tostring(why)))
+  run(w, { { 'R', cond.atX(130) }, { 6, 'RJ' }, { 'R', cond.onTop(208, 134, 208) }, { 'R', cond.atX(190) },
+    { 10, '-' }, { 1, 'X' }, { 20, '-' }, { 150, 'R' } })
+  check('level 10: casting on the shrine without waiting at its foot leaves nothing to step onto',
+    w.player.state ~= 'cleared' and (w.player.state == 'dead' or w.player.x < SPIKES_END), ('state=%s x=%.1f'):format(w.player.state, w.player.x))
+  w = Level.new(Levels[10])
+  run(w, { { 'R', cond.atX(166) }, { 120, '-' }, { 'L', cond.atXLeft(104) }, { 'R', cond.atX(166) }, { 1, 'X' },
+    { 'L', cond.atXLeft(130) }, { 'R', cond.atX(130) }, { 6, 'RJ' }, { 'R', cond.onTop(208, 134, 208) }, { 20, '-' }, { 150, 'R' } })
+  check('level 10: an echo cast at the foot of the shrine is not reflected, so it walks away from the pit',
+    not w.echoes[1].mirrored and w.player.state ~= 'cleared' and (w.player.state == 'dead' or w.player.x < SPIKES_END),
+    ('state=%s x=%.1f'):format(w.player.state, w.player.x))
 end
 
 local function testShortMemoryNeedsPatience()
@@ -421,18 +462,12 @@ local function testShortMemoryNeedsPatience()
 end
 
 local function testConfluenceTiming()
+  local strategy = Solutions.strategies['Confluence']
   local w = Level.new(Levels[12])
-  local ok, why = run(w, { { 'R', cond.atX(228) }, { 'RJ', cond.atX(1000) } })
-  check('level 12: a running jump lands in the spikes', not ok and w.player.state == 'dead' and w.player.x < 19 * 16, tostring(why))
-  w = Level.new(Levels[12])
-  local script = prefix(Solutions.scripts[Levels[12].name], 7)
-  script[#script + 1] = { 200, '-' }
-  script[#script + 1] = { 'R', cond.atX(376) }
-  script[#script + 1] = { 1, 'X' }
-  script[#script + 1] = { 240, '-' }
-  run(w, script)
+  run(w, strategy.build(Solutions.decisions(strategy, { landDelay = 160 })))
   check('level 12: dawdling on the landing lets the crossing fade, the second echo misses the plate',
-    w.doorOpen.a == false and w.player.x <= 25 * 16 - 10 + 0.01, ('x=%.1f'):format(w.player.x))
+    w.player.state == 'ground' and w.doorOpen.a == false and w.player.x <= 21 * 16 - 10 + 0.01,
+    ('state=%s x=%.1f'):format(w.player.state, w.player.x))
 end
 
 local function withoutPresses(keys)
@@ -466,6 +501,25 @@ local function testSolutionSlack()
     end
     check(('level %d "%s" solution survives timing perturbed by 3 frames'):format(i, Levels[i].name),
       #failures == 0, #failures > 0 and table.concat(failures, '; ') or ('%d variants'):format(#VARIANTS))
+  end
+end
+
+-- Every decision a human makes in a strategy must have a window a human can hit: half a second, or a tile and a half.
+local function testHumanSlack()
+  local Slack = require 'slack'
+  for i, def in ipairs(Levels) do
+    if Solutions.strategies[def.name] then
+      local r = Slack.measure(i)
+      local tight = {}
+      for _, row in ipairs(r.rows) do
+        local need = row.need or (row.unit == 'px' and 24 or 30)
+        if row.width < need then
+          tight[#tight + 1] = ('%s %d %s'):format(row.name, row.width, row.unit)
+        end
+      end
+      check(('level %d "%s" every human decision has at least 30 frames or 24 px of slack'):format(i, def.name),
+        r.nominalWins and #tight == 0, #tight > 0 and table.concat(tight, '; ') or ('%d decisions'):format(#r.rows))
+    end
   end
 end
 
@@ -522,11 +576,14 @@ function S.run()
   testTrapdoorNeedsCast()
   testUndertowNeedsVeilEcho()
   testUnderfootNeedsEcho()
-  testFerryPitIsTooWide()
+  testTunnelJumps(10)
+  testTunnelJumps(12)
+  testFerryNeedsTheWait()
   testShortMemoryNeedsPatience()
   testConfluenceTiming()
   testSolutions()
   testSolutionSlack()
+  testHumanSlack()
   print(('%d checks, %d failed'):format(total, failed))
   return failed == 0
 end

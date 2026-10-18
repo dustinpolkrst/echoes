@@ -85,16 +85,9 @@ end
 function C.onLastEcho(w) return w.player.support == w.echoes[#w.echoes] end
 function C.grounded(w) return w.player.state == 'ground' end
 function C.doorOpen(id) return function(w) return w.doorOpen[id] end end
-function C.lastEchoOvertakingRight(maxBehind)
-  return function(w)
-    local e = w.echoes[#w.echoes]
-    return e ~= nil and e.x > e.prevX and e.x >= w.player.x - maxBehind
-  end
-end
 
 local atX, atXLeft, onTop = C.atX, C.atXLeft, C.onTop
 local apex, echoArrived, onLastEcho, grounded, doorOpen = C.apex, C.echoArrived, C.onLastEcho, C.grounded, C.doorOpen
-local lastEchoOvertakingRight = C.lastEchoOvertakingRight
 
 -- Coordinates are pixels (tile = 16). Each list is a full playthrough of the level of that name.
 M.scripts = {
@@ -169,20 +162,65 @@ M.scripts = {
   ['Underfoot'] = {
     { 'R', atX(48) }, { 190, '-' }, { 1, 'X' }, { 'R', atX(296) }, { '-', onTop(224) },
   },
-  ['Ferry'] = {
-    { 'R', atX(208) }, { 'L', atXLeft(80) }, { 'R', atX(209) }, { 1, 'X' },
-    { '-', lastEchoOvertakingRight(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(400) },
-  },
   ['Short Memory'] = {
     { 'R', atX(26) }, { 'RJ', onTop(208, 54, 102) }, { 130, '-' },
     { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
   },
+}
+
+-- A strategy is a solution written as a human would play it: every decision a human has to time or place is a
+-- parameter with the range a player might plausibly pick. slack.lua sweeps each one and reports the winning window,
+-- which the selftest holds to 30 frames or 24 px unless the decision says what it needs instead.
+local FERRY_DECISIONS = {
+  { name = 'footX', unit = 'px', nominal = 166, min = 130, max = 166, step = 2, need = 4, note = 'the pedestal wall stops you here' },
+  { name = 'idle', unit = 'frames', nominal = 120, min = 0, max = 240, step = 4 },
+  { name = 'turnX', unit = 'px', nominal = 104, min = 30, max = 178, step = 2 },
+  { name = 'hopX', unit = 'px', nominal = 130, min = 60, max = 180, step = 2 },
+  { name = 'hopHold', unit = 'frames', nominal = 6, min = 1, max = 40, step = 1 },
+  { name = 'castX', unit = 'px', nominal = 190, min = 160, max = 210, step = 1 },
+  { name = 'castDelay', unit = 'frames', nominal = 10, min = 0, max = 150, step = 2 },
+  { name = 'stepDelay', unit = 'frames', nominal = 20, min = 0, max = 200, step = 2 },
+  { name = 'stepHold', unit = 'frames', nominal = 3, min = 0, max = 30, step = 1, need = 6, note = 'a tap; the echo is 10 px wide' },
+}
+
+-- Wait at the foot of the shrine pedestal, walk away, hop back up, cast, step off onto the waiting reflection, ride.
+local function ferry(p)
+  return {
+    { 'R', atX(p.footX) }, { p.idle, '-' }, { 'L', atXLeft(p.turnX) },
+    { 'R', atX(p.hopX) }, { p.hopHold, 'RJ' }, { 'R', onTop(208, 134, 208) },
+    { 'R', atX(p.castX) }, { p.castDelay, '-' }, { 1, 'X' },
+    { p.stepDelay, '-' }, { 'R', onLastEcho }, { p.stepHold, 'R' }, { '-', echoArrived },
+  }
+end
+
+local function append(script, more)
+  for _, seg in ipairs(more) do script[#script + 1] = seg end
+  return script
+end
+
+M.strategies = {
+  ['Ferry'] = {
+    params = FERRY_DECISIONS,
+    build = function(p) return append(ferry(p), { { 'R', atX(360) } }) end,
+  },
   ['Confluence'] = {
-    { 'R', atX(208) }, { 'L', atXLeft(80) }, { 'R', atX(209) }, { 1, 'X' },
-    { '-', lastEchoOvertakingRight(8) }, { 'RJ', onLastEcho }, { '-', echoArrived }, { 'R', atX(376) }, { 1, 'X' },
-    { '-', doorOpen('a') }, { 'R', atX(440) },
+    params = append({ { name = 'landDelay', unit = 'frames', nominal = 20, min = 0, max = 240, step = 4 } }, FERRY_DECISIONS),
+    build = function(p)
+      return append(ferry(p), {
+        { p.landDelay, '-' }, { 'R', atX(326) }, { 1, 'X' }, { '-', doorOpen('a') }, { 'R', atX(360) },
+      })
+    end,
   },
 }
+
+function M.decisions(strategy, overrides)
+  local p = {}
+  for _, d in ipairs(strategy.params) do p[d.name] = d.nominal end
+  for k, v in pairs(overrides or {}) do p[k] = v end
+  return p
+end
+
+for name, strategy in pairs(M.strategies) do M.scripts[name] = strategy.build(M.decisions(strategy)) end
 
 -- An input source for a live scene: returns the next scripted input, then idles.
 function M.provider(index)

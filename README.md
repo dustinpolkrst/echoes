@@ -67,7 +67,7 @@ Act two introduces one tile each:
 
 Act three combines them:
 
-10. Ferry: a reflected walk carries you over spikes.
+10. Ferry: a reflection that waited where you waited carries you through a tunnel too low to jump in.
 11. Short Memory: an echo starts three seconds back, so the wait before casting decides which side of a veil it begins on.
 12. Confluence: the ride, the veil and the sealed plate in one recording.
 
@@ -75,7 +75,11 @@ Act three combines them:
 
     love echoes --selftest
 
-Runs the simulation headless (no window), prints PASS or FAIL per check, and exits nonzero on any failure. It covers physics, hazards, doors and plates, echo recording and carry, the mirror, veil and crumble tiles, and a scripted solution for every level (`solutions.lua`). For levels 6 to 12 it also proves the naive approach fails (the jump falls short, the door stays shut, the echo parks in the wrong place) and reruns each solution with its timings shifted by three frames, so no level needs frame-perfect play.
+Runs the simulation headless (no window), prints PASS or FAIL per check, and exits nonzero on any failure. It covers physics, hazards, doors and plates, echo recording and carry, the mirror, veil and crumble tiles, and a scripted solution for every level (`solutions.lua`). For levels 6 to 12 it also proves the naive approach fails (the jump falls short, the door stays shut, the echo parks in the wrong place) and reruns each solution with its timings shifted by three frames, so no level needs frame-perfect play. Levels with a strategy (see `--slack`) must give every human decision at least 30 frames or 24 px of slack.
+
+    love echoes --slack [N] [decision=value ...]
+
+Measures how forgiving a level is. A strategy in `solutions.lua` is a solution written the way a person plays it, with every decision a person has to time or place (how long to wait, where to turn back, when to step off) as a named parameter with a plausible range. The lever sweeps each decision on its own, holding the others at their nominal values, and prints a strip of wins and losses with the width of the winning window around the nominal, in frames or pixels. `N` limits it to one level and `turnX=120` style overrides move the nominal, which is how to read a window as a function of another decision.
 
     love echoes --shot N
 

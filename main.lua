@@ -1,9 +1,13 @@
 local selftest, flow, bench, shotTarget, shotArg = false, false, nil, nil, nil
 local benchOpts = {}
-local diffPair
+local diffPair, slackArgs
 local args = arg or {}
 for i, a in pairs(args) do
   if a == '--selftest' then selftest = true end
+  if a == '--slack' then
+    slackArgs = {}
+    for j = i + 1, #args do slackArgs[#slackArgs + 1] = args[j] end
+  end
   if a == '--flow' then flow = true end
   if a == '--bench' then
     local label = args[i + 1]
@@ -30,9 +34,12 @@ if diffPair then
   return
 end
 
-if selftest then
+if selftest or slackArgs then
   function love.load()
-    local ok, passed = xpcall(function() return require('selftest').run() end, function(e)
+    local ok, passed = xpcall(function()
+      if slackArgs then return require('slack').run(slackArgs) end
+      return require('selftest').run()
+    end, function(e)
       return debug.traceback(e, 2)
     end)
     if not ok then
