@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="{{ site.LanguageCode }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.description }}{{ end }}">
+  <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="{{ "/" | relURL }}"><span class="flame" aria-hidden="true"></span>ECHOES <small>dev blog</small></a>
+    <nav>
+      {{ range site.Menus.main }}<a href="{{ .URL }}">{{ .Name }}</a>{{ end }}
+    </nav>
+  </header>
+  <main>
+    {{ block "main" . }}{{ end }}
+  </main>
+  <footer class="footer">
+    <p>Echoes is built with LÖVE 11.5. Every screenshot here comes from <code>devblog/tools/shots.sh</code>, which renders it from the commit the post describes.</p>
+  </footer>
+</body>
+</html>
