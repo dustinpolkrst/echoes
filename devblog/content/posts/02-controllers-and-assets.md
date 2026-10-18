@@ -8,7 +8,7 @@ commits: ["a72332d"]
 cover: "images/02-controls/hints-gamepad.png"
 ---
 
-The next work was practical. The game needed to run on an Xbox controller, and real sprites needed a way in later without code changes. The engine choice also got a second look, LÖVE against raylib.
+The next work was practical. The game needed to run on an Xbox controller, and real sprites needed a way in later without code changes.
 
 The controller and the asset folder both made it into the first-build commit, `a72332d`. Rerun for this post, its selftest has 40 checks. That's the 29 from [part 1]({{< relref "01-the-pitch" >}}) plus 11 for the pad, like "pad stick inside deadzone does nothing" and "hint swaps button names for pad".
 
@@ -61,9 +61,3 @@ A.SLOTS = {
 The fallback works slot by slot, so an artist can replace just the player and leave everything else. `assets/README.md` lists every slot with its pixel size and anchor point, so nobody has to read Lua to make art for the game. Lighting, glows and the HUD still draw on top, which means a dropped-in sprite gets lit the same way the procedural one does.
 
 The repository has no sprite or sound files yet. Every screenshot on this blog is the procedural fallback.
-
-## Why LÖVE and not raylib
-
-The game stayed on LÖVE. It already worked, and a rewrite in raylib would have cost real time and bought nothing it needed. LÖVE already had everything the game used: canvases for the lightmap and the pixel-scaled view, blend modes for the glow, generated sound data for the audio, and built-in gamepad mappings for the controller work above.
-
-raylib is the better pick for a web export, for raw speed with a lot of objects on screen, or when the point is to learn or ship C and C++. None of that applied here. [Part 5]({{< relref "05-measuring" >}}) later measured how much headroom the game has on LÖVE, and there was a lot of it.

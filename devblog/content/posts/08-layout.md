@@ -8,7 +8,7 @@ commits: ["7ae145b", "eb0d82c", "0c8fcda", "eccb521"]
 cover: "images/08-layout/select-game-folder.png"
 ---
 
-Up to `1afca9f`, all 27 of the game's Lua files sat in the repository root, next to `README.md` and the `assets/` folder. The game grew that way over one long session, one file at a time. The layout made sense to whoever had just added a file. It made no sense to someone opening the project for the first time, so the files moved into folders.
+Up to `1afca9f`, all 27 of the game's Lua files sat in the repository root, next to `README.md` and the `assets/` folder. The game grew that way, one file at a time. The layout made sense to whoever had just added a file. It made no sense to someone opening the project for the first time, so the files moved into folders.
 
 ## What the flat folder didn't show
 

@@ -8,7 +8,7 @@ commits: ["d1844e5", "9591f41", "c31b489", "55a8f02", "10d1344"]
 cover: "images/03-puzzles/other-side-mirror.png"
 ---
 
-Five levels teach the echo without asking much of it. The next round of work covered harder puzzles, a real interface and performance, split into three branches that ran at the same time: the puzzles here, which grew the game to twelve levels in three acts, the interface work in [part 4]({{< relref "04-interface" >}}), and the performance work in [part 5]({{< relref "05-measuring" >}}). Each had its own git worktree and its own agent, and the branches merged afterwards. The puzzles came in with the merge `55a8f02`, and `10d1344` then grouped the levels into acts.
+Five levels teach the echo without asking much of it. The next round of work covered harder puzzles, a real interface and performance, split into three branches that ran at the same time: the puzzles here, which grew the game to twelve levels in three acts, the interface work in [part 4]({{< relref "04-interface" >}}), and the performance work in [part 5]({{< relref "05-measuring" >}}). The three branches merged afterwards. The puzzles came in with the merge `55a8f02`, and `10d1344` then grouped the levels into acts.
 
 ## Three new tiles
 
