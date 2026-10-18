@@ -2,6 +2,7 @@ local Save = require 'platform.save'
 local Input = require 'platform.input'
 local Progress = require 'screens.progress'
 local Solutions = require 'dev.solutions'
+local Level = require 'world.level'
 
 local F = {}
 
@@ -242,6 +243,33 @@ function F.run(Scenes)
     Scenes.name == 'playing' and Scenes.playing.world.respawn == nil and Scenes.playing.attemptT < kept
     and math.abs(Scenes.playing.world.player.x - (1 * 16 + 3)) < 1, ('x=%.1f t=%.2f'):format(Scenes.playing.world.player.x, Scenes.playing.attemptT))
   Levels[#Levels] = nil
+
+  local function drawnWorld(doorRow)
+    local row = '#' .. doorRow .. '#'
+    local w = Level.new({ name = 'door test', map = { '################', row, row, row, '#P.............#', '################' } })
+    local canvas = love.graphics.newCanvas(w.W * 16, w.H * 16)
+    love.graphics.push('all')
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear(0, 0, 0, 1)
+    love.graphics.origin()
+    Render.t = 0
+    Render.drawWorld(w)
+    love.graphics.pop()
+    return canvas:newImageData()
+  end
+  local split, left, right, none =
+    drawnWorld('..A......A....'), drawnWorld('..A...........'), drawnWorld('.........A....'), drawnWorld('..............')
+  local function inColumn(x, y, tx) return x >= tx * 16 and x < (tx + 1) * 16 and y >= 16 and y < 64 end
+  local wrong = 0
+  for y = 0, split:getHeight() - 1 do
+    for x = 0, split:getWidth() - 1 do
+      local want = inColumn(x, y, 3) and left or inColumn(x, y, 10) and right or none
+      local r1, g1, b1 = split:getPixel(x, y)
+      local r2, g2, b2 = want:getPixel(x, y)
+      if r1 ~= r2 or g1 ~= g2 or b1 ~= b2 then wrong = wrong + 1 end
+    end
+  end
+  check('a letter used in two places draws two doors and nothing between them', wrong == 0, wrong .. ' pixels differ')
 
   print(('%d flow checks, %d failed'):format(total, failed))
   return failed == 0

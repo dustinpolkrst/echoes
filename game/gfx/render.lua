@@ -379,8 +379,8 @@ TILES.checkpoint.draw = withSlot('checkpoint', proceduralCheckpoint, function(c)
   return { frame = c.active and 2 or 1 }
 end)
 
--- Doors span several cells, so they are drawn as one slab per letter rather than per tile.
-local function drawDoor(world, id, cells, open)
+-- Doors span several cells, so each door piece is drawn as one slab rather than per tile.
+local function drawDoor(cells, open)
   local col = PLATE_COLORS[cells[1].idx]
   local x0, y0, x1, y1 = math.huge, math.huge, 0, 0
   for _, c in ipairs(cells) do
@@ -476,12 +476,44 @@ local function bake(world)
   return canvas
 end
 
+-- A letter can mark several separate doors that share a plate. Each 4-connected run of its cells is one piece,
+-- listed in map order so every run draws them in the same order.
+local NEIGHBOURS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+
+local function doorPieces(world)
+  local pieces, seen = {}, {}
+  for ty = 0, world.H - 1 do
+    for tx = 0, world.W - 1 do
+      local c = world.cells[ty][tx]
+      if c and c.kind == 'door' and not seen[c] then
+        local cells, stack = {}, { c }
+        seen[c] = true
+        while #stack > 0 do
+          local d = table.remove(stack)
+          cells[#cells + 1] = d
+          for _, n in ipairs(NEIGHBOURS) do
+            local row = world.cells[d.ty + n[2]]
+            local e = row and row[d.tx + n[1]]
+            if e and e.kind == 'door' and e.id == c.id and not seen[e] then
+              seen[e] = true
+              stack[#stack + 1] = e
+            end
+          end
+        end
+        table.sort(cells, function(a, b) return a.ty < b.ty or a.ty == b.ty and a.tx < b.tx end)
+        pieces[#pieces + 1] = { id = c.id, cells = cells }
+      end
+    end
+  end
+  return pieces
+end
+
 local viewsByWorld = setmetatable({}, { __mode = 'k' })
 
 local function view(world)
   local v = viewsByWorld[world]
   if not v then
-    v = { doors = {} }
+    v = { doors = {}, pieces = doorPieces(world) }
     viewsByWorld[world] = v
   end
   return v
@@ -695,8 +727,8 @@ function R.drawWorld(world)
   local t = R.t
   gfx.setColor(1, 1, 1)
   gfx.draw(layer(world), 0, 0)
-  local doors = view(world).doors
-  for id, cells in pairs(world.doorCells) do drawDoor(world, id, cells, doors[id] or 0) end
+  local v = view(world)
+  for _, p in ipairs(v.pieces) do drawDoor(p.cells, v.doors[p.id] or 0) end
   for ty = 0, world.H - 1 do
     for tx = 0, world.W - 1 do
       local c = world.cells[ty][tx]
@@ -742,9 +774,9 @@ function R.drawLighting(world, camx, camy, extra)
     end
     glow(l.x, l.y, r, spec.color[1], spec.color[2], spec.color[3], lightAlpha(spec, l))
   end
-  local doors = view(world).doors
-  for id, cells in pairs(world.doorCells) do
-    local open = doors[id] or 0
+  local v = view(world)
+  for _, p in ipairs(v.pieces) do
+    local cells, open = p.cells, v.doors[p.id] or 0
     if open < 0.95 then
       local col = PLATE_COLORS[cells[1].idx]
       local c = cells[floor(#cells / 2) + 1]
