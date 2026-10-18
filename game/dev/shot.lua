@@ -1,4 +1,4 @@
-local Save = require 'save'
+local Save = require 'platform.save'
 
 local Shot = {}
 
@@ -29,7 +29,7 @@ end
 
 local function playSolution(Scenes, level, n)
   Scenes.go('playing', level)
-  Scenes.inputSource = require('solutions').provider(level)
+  Scenes.inputSource = require('dev.solutions').provider(level)
   for _ = 1, n do Scenes.update() end
 end
 
@@ -38,8 +38,8 @@ end
 function Shot.setup(Scenes, target, arg)
   love.math.setRandomSeed(1)
   math.randomseed(1)
-  require('ui').time = function() return 0 end
-  local Levels = require 'levels'
+  require('gfx.ui').time = function() return 0 end
+  local Levels = require 'content.levels'
   local level = tonumber(target)
   if level then
     Scenes.init(seededStore(0))
@@ -75,7 +75,7 @@ function Shot.setup(Scenes, target, arg)
     local level = arg or 1
     Scenes.init(seededStore(0, { [level] = { done = true, bestTime = 999, bestDeaths = 9 } }))
     Scenes.go('playing', level)
-    Scenes.inputSource = require('solutions').provider(level)
+    Scenes.inputSource = require('dev.solutions').provider(level)
     for _ = 1, 4000 do
       Scenes.update()
       if Scenes.name == 'levelclear' then break end
@@ -84,7 +84,7 @@ function Shot.setup(Scenes, target, arg)
   elseif target == 'transition' then
     Scenes.init(seededStore(0))
     playTo(Scenes, arg or 2, 90)
-    require('transition').start(function() end, 480, 270)
+    require('screens.transition').start(function() end, 480, 270)
     frames(Scenes, 9)
   else
     error('unknown --shot target: ' .. tostring(target))

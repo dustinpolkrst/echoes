@@ -1,7 +1,7 @@
-local Save = require 'save'
-local Input = require 'input'
-local Progress = require 'progress'
-local Solutions = require 'solutions'
+local Save = require 'platform.save'
+local Input = require 'platform.input'
+local Progress = require 'screens.progress'
+local Solutions = require 'dev.solutions'
 
 local F = {}
 
@@ -52,7 +52,7 @@ function F.run(Scenes)
   settle()
   check('pause Restart level returns to play with a fresh world', Scenes.name == 'playing' and Scenes.playing.world ~= world)
 
-  local Render = require 'render'
+  local Render = require 'gfx.render'
   local function playingFrame()
     Scenes.draw()
     return { pixels = Render.game:newImageData():getString(), t = Render.t }

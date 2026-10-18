@@ -1,4 +1,4 @@
-local Assets = require 'assets'
+local Assets = require 'platform.assets'
 
 local M = {}
 

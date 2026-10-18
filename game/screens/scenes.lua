@@ -1,17 +1,17 @@
-local Level = require 'level'
-local Levels = require 'levels'
-local Player = require 'player'
-local Render = require 'render'
-local Particles = require 'particles'
-local Sfx = require 'sfx'
-local Input = require 'input'
-local Save = require 'save'
-local Progress = require 'progress'
-local Menu = require 'menu'
-local Trans = require 'transition'
-local Ui = require 'ui'
-local Hud = require 'hud'
-local Assets = require 'assets'
+local Level = require 'world.level'
+local Levels = require 'content.levels'
+local Player = require 'world.player'
+local Render = require 'gfx.render'
+local Particles = require 'gfx.particles'
+local Sfx = require 'platform.sfx'
+local Input = require 'platform.input'
+local Save = require 'platform.save'
+local Progress = require 'screens.progress'
+local Menu = require 'screens.menu'
+local Trans = require 'screens.transition'
+local Ui = require 'gfx.ui'
+local Hud = require 'gfx.hud'
+local Assets = require 'platform.assets'
 
 local gfx = love.graphics
 local floor, sin, pi, min, max = math.floor, math.sin, math.pi, math.min, math.max
@@ -27,7 +27,7 @@ S.readInput = Input.read
 -- Replaced by --shot so a scripted run can drive the same scenes; receives the live world.
 S.inputSource = function() return Input.read() end
 
-local clock = require('hudmodel').clock
+local clock = require('gfx.hudmodel').clock
 
 
 S.store = Save.open({ read = function() return nil end, write = function() return true end })

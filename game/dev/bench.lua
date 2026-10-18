@@ -1,7 +1,7 @@
-local Levels = require 'levels'
-local Solutions = require 'solutions'
-local Trans = require 'transition'
-local Shot = require 'shot'
+local Levels = require 'content.levels'
+local Solutions = require 'dev.solutions'
+local Trans = require 'screens.transition'
+local Shot = require 'dev.shot'
 
 local gfx = love.graphics
 local getTime = love.timer.getTime
@@ -239,15 +239,15 @@ local function instrument(Scenes)
       return a, b, c, d
     end
   end
-  local Render, Ui = require 'render', require 'ui'
+  local Render, Ui = require 'gfx.render', require 'gfx.ui'
   for _, k in ipairs({ 'drawBackground', 'drawWorld', 'drawLighting', 'drawGlows', 'drawMotes', 'present' }) do
     wrap(Render, k, 'Render.' .. k)
   end
   for _, k in ipairs({ 'glowText', 'text', 'menu', 'footer', 'panel', 'iris' }) do wrap(Ui, k, 'Ui.' .. k) end
-  wrap(require('particles'), 'draw', 'Particles.draw')
-  wrap(require('particles'), 'update', 'Particles.update')
-  wrap(require('level'), 'step', 'Level.step')
-  wrap(require('hud'), 'draw', 'Hud.draw')
+  wrap(require('gfx.particles'), 'draw', 'Particles.draw')
+  wrap(require('gfx.particles'), 'update', 'Particles.update')
+  wrap(require('world.level'), 'step', 'Level.step')
+  wrap(require('gfx.hud'), 'draw', 'Hud.draw')
   for _, n in ipairs({ 'title', 'pause', 'select', 'playing' }) do wrap(Scenes[n], 'drawUI', n .. '.drawUI') end
 end
 

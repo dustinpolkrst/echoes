@@ -1,5 +1,5 @@
-local Render = require 'render'
-local Menu = require 'menu'
+local Render = require 'gfx.render'
+local Menu = require 'screens.menu'
 
 local gfx = love.graphics
 local sin, min, max = math.sin, math.min, math.max
