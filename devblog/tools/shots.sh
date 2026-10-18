@@ -64,20 +64,19 @@ SHOTS='
 09-shortcuts  37c1380  other-side-ledge        6 288
 09-shortcuts  37c1380  underfoot-pedestal      9 260
 09-shortcuts  37c1380  short-memory-hatch      11 295
-10-act-four   37c1380  waystone-lit            13 282
-10-act-four   37c1380  relay-before-restart    13 700
-10-act-four   37c1380  relay-after-restart     relayrespawn 700
-10-act-four   37c1380  plumb-line-well         14 410
-10-act-four   37c1380  undercroft-reflection   15 300
-10-act-four   37c1380  crawlspace-parked       16 265
-10-act-four   37c1380  toll-gate               17 960
-10-act-four   37c1380  toll-hatch              17 1500
-11-act-five   37c1380  clockwork-overlap       18 300
-11-act-five   37c1380  hall-of-mirrors-air     19 300
-11-act-five   37c1380  let-go-doorway          21 360
-11-act-five   37c1380  last-light-ferry        22 430
-11-act-five   37c1380  select-five-acts        select 21
-12-next       37c1380  door-slabs              20 760
+10-act-four   df9c112  waystone-lit            13 282
+10-act-four   df9c112  relay-before-restart    13 700
+10-act-four   df9c112  relay-after-restart     relayrespawn 700
+10-act-four   df9c112  plumb-line-well         14 410
+10-act-four   df9c112  undercroft-reflection   15 300
+10-act-four   df9c112  crawlspace-parked       16 265
+10-act-four   df9c112  toll-gate               17 960
+10-act-four   df9c112  toll-hatch              17 1500
+11-act-five   df9c112  clockwork-overlap       18 300
+11-act-five   df9c112  hall-of-mirrors-air     19 300
+11-act-five   df9c112  let-go-doorway          21 360
+11-act-five   df9c112  last-light-ferry        22 430
+11-act-five   df9c112  select-five-acts        select 21
 '
 
 game_dir() {

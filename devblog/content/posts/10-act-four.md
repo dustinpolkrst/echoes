@@ -23,8 +23,6 @@ A respawn rebuilds the level from its map and stands the player on the lit wayst
 {{< figure src="images/10-act-four/relay-after-restart.png" caption="Then <kbd>R</kbd>. The light stands on the first waystone with both echo slots empty, 0.6 s of memory, and the gate shut. The clock went on from 0:11.7." >}}
 {{< /pair >}}
 
-The pink slab that runs through both storeys in the second frame is a drawing bug, not a door. [Part 12]({{< relref "12-whats-next" >}}) covers it.
-
 The respawn is an option of the world constructor, so the game and the tests build a room the same way:
 
 ```lua

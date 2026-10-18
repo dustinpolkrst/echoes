@@ -48,7 +48,7 @@ Three ideas were probed for the empty slot before one was built:
 
 The idea behind Let Go is that sometimes you want a ghost gone. Door A in each room is two things at once. It's a one-tile gate standing on crumble over spikes, and past one more crumble tile, a floor five tiles long over more spikes. While a ghost holds plate a, the gate is open and so is the floor. To cross, you need the gate open as you step into it and the floor shut after. You stand in the doorway, where your own body keeps the gate open, and cast until the third ghost takes the one on a with it. The stone under the doorway cracks, so you can't wait there for the ghost to fade instead.
 
-{{< figure src="images/11-act-five/let-go-doorway.png" caption="Let Go, frame 360. Two casts from inside the doorway, at frames 353 and 356, made a third ghost, and the ghost on plate a went with it. Door A is shut, so the five-tile floor ahead is solid, though this frame doesn't draw it. That's the bug in part 12." >}}
+{{< figure src="images/11-act-five/let-go-doorway.png" caption="Let Go, frame 360. Two casts from inside the doorway, at frames 353 and 356, made a third ghost, and the ghost on plate a went with it. Door A has just shut, so the five-tile floor ahead is solid again. Its pieces are still sliding back into place." >}}
 
 The three rooms follow teach, test and twist. In **Let Go** you cast once on a and twice in the doorway. In **Oldest First** a second plate, b, holds the exit door, and the cast in the doorway takes the oldest ghost. So the cast on a has to come before the one on b, or the kill takes the keeper. In **Borrowed Time** the two casts in the doorway replay a pause on plate c three seconds later. That pause has to last between 0.7 and 2.8 seconds.
 
@@ -66,7 +66,7 @@ The doc ends act V with lessons for whoever builds the next level:
 
 ## 22 levels
 
-{{< figure src="images/11-act-five/select-five-acts.png" caption="Level select at `37c1380`, five acts, with 21 levels cleared and The Last Light up next. Long names like Ferryman's Toll and Three Steps Behind wrap above the time, from `a3c2812`. The records are seeded test data." >}}
+{{< figure src="images/11-act-five/select-five-acts.png" caption="Level select at `df9c112`, five acts, with 21 levels cleared and The Last Light up next. Long names like Ferryman's Toll and Three Steps Behind wrap above the time, from `a3c2812`. The records are seeded test data." >}}
 
 Rerun for this post at `37c1380`:
 

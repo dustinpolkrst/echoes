@@ -1,28 +1,20 @@
 ---
 title: "Next: playtests and cleanup"
-description: "Acts IV and V need people to play them, a few weak spots and a door-drawing bug are known, and the code shows where the cleanup should go."
+description: "Acts IV and V need people to play them, a few weak spots are known, and the code shows where the cleanup should go."
 part: 12
 weight: 12
 date: 2026-10-18
-commits: ["37c1380"]
+commits: ["37c1380", "df9c112"]
 cover: "images/11-act-five/select-five-acts.png"
 ---
 
-Echoes now has 22 levels in five acts, waystones in every long level, menus, saved progress and controller support. Five tools rerun its claims: `--selftest` with 369 checks, `--flow` with 37, `--slack`, `--cheese`, and `--bench`. Here's what's left.
+Echoes now has 22 levels in five acts, waystones in every long level, menus, saved progress and controller support. Five tools rerun its claims: `--selftest` with 369 checks, `--flow` with 38, `--slack`, `--cheese`, and `--bench`. Here's what's left.
 
-{{< figure src="images/11-act-five/select-five-acts.png" caption="Level select at `37c1380`. The records are seeded test data." >}}
+{{< figure src="images/11-act-five/select-five-acts.png" caption="Level select at `df9c112`. The records are seeded test data." >}}
 
 ## Put acts IV and V in front of people
 
 Every room in acts IV and V passes its solve, its naives, `--slack` and `--cheese`. None of those tools can say whether a person sees the insight from the waystone, or reads the hint and gets it. The last step in the doc's checklist for a new level is one no tool runs. Play it with a pad, from the title, through every waystone, dying once per room on purpose. The real test is someone playing all ten levels cold while someone else watches where they get stuck.
-
-## Draw each door where it is
-
-Taking the screenshots for [part 10]({{< relref "10-act-four" >}}) and [part 11]({{< relref "11-act-five" >}}) turned up a drawing bug. `drawDoor` in `game/gfx/render.lua` draws one slab per door letter, over the bounding box of every cell with that letter. That worked while each letter was one door. Seven levels now use a letter in two or more places, levels 11, 13 and 18 to 22. Let Go's door A is in six. On those levels the slab spans everything between the pieces and covers the floors under it. A door that stands upright is drawn only in the column of its first piece, so the other pieces don't show at all.
-
-{{< figure src="images/12-next/door-slabs.png" caption="Three Steps Behind at `37c1380`, frame 760. The striped panels with magenta and yellow edges are the slabs for hatches B and C, each drawn from one hatch to its twin far away. The corridors and floors under them are hidden." >}}
-
-Collision reads the cells, not the slab, so the levels play as tested. But a person playtesting them sees doors where there are none and floors that aren't drawn, so the fix comes before the playtests. Each connected group of cells needs its own slab. The overlapping slabs also make this shot vary between runs. In four renders of this frame, one differed from the other three in 7,348 pixels.
 
 ## Close the weak spots the doc names
 
@@ -43,7 +35,7 @@ The plan is one `TILES` entry per tile that also names its character, with `LEGE
 
 ## Split the two largest files
 
-`game/screens/scenes.lua` is now 824 lines and `game/gfx/render.lua` is 812. Both already show where they would split.
+`game/screens/scenes.lua` is now 824 lines and `game/gfx/render.lua` is 844. Both already show where they would split.
 
 `scenes.lua` opens with code every scene shares: the camera that follows the player, the reaction to world events, and the ambient title hall behind the menus. After that come seven scenes, one table each: title, playing, pause, level select, settings, level clear, and ending. One file per scene, with the shared code in its own module, would keep each file to one screen.
 
