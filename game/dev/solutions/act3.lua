@@ -4,13 +4,6 @@ local atX, atXLeft, onTop, echoArrived, onLastEcho, doorOpen =
   C.atX, C.atXLeft, C.onTop, C.echoArrived, C.onLastEcho, C.doorOpen
 local append = S.append
 
-local scripts = {
-  ['Short Memory'] = {
-    { 'R', atX(26) }, { 'RJ', onTop(208, 54, 102) }, { 130, '-' },
-    { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
-  },
-}
-
 -- A strategy is a solution written as a human would play it: every decision a human has to time or place is a
 -- parameter with the range a player might plausibly pick. dev/slack.lua sweeps each one and reports the winning window,
 -- which the selftest holds to 30 frames or 24 px unless the decision says what it needs instead.
@@ -36,7 +29,35 @@ local function ferry(p)
   }
 end
 
+-- Casts every `every` frames, `times` times, holding `keys` throughout.
+local function mash(keys, every, times)
+  local out = {}
+  for _ = 1, times do
+    out[#out + 1] = { 1, keys .. 'X' }
+    if every > 1 then out[#out + 1] = { every - 1, keys } end
+  end
+  return out
+end
+
+local function stopped(w) return w.player.vx == 0 end
+
+-- Jump onto the block, walk to standX, wait there, walk to the shrine, cast, walk through the door onto the hatch.
+local function shortMemory(p)
+  return {
+    { 'R', atX(26) }, { 6, 'RJ' }, { 'R', onTop(208, 54, 112) }, { '-', stopped }, { 'R', atX(p.standX) }, { 'L', atXLeft(p.standX) },
+    { p.wait, '-' }, { 'R', atX(163) }, { p.castDelay, '-' }, { 1, 'X' }, { 'R', atX(300) },
+  }
+end
+
 local strategies = {
+  ['Short Memory'] = {
+    params = {
+      { name = 'standX', unit = 'px', nominal = 87, min = 55, max = 111, step = 2, need = 20, note = 'one plate: a wider pad would let a running ghost hold the door' },
+      { name = 'wait', unit = 'frames', nominal = 150, min = 0, max = 300, step = 4 },
+      { name = 'castDelay', unit = 'frames', nominal = 10, min = 0, max = 150, step = 2 },
+    },
+    build = shortMemory,
+  },
   ['Ferry'] = {
     params = FERRY_DECISIONS,
     build = function(p) return append(ferry(p), { { 'R', atX(360) } }) end,
@@ -55,6 +76,27 @@ local strategies = {
 -- exit (a tile rect { tx0, ty0, tx1, ty1 }, or nil for the goal), the insight it tests, a solve from a fresh respawn at
 -- its start, and the naive approaches that must not reach the exit. The selftest proves every solve and every naive.
 local rooms = {
+  ['Short Memory'] = {
+    {
+      name = 'Short Memory',
+      insight = 'the ghost starts where you were three seconds ago, so wait on the block long enough that it starts past the veil and stands on the plate',
+      solve = shortMemory(S.decisions(strategies['Short Memory'])),
+      naive = {
+        { 'pause on the block, then cast once at the shrine', {
+          { 'R', atX(26) }, { 'RJ', onTop(208, 54, 112) }, { 30, '-' }, { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
+        } },
+        { 'run to the door and cast at the shrine every other frame', append(
+          { { 'R', atX(26) }, { 'RJ', onTop(208, 54, 112) }, { 'R', atX(166) } }, append(mash('R', 2, 300), { { 60, 'R' } })) },
+        { 'run to the door and cast at the shrine every 10 frames', append(
+          { { 'R', atX(26) }, { 'RJ', onTop(208, 54, 112) }, { 'R', atX(166) } }, append(mash('R', 10, 60), { { 60, 'R' } })) },
+        { 'run to the door and cast at the shrine every half second', append(
+          { { 'R', atX(26) }, { 'RJ', onTop(208, 54, 112) }, { 'R', atX(166) } }, append(mash('R', 30, 20), { { 60, 'R' } })) },
+        { 'wait three seconds before the block, then cast at the shrine', {
+          { 'R', atX(26) }, { 180, '-' }, { 'RJ', onTop(208, 54, 112) }, { 'R', atX(163) }, { 1, 'X' }, { 'R', atX(300) },
+        } },
+      },
+    },
+  },
   ['Ferry'] = {
     {
       name = 'Crossing',
@@ -74,4 +116,4 @@ local rooms = {
   },
 }
 
-return { scripts = scripts, strategies = strategies, rooms = rooms }
+return { strategies = strategies, rooms = rooms }
