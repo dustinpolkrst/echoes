@@ -5,7 +5,7 @@ part: 8
 weight: 8
 date: 2026-10-17
 commits: ["7ae145b", "eb0d82c", "0c8fcda", "eccb521"]
-cover: "images/09-layout/select-game-folder.png"
+cover: "images/08-layout/select-game-folder.png"
 ---
 
 Up to `1afca9f`, all 27 of the game's Lua files sat in the repository root, next to `README.md` and the `assets/` folder. The game grew that way over one long session, one file at a time. The layout made sense to whoever had just added a file. It made no sense to someone opening the project for the first time, so the files moved into folders.
@@ -67,8 +67,8 @@ DIFF before.png after.png  0 of 518400 pixels differ, max channel delta 0/255
 ```
 
 {{< pair >}}
-{{< figure src="images/09-layout/select-flat-folder.png" caption="Level select at `1afca9f`, before the move. The records are seeded test data." >}}
-{{< figure src="images/09-layout/select-game-folder.png" caption="At `eccb521`, after the move. 0 of 518,400 pixels differ." >}}
+{{< figure src="images/08-layout/select-flat-folder.png" caption="Level select at `1afca9f`, before the move. The records are seeded test data." >}}
+{{< figure src="images/08-layout/select-game-folder.png" caption="At `eccb521`, after the move. 0 of 518,400 pixels differ." >}}
 {{< /pair >}}
 
 The blog's screenshot script needed no change for the move. It exports each commit whole with `git archive`, and when a commit keeps `main.lua` in `game/` instead of the root, it runs that folder.

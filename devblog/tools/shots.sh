@@ -57,9 +57,27 @@ SHOTS='
 07-ferry      1afca9f  ferry-new-cast          10 330
 07-ferry      1afca9f  ferry-new-ride          10 400
 07-ferry      1afca9f  ferry-new-across        10 450
-08-next       1b2f9ce  select-ferry-next       select 9
-09-layout     1afca9f  select-flat-folder      select 12
-09-layout     eccb521  select-game-folder      select 12
+08-layout     1afca9f  select-flat-folder      select 12
+08-layout     eccb521  select-game-folder      select 12
+09-shortcuts  d4f6eca  other-side-before       othersiderun 104
+09-shortcuts  d3180c1  other-side-after        othersiderun 56
+09-shortcuts  37c1380  other-side-ledge        6 288
+09-shortcuts  37c1380  underfoot-pedestal      9 260
+09-shortcuts  37c1380  short-memory-hatch      11 295
+10-act-four   37c1380  waystone-lit            13 282
+10-act-four   37c1380  relay-before-restart    13 700
+10-act-four   37c1380  relay-after-restart     relayrespawn 700
+10-act-four   37c1380  plumb-line-well         14 410
+10-act-four   37c1380  undercroft-reflection   15 300
+10-act-four   37c1380  crawlspace-parked       16 265
+10-act-four   37c1380  toll-gate               17 960
+10-act-four   37c1380  toll-hatch              17 1500
+11-act-five   37c1380  clockwork-overlap       18 300
+11-act-five   37c1380  hall-of-mirrors-air     19 300
+11-act-five   37c1380  let-go-doorway          21 360
+11-act-five   37c1380  last-light-ferry        22 430
+11-act-five   37c1380  select-five-acts        select 21
+12-next       37c1380  door-slabs              20 760
 '
 
 game_dir() {
@@ -85,6 +103,19 @@ export_commit() {
 			local base = Shot.setup
 			function Shot.setup(Scenes, target, arg)
 			  local scenario = require('blogscenarios')[target]
+			  if scenario then return scenario(Scenes, arg) end
+			  return base(Scenes, target, arg)
+			end
+			return Shot
+		LUA
+	elif [ -f "$dir/dev/shot.lua" ]; then
+		mv "$dir/dev/shot.lua" "$dir/dev/shot_base.lua"
+		cp "$TOOLS/blogscenarios_game.lua" "$dir/dev/blogscenarios.lua"
+		cat > "$dir/dev/shot.lua" <<-'LUA'
+			local Shot = require 'dev.shot_base'
+			local base = Shot.setup
+			function Shot.setup(Scenes, target, arg)
+			  local scenario = require('dev.blogscenarios')[target]
 			  if scenario then return scenario(Scenes, arg) end
 			  return base(Scenes, target, arg)
 			end
@@ -129,6 +160,6 @@ diff_pair() {
 	(cd "$WORK" && "$LOVE" "$(game_dir "$commit")" --diff before.png after.png) | grep '^DIFF'
 }
 
-# Post 05: the pause fix left the picture unchanged. Post 09: moving the files changed no pixel.
+# Post 05: the pause fix left the picture unchanged. Post 08: moving the files changed no pixel.
 diff_pair 05-bench af3114f pause-before-fix pause-after-fix
-diff_pair 09-layout eccb521 select-flat-folder select-game-folder
+diff_pair 08-layout eccb521 select-flat-folder select-game-folder
