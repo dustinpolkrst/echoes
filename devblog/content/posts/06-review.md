@@ -1,5 +1,5 @@
 ---
-title: "\"It speeds through and then crashes\""
+title: "\"The game like speeds through and then crashes?\""
 description: "A bug report the tests couldn't reproduce, a review by two reviewers, and four fixes that each came with a check that failed on the old code first."
 part: 6
 weight: 6
@@ -8,17 +8,17 @@ commits: ["d33fa5e", "a4155a1", "e865580", "1b2f9ce"]
 cover: "images/06-review/pause-settings-before.png"
 ---
 
-Once the three branches merged, Dustin played the game and said it "speeds through and then crashes". Every automated check was green. So the tests and the player were looking at different things.
+Once the three branches merged, I played the game and told Claude, "the game like speeds through and then crashes?" Every automated check was green. So the tests and I were looking at different things.
 
-## We couldn't reproduce it
+## Claude couldn't reproduce it
 
-Our first guesses were a simulation running too fast and a Lua error. We drove the real game loop with real frame timing through a 10-minute playthrough of all 12 levels. It held a steady 60 simulation steps per second and threw no Lua error. Neither guess held up.
+Claude's first guesses were a simulation running too fast and a Lua error. It drove the real game loop with real frame timing through a 10-minute playthrough of all 12 levels. It held a steady 60 simulation steps per second and threw no Lua error. Neither guess held up.
 
-That run made a mess of its own. It wrote its level clears into Dustin's real save file. We moved the file aside, and it still sits next to the real one as `save.from-test-run.txt`. The screenshot script for this blog avoids the same trap by rewriting `t.identity` in every exported commit to a scratch name before it runs anything.
+That run made a mess of its own. It wrote its level clears into my real save file. Claude moved the file aside, and the file still sits next to the real one as `save.from-test-run.txt`. The screenshot script for this blog avoids the same trap by rewriting `t.identity` in every exported commit to a scratch name before it runs anything.
 
 ## Two reviewers
 
-With nothing reproduced, we had two independent reviewers go through the code, one reading for correctness and one for maintainability. Both found the same visual bug on their own. We then confirmed every finding below by running the game, rather than taking a reviewer's word for it.
+With nothing reproduced, Claude had two independent reviewers go through the code, one reading for correctness and one for maintainability. Both found the same visual bug on their own. Claude then confirmed every finding below by running the game, rather than taking a reviewer's word for it.
 
 ### 1. Pause, a menu, resume, and the wrong level
 
@@ -74,6 +74,6 @@ Press <kbd>R</kbd> or Back just after touching the goal and the level restarted 
 
 ## Each check failed first
 
-Every fix landed as its own commit with a regression check, and we ran each check against the old code first to see it fail. A check that passes on broken code says nothing about the fix. The selftest went from 139 to 149 checks and `--flow` from 21 to 33. Rerun for this post at `1b2f9ce`, all 149 and all 33 pass.
+Every fix landed as its own commit with a regression check, and Claude ran each check against the old code first to see it fail. A check that passes on broken code says nothing about the fix. The selftest went from 139 to 149 checks and `--flow` from 21 to 33. Rerun for this post at `1b2f9ce`, all 149 and all 33 pass.
 
 The selftest drove the simulation, and the simulation was fine. The bugs were in the gaps between scenes, where a player's hands are still on the keys from the last screen. A test that sends one clean key event per action never presses Up out of habit.

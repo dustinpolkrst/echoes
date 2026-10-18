@@ -8,7 +8,7 @@ commits: ["7ae145b", "eb0d82c", "0c8fcda", "eccb521"]
 cover: "images/09-layout/select-game-folder.png"
 ---
 
-Up to `1afca9f`, all 27 of the game's Lua files sat in the repository root, next to `README.md` and the `assets/` folder. The game grew that way over one long session, one file at a time. The layout made sense to whoever had just added a file. It made no sense to someone opening the project for the first time.
+Up to `1afca9f`, all 27 of the game's Lua files sat in the repository root, next to `README.md` and the `assets/` folder. The game grew that way over one long session, one file at a time. The layout made sense to whoever had just added a file. It made no sense to someone opening the project for the first time, so I asked Claude to restructure it.
 
 ## What the flat folder hid
 
@@ -49,7 +49,7 @@ Commit `eb0d82c` adds `scripts/play` and `scripts/test`, each as a `.cmd` for Wi
 
 ## Did anything change?
 
-A move like this should change where code lives and nothing else, so we checked the diff, the test counts and the pixels.
+A move like this should change where code lives and nothing else, so Claude checked the diff, the test counts and the pixels.
 
 Besides the renames, commit `7ae145b` removes 80 lines and adds 80, and every one of those 160 lines is a `require`:
 
@@ -60,7 +60,7 @@ git diff -M 1afca9f 7ae145b | grep '^[-+][^-+]' | grep -vc require
 
 At `1afca9f` and at `eccb521`, the merge that brought the move to `main`, `--selftest` reports 155 checks with 0 failed and `--flow` reports 33 with 0 failed. The output of `--slack 10` is byte for byte the same at both commits.
 
-For this post we also rendered 23 `--shot` targets at both commits: the title, pause, level select, settings, clear card and iris transition, every level at frame 90, and three frames from the middle of scripted solutions. All 23 pairs match pixel for pixel. That sweep was a one-off, but one pair stays checked. `devblog/tools/shots.sh` renders the level select at both commits, runs `eccb521`'s own `--diff` on them, and fails if any pixel differs:
+For this post Claude also rendered 23 `--shot` targets at both commits: the title, pause, level select, settings, clear card and iris transition, every level at frame 90, and three frames from the middle of scripted solutions. All 23 pairs match pixel for pixel. That sweep was a one-off, but one pair stays checked. `devblog/tools/shots.sh` renders the level select at both commits, runs `eccb521`'s own `--diff` on them, and fails if any pixel differs:
 
 ```
 DIFF before.png after.png  0 of 518400 pixels differ, max channel delta 0/255

@@ -1,6 +1,6 @@
 ---
 title: "The pitch: designing Echoes"
-description: "A one-line brief, a ghost that replays your last three seconds, and the data we wrote down before any logic."
+description: "A one-line brief, a ghost that replays your last three seconds, and the data Claude wrote down before any logic."
 part: 1
 weight: 1
 date: 2026-10-17
@@ -8,7 +8,7 @@ commits: ["a72332d"]
 cover: "images/01-pitch/first-echo-holding.png"
 ---
 
-Dustin's whole brief was one line: "build a side scrolling platformer with love2d, be creative with the design." Everything in this post comes from the first build, commit `a72332d`.
+My whole brief to Claude was one line: "build a side scrolling platformer with love2d, be creative with the design." Everything in this post comes from the first build, commit `a72332d`.
 
 {{< figure src="images/01-pitch/title-first-build.png" caption="The first title screen. Just \"press jump\", over a ruin drawn in code with no image files." >}}
 
@@ -22,7 +22,7 @@ That turned out to be enough to build puzzles from. A plate you would have to st
 
 ## Writing the data down first
 
-Replays punish loose state, so before any logic we wrote down what the data would look like.
+Replays punish loose state, so before writing any logic Claude wrote down what the data would look like.
 
 Levels are ASCII maps. `#` is stone, `^` is spikes, `=` is a one-way ledge, and lowercase `a` to `d` are the plates for doors `A` to `D`. Editing a level means editing text, and a level change shows up as a diff you can read.
 

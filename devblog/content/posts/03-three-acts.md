@@ -8,7 +8,7 @@ commits: ["d1844e5", "9591f41", "c31b489", "55a8f02", "10d1344"]
 cover: "images/03-puzzles/other-side-mirror.png"
 ---
 
-Five levels teach the echo without asking much of it. Next we grew the game to twelve levels in three acts. That work ran at the same time as the interface pass in [part 4]({{< relref "04-interface" >}}) and the performance pass in [part 5]({{< relref "05-measuring" >}}). Each had its own git worktree and its own agent, and the branches merged afterwards. The puzzles came in with the merge `55a8f02`, and `10d1344` then grouped the levels into acts.
+Five levels teach the echo without asking much of it. Next I asked Claude for harder puzzles, a real interface, and a look at performance. It split that into three branches that ran at the same time: the puzzles here, which grew the game to twelve levels in three acts, the interface pass in [part 4]({{< relref "04-interface" >}}), and the performance pass in [part 5]({{< relref "05-measuring" >}}). Each had its own git worktree and its own agent, and the branches merged afterwards. The puzzles came in with the merge `55a8f02`, and `10d1344` then grouped the levels into acts.
 
 ## Three new tiles
 
@@ -79,6 +79,6 @@ The first number makes every fixed-length wait 3 frames shorter or longer. The s
 
 The selftest grew from 40 checks to 139. Rerun for this post at `10d1344`, all of them pass.
 
-We thought that timing check meant nobody would need frame-perfect play. It didn't, and [part 7]({{< relref "07-ferry" >}}) is about the level that showed it.
+That timing check was supposed to mean nobody would need frame-perfect play. It didn't, and [part 7]({{< relref "07-ferry" >}}) is about the level that showed it.
 
 {{< figure src="images/03-puzzles/select-three-acts.png" caption="Level select after `10d1344`, in three acts and five columns. The times and deaths are seeded test records from `--shot select`, not real play." >}}

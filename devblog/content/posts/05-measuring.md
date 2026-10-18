@@ -1,6 +1,6 @@
 ---
 title: "Measuring before optimizing"
-description: "We built a benchmark before touching any rendering code. Every scene was far under budget, so we fixed one thing and left the rest alone."
+description: "Claude built a benchmark before touching any rendering code. Every scene was far under budget, so it fixed one thing and left the rest alone."
 part: 5
 weight: 5
 date: 2026-10-17
@@ -8,7 +8,7 @@ commits: ["b9d194a", "a53d252", "af3114f"]
 cover: "images/05-bench/pause-after-fix.png"
 ---
 
-The third branch running next to the puzzles and the interface was performance. We didn't start by changing code. We started by building a way to measure the game, so any change after that would have a number to answer to.
+The third branch running next to the puzzles and the interface was performance. Claude didn't start by changing code. It started by building a way to measure the game, so any change after that would have a number to answer to.
 
 ## The harness
 
@@ -26,7 +26,7 @@ The same commit added a way to check that an optimization didn't change the pict
 
 Across scenes, frames took 0.14 to 0.31 ms. At 60 frames a second the budget is 16.7 ms, so the heaviest scene used less than 2% of it.
 
-Shaving a frame that small saves time no player can feel, and every edit to working rendering code is a chance to break how the game looks. So we only went after a cost the numbers pointed at.
+Shaving a frame that small saves time no player can feel, and every edit to working rendering code is a chance to break how the game looks. So Claude only went after a cost the numbers pointed at.
 
 ## Pause redrew a still picture
 
@@ -69,6 +69,6 @@ If those look identical, they are. The blog's screenshot script runs `af3114f`'s
 
 ## The rest stayed as it was
 
-Nothing else the harness measured stood out from the noise, so we left it alone. A tidier draw loop or a pooled particle table might have looked like progress in a diff. With no measured cost behind it, it would only have been churn with a small chance of a visual regression.
+Nothing else the harness measured stood out from the noise, so Claude left it alone. A tidier draw loop or a pooled particle table might have looked like progress in a diff. With no measured cost behind it, it would only have been churn with a small chance of a visual regression.
 
 The harness is still in the repository. If larger levels or sprite art ever make a scene slow, `--bench` will show which one and by how much.
