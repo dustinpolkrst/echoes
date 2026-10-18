@@ -13,9 +13,6 @@ local scripts = {
     { 'R', atX(70) }, { '-', onTop(224) }, { 1, 'X' }, { '-', echoArrived },
     { 'J', onLastEcho }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
   },
-  ['Underfoot'] = {
-    { 'R', atX(48) }, { 190, '-' }, { 1, 'X' }, { 'R', atX(296) }, { '-', onTop(224) },
-  },
 }
 
 -- Casts every `every` frames, `times` times, holding `keys` throughout. Two echoes live at once, so a cast every
@@ -45,6 +42,21 @@ local strategies = {
       }
     end,
   },
+  ['Underfoot'] = {
+    params = {
+      { name = 'hopX', unit = 'px', nominal = 70, min = 48, max = 83, step = 1 },
+      { name = 'hopHold', unit = 'frames', nominal = 12, min = 1, max = 40, step = 1 },
+      { name = 'stand', unit = 'frames', nominal = 190, min = 0, max = 300, step = 4 },
+      { name = 'leaveDelay', unit = 'frames', nominal = 10, min = 0, max = 240, step = 4 },
+    },
+    -- Hop onto the pedestal, stand on the plate, cast, run the long bridge to the hatch while the ghost holds the plate.
+    build = function(p)
+      return {
+        { 'L', atXLeft(p.hopX) }, { p.hopHold, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
+        { p.stand, '-' }, { 1, 'X' }, { p.leaveDelay, '-' }, { 'R', atX(420) }, { '-', onTop(224) }, { 'R', atX(470) },
+      }
+    end,
+  },
 }
 
 local rooms = {
@@ -64,6 +76,24 @@ local rooms = {
         { 'stand three seconds on the ledge and cast there', {
           { 'L', atXLeft(96) }, { 12, 'LJ' }, { 'L', onTop(192, 30, 90) }, { 200, '-' }, { 1, 'X' },
           { 'R', atX(300) },
+        } },
+      },
+    },
+  },
+  ['Underfoot'] = {
+    {
+      name = 'Underfoot',
+      insight = 'the hatch is more than three seconds from the plate, so only a ghost left standing on the plate opens it under you',
+      solve = strategies['Underfoot'].build(S.decisions(strategies['Underfoot'])),
+      naive = {
+        { 'run onto the hatch and cast every half second', append(
+          { { 'R', atX(430) } }, append(mash('-', 30, 12), { { 60, '-' } })) },
+        { 'touch the plate, run onto the hatch and cast every half second', append(
+          { { 'L', atXLeft(56) }, { 12, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) }, { 'R', atX(430) } },
+          append(mash('-', 30, 12), { { 60, '-' } })) },
+        { 'stand on the plate without an echo, then run to the hatch', {
+          { 'L', atXLeft(56) }, { 12, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) }, { 200, '-' },
+          { 'R', atX(430) }, { 200, '-' },
         } },
       },
     },
