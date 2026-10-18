@@ -205,6 +205,44 @@ function F.run(Scenes)
   key('down')
   check('a fresh key press moves the clear card cursor', Scenes.levelclear.menu.index == 2)
 
+  local Levels = require 'content.levels'
+  Levels[#Levels + 1] = {
+    name = 'Waystone test', hint = '',
+    map = {
+      '##############',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#P...w...^^.G#',
+      '##############',
+    },
+  }
+  Scenes.go('playing', #Levels)
+  Scenes.inputSource = function() return { right = true } end
+  runUntil(function() return Scenes.playing.world.player.state == 'dead' end)
+  Scenes.inputSource = function() return {} end
+  local dying = Scenes.playing.world
+  check('the waystone lit on the way to the spikes', dying.respawn == 1)
+  local before = Scenes.playing.attemptT
+  settle()
+  settle()
+  local w = Scenes.playing.world
+  check('death respawns on the waystone with the clock still running', w ~= dying and w.respawn == 1
+    and math.abs(w.player.x - (5 * 16 + 3)) < 1 and Scenes.playing.attemptT > before, ('x=%.1f t=%.2f'):format(w.player.x, Scenes.playing.attemptT))
+  step(10)
+  key('r')
+  settle()
+  check('R retries from the waystone', Scenes.playing.world ~= w and Scenes.playing.world.respawn == 1 and Scenes.playing.attemptT > before)
+  local kept = Scenes.playing.attemptT
+  key('p')
+  key('down')
+  key('return')
+  settle()
+  check('pause Restart level starts over from the beginning with a fresh clock',
+    Scenes.name == 'playing' and Scenes.playing.world.respawn == nil and Scenes.playing.attemptT < kept
+    and math.abs(Scenes.playing.world.player.x - (1 * 16 + 3)) < 1, ('x=%.1f t=%.2f'):format(Scenes.playing.world.player.x, Scenes.playing.attemptT))
+  Levels[#Levels] = nil
+
   print(('%d flow checks, %d failed'):format(total, failed))
   return failed == 0
 end

@@ -108,6 +108,11 @@ local function react(stage, ev)
   elseif ev.name == 'goal' then
     Sfx.play('goal')
     burst(30, { speed = 90, life = 1.0, drag = 1.5, color = { 0.7, 1, 0.95 }, glow = true })
+  elseif ev.name == 'checkpoint' then
+    Sfx.play('checkpoint')
+    Input.rumble(0.15, 0.1)
+    stage.checkpointT = 0
+    burst(22, { dir = -pi / 2, spread = pi * 0.7, speed = 55, life = 0.9, grav = -20, drag = 1.5, color = { 0.6, 1, 0.8 }, glow = true })
   end
 end
 
@@ -128,7 +133,7 @@ end
 
 
 local function setStage(stage, world)
-  stage.world, stage.cam, stage.particles, stage.shake = world, {}, Particles.new(), 0
+  stage.world, stage.cam, stage.particles, stage.shake, stage.checkpointT = world, {}, Particles.new(), 0, nil
   followCamera(stage, true)
 end
 
@@ -140,6 +145,7 @@ local function stepStage(stage, input)
   Particles.update(stage.particles, DT)
   Render.update(world, DT)
   stage.shake = stage.shake * 0.88
+  if stage.checkpointT then stage.checkpointT = stage.checkpointT + DT end
 end
 
 local function drawScene(stage)
@@ -311,10 +317,15 @@ S.title.actions = menuActions(function() return S.title.menu end)
 local playing = {}
 S.playing = playing
 
-local function loadAttempt()
-  setStage(playing, Level.new(Levels[playing.index]))
-  playing.t = 0
-  playing.attemptT = 0
+-- Death and R retry from the last waystone and keep the clock running; the pause menu's Restart level
+-- starts the level over with a fresh clock.
+local function loadAttempt(fromCheckpoint)
+  local checkpoint = fromCheckpoint and playing.world and playing.world.respawn or nil
+  setStage(playing, Level.new(Levels[playing.index], { checkpoint = checkpoint }))
+  if not checkpoint then
+    playing.t = 0
+    playing.attemptT = 0
+  end
 end
 
 local function playerFocus()
@@ -336,7 +347,7 @@ function playing.update()
   followCamera(playing)
   if p.state == 'dead' and p.stateT >= Player.DEATH_DELAY then
     local cx, cy = playerFocus()
-    Trans.start(loadAttempt, cx, cy)
+    Trans.start(function() loadAttempt(true) end, cx, cy)
   elseif p.state == 'cleared' and p.stateT >= 1.1 then
     local cx, cy = playerFocus()
     Trans.start(function() S.go('levelclear', playing.index, playing.attemptT) end, cx, cy)
@@ -357,7 +368,7 @@ function playing.drawUI()
   end
   Hud.draw(world, {
     index = playing.index, name = world.name, time = playing.attemptT, deaths = stats.deaths,
-    camx = playing.cam.x, camy = playing.cam.y, nameAlpha = 1 - a,
+    camx = playing.cam.x, camy = playing.cam.y, nameAlpha = 1 - a, checkpointT = playing.checkpointT,
   })
   local p = world.player
   if p.state == 'cleared' then
@@ -372,7 +383,7 @@ playing.actions = {
   restart = function()
     if cleared() then return end
     local cx, cy = playerFocus()
-    Trans.start(loadAttempt, cx, cy)
+    Trans.start(function() loadAttempt(true) end, cx, cy)
   end,
   pause = function()
     if not cleared() then S.go('pause', 'playing') end
@@ -422,7 +433,7 @@ function pause.enter(under)
   pause.menu = Menu.new({
     { label = 'Resume', action = resume },
     { label = 'Restart level', action = function()
-      Trans.start(function() loadAttempt() resume() end)
+      Trans.start(function() loadAttempt(false) resume() end)
     end },
     { label = 'Level select', action = function()
       S.select.returnTo = { 'pause', 'playing' }

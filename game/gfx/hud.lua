@@ -63,10 +63,25 @@ local function drawPlayerRing(world, camx, camy, t)
   ring(x, y, 24, frac, 2)
 end
 
--- ctx: index, name, time, deaths, camx, camy
+local BEACON = { 0.6, 1, 0.8 }
+local LABEL_LIFE = 1.6
+
+-- "waystone lit" rises and fades over the player for a moment after a checkpoint is touched.
+local function drawCheckpointLabel(world, ctx)
+  local age = ctx.checkpointT
+  if not age or age >= LABEL_LIFE then return end
+  local p = world.player
+  local a = age < 0.2 and age / 0.2 or 1 - (age - 0.2) / (LABEL_LIFE - 0.2)
+  local x = (p.x + p.w / 2 - ctx.camx) * 2
+  local y = (p.y - ctx.camy) * 2 - 34 - age * 14
+  Ui.text('waystone lit', Ui.fonts.small, y, BEACON, a, x - 100, 200, 'center')
+end
+
+-- ctx: index, name, time, deaths, camx, camy, checkpointT (seconds since a waystone lit, or nil)
 function Hud.draw(world, ctx)
   local f, t = Ui.fonts, Ui.time()
   drawPlayerRing(world, ctx.camx, ctx.camy, t)
+  drawCheckpointLabel(world, ctx)
   Ui.text(('%d  %s'):format(ctx.index, ctx.name), f.small, 14, Ui.colors.amber, 0.75 * (ctx.nameAlpha or 1), 20, 400, 'left')
   Ui.text(Model.clock(ctx.time), f.small, 14, Ui.colors.white, 0.7, -20, Ui.W, 'right')
   local d = ctx.deaths

@@ -47,6 +47,7 @@ Three tiles change what an echo does:
 - Mirror shrine (violet). Cast while touching it and the echo replays reflected about the shrine, so it walks where you did not, through walls included. Mirrored echoes are violet.
 - Veil (amber). You walk through it. An echo whose next step would enter it stops right there and stays for 4 seconds, so a veil is where you park a ghost.
 - Crumble stone (ochre). Half a second after any body stands on it, you or an echo, it gives way. It grows back 3 seconds after nothing is left inside it. Echoes replay positions, so a ghost keeps standing where the stone used to be.
+- Waystone (mint). Touch it and it lights. Dying or pressing R brings you back to the lit waystone with the level reset around you: no echoes, an empty memory, doors shut, crumble stone whole. The clock keeps running. Restart level in the pause menu starts the level over with a fresh clock.
 
 ### Levels
 
@@ -83,7 +84,8 @@ game/               the LÖVE project root (love loads this folder)
     player.lua      player state machine (ground, air, dead, cleared)
     echo.lua        ring-buffer recorder and the echo that replays it
   content/
-    levels.lua      the twelve ASCII level maps with names, hints and act breaks
+    levels.lua      aggregates the acts into one numbered list
+    acts/           one file per act: ASCII level maps with names and hints (act1.lua to act5.lua)
   screens/          which screen is showing and how the player moves between them
     scenes.lua      title, play, pause, level select, settings, clear card, ending
     progress.lua    act layout and the cleared/unlocked state of each level
@@ -104,8 +106,11 @@ game/               the LÖVE project root (love loads this folder)
     selftest.lua    headless checks (--selftest)
     uitest.lua      menu and HUD checks, run as part of the selftest
     flowtest.lua    scripted key presses through the real scenes (--flow)
-    solutions.lua   a scripted solution and a human-style strategy for each level
+    script.lua      the scripting primitives: driver, runner, wait conditions
+    solutions.lua   aggregates the per-act solution files
+    solutions/      one file per act: scripted solutions, human-style strategies and room declarations
     slack.lua       how forgiving each decision is (--slack)
+    cheese.lua      shallow-strategy search per room (--cheese)
     bench.lua       frame-time and allocation benchmark (--bench)
     shot.lua        deterministic screenshots (--shot)
     imgdiff.lua     pixel diff of two screenshots (--diff)
@@ -121,7 +126,7 @@ Modules require each other by dotted path from `game/`, for example `require 'wo
 
 ## Changing the game
 
-**Add a level.** Append a table to `game/content/levels.lua` with `name`, `hint` and a `map` of equal-width strings. Set `act` on the first level of a new act. The legend is at the top of that file. Add a scripted solution in `game/dev/solutions.lua` so `--selftest` can prove the level is solvable.
+**Add a level.** Append a table to its act's file, `game/content/acts/actN.lua`, with `name`, `hint` and a `map` of equal-width strings; the act number comes from the file. The legend is at the top of `game/content/levels.lua`. Add a scripted solution under the same name in `game/dev/solutions/actN.lua` so `--selftest` can prove the level is solvable. A level with a waystone (`w`) is a long level and also owes a slack strategy and a `rooms` entry (one room for the start and one per waystone, each with a solve from a fresh respawn and the naive approaches that must fail); `--selftest` checks all of it, `--slack N` measures the strategy and `--cheese N` hunts for shallow routes. The rules and the room format are in `docs/level-design.md`.
 
 **Add a tile.** Pick a character and add it to `LEGEND` in `game/world/level.lua`. Add a `TILES` entry in the same file with its behavior flags (`solid`, `hurts`, `light`, `worldList` and so on). Give it a draw function in `game/gfx/render.lua` next to the existing `procedural*` ones, wrapped in `withSlot` so artists can replace it, and add a matching slot in `game/platform/assets.lua`.
 
@@ -136,6 +141,7 @@ Pass these to `scripts/play` or run `love game <flag>` from the repo root.
 | `--selftest` | Runs the simulation headless and prints PASS or FAIL per check. Covers physics, hazards, plates, echoes, the three special tiles, a scripted solution for every level, and reruns with timings shifted by three frames. Levels 6 to 12 must also fail when played naively. Exits nonzero on failure. |
 | `--flow` | Drives the real scenes (title, pause, settings, clear card, level select) with key events against an in-memory save. |
 | `--slack [N] [name=value ...]` | Measures how forgiving a level is. Sweeps each human decision in the level's strategy (how long to wait, where to turn back) and prints the width of the winning window. `N` picks one level and `turnX=120` moves a nominal value. Every decision needs at least 30 frames or 24 px of slack to pass. |
+| `--cheese [N ...]` | Plays shallow strategies against each room of a level from its respawn point (autoruns and single swept jumps, one cast swept along the natural path, a two-cast ladder, stacks of standing echoes) and prints any that reach the room's exit or the goal. No level given means every level. Exits nonzero on a hit. Act I levels are meant to be shallow and are expected to light up. |
 | `--bench LABEL [--size WxH] [--profile]` | Plays the title, menus and every level's solution with vsync off. Prints median, p95, p99 and max frame time, draw calls and allocation per scene, and writes CSVs under `bench/` in the save directory. `--profile` adds a per-function breakdown. |
 | `--shot TARGET [F]` | Saves a PNG to the save directory and prints its path. TARGET is a level number (0 is the title), `title`, `pause [N]`, `select [cleared]`, `settings`, `clear [N]` or `transition`. For a level, F plays its scripted solution for F frames. Shots are deterministic. |
 | `--record N` | Plays level N's scripted solution and saves every second frame (30 fps) to `record/` in the save directory, stopping just after the clear card appears. The README GIF came from `--record 10`. Crop the frames, build a palette, then encode in a separate pass (a one-pass `split`/`palettegen` graph silently drops all but the last frames): `ffmpeg -i record/f%05d.png -vf crop=860:290:40:190 c/c%05d.png`, then `ffmpeg -i c/c%05d.png -vf palettegen=max_colors=96 -update 1 pal.png`, then `ffmpeg -framerate 30 -i c/c%05d.png -i pal.png -filter_complex "[0:v][1:v]paletteuse=dither=none" ferry.gif`. Check the frame count of the result. |

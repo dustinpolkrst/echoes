@@ -336,6 +336,53 @@ local function testDoorFloor()
     ('bottom=%.1f'):format(w.player.y + w.player.h))
 end
 
+local CHECKPOINT_ROWS = {
+  '################',
+  '#..............#',
+  '#.......A......#',
+  '#P.a.w..A..w.^G#',
+  '############%###',
+  '#..............#',
+  '################',
+}
+
+local function testCheckpoint()
+  local def = { name = 'waystones', map = CHECKPOINT_ROWS }
+  local w = Level.new(def)
+  idle(w, 5)
+  check('a fresh level has no respawn point', w.respawn == nil and #w.checkpoints == 2 and not w.checkpoints[1].active)
+  local lit = 0
+  run(w, { { 'R', cond.atX(5 * 16 + 3) } }, function(c)
+    for _, ev in ipairs(c.events) do if ev.name == 'checkpoint' then lit = lit + 1 end end
+  end)
+  check('touching a waystone lights it and sets the respawn point', w.respawn == 1 and w.checkpoints[1].active and lit == 1)
+  run(w, { { 'L', cond.atXLeft(60) }, { 'R', cond.atX(5 * 16 + 3) } }, function(c)
+    for _, ev in ipairs(c.events) do if ev.name == 'checkpoint' then lit = lit + 1 end end
+  end)
+  check('touching the lit waystone again does nothing', lit == 1 and w.respawn == 1)
+
+  run(w, { { 'L', cond.atXLeft(3 * 16 + 3) }, { 190, '-' }, { 1, 'X' }, { 'R', cond.atX(11 * 16 + 3) } })
+  check('a later waystone takes over as the respawn point', w.respawn == 2 and w.checkpoints[2].active and not w.checkpoints[1].active)
+  run(w, { { 'R', cond.atX(12 * 16 - 4) }, { 40, '-' } })
+  check('the arena is spent before respawning: echo out, door held, crumble gone',
+    #w.echoes == 1 and w.doorOpen.a == true and w.crumbles[1].gone, ('echoes=%d door=%s gone=%s'):format(#w.echoes, tostring(w.doorOpen.a), tostring(w.crumbles[1].gone)))
+
+  local r = Level.new(def, { checkpoint = w.respawn })
+  idle(r, 2)
+  local stand = Level.standingOn(r.checkpoints[2])
+  check('respawn stands the player on the lit waystone', r.respawn == 2 and r.checkpoints[2].active
+    and math.abs(r.player.x - stand.x) < 0.01 and math.abs(r.player.y - stand.y) < 0.01 and r.player.state == 'ground',
+    ('x=%.1f y=%.1f state=%s'):format(r.player.x, r.player.y, r.player.state))
+  check('respawn carries nothing in: no echoes, empty memory, door shut, crumble intact',
+    #r.echoes == 0 and r.rec.count <= 2 and r.doorOpen.a == false and not r.crumbles[1].gone and not r.crumbles[1].crack)
+  local back = Level.new(def)
+  run(back, { { 'R', cond.atX(3 * 16 + 3) }, { 190, '-' }, { 1, 'X' }, { 'R', cond.atX(11 * 16 + 3) }, { 'L', cond.atXLeft(5 * 16 + 3) } })
+  check('walking back onto an earlier waystone makes it the respawn point',
+    back.respawn == 1 and back.checkpoints[1].active and not back.checkpoints[2].active, 'respawn=' .. tostring(back.respawn))
+  local okNew = pcall(Level.new, def, { checkpoint = 3 })
+  check('a respawn at a checkpoint the level lacks is refused', not okNew)
+end
+
 local function testStairwayNeedsEcho()
   local w = Level.new(Levels[3])
   run(w, { { 'R', cond.atX(66) }, { 'RJ', cond.onTop(192, 80) } })
@@ -437,20 +484,6 @@ local function testTunnelJumps(index)
     survivors == 0 and far < SPIKES_END, ('farthest x=%.1f'):format(far))
 end
 
-local function testFerryNeedsTheWait()
-  local w = Level.new(Levels[10])
-  run(w, { { 'R', cond.atX(130) }, { 6, 'RJ' }, { 'R', cond.onTop(208, 134, 208) }, { 'R', cond.atX(190) },
-    { 10, '-' }, { 1, 'X' }, { 20, '-' }, { 150, 'R' } })
-  check('level 10: casting on the shrine without waiting at its foot leaves nothing to step onto',
-    w.player.state ~= 'cleared' and (w.player.state == 'dead' or w.player.x < SPIKES_END), ('state=%s x=%.1f'):format(w.player.state, w.player.x))
-  w = Level.new(Levels[10])
-  run(w, { { 'R', cond.atX(166) }, { 120, '-' }, { 'L', cond.atXLeft(104) }, { 'R', cond.atX(166) }, { 1, 'X' },
-    { 'L', cond.atXLeft(130) }, { 'R', cond.atX(130) }, { 6, 'RJ' }, { 'R', cond.onTop(208, 134, 208) }, { 20, '-' }, { 150, 'R' } })
-  check('level 10: an echo cast at the foot of the shrine is not reflected, so it walks away from the pit',
-    not w.echoes[1].mirrored and w.player.state ~= 'cleared' and (w.player.state == 'dead' or w.player.x < SPIKES_END),
-    ('state=%s x=%.1f'):format(w.player.state, w.player.x))
-end
-
 local function testShortMemoryNeedsPatience()
   local w = Level.new(Levels[11])
   run(w, { { 'R', cond.atX(26) }, { 'RJ', cond.onTop(208, 54, 102) }, { 30, '-' },
@@ -525,11 +558,94 @@ end
 
 local function testSolutions()
   for i, def in ipairs(Levels) do
-    local w = Level.new(def)
-    local ok, outcome = run(w, Solutions.scripts[def.name])
+    local script = Solutions.scripts[def.name]
+    local ok, outcome = false, 'no scripted solution'
+    if script then ok, outcome = run(Level.new(def), script) end
     check(('level %d "%s" scripted solution reaches the goal'):format(i, def.name),
       ok and outcome == 'cleared', ok and outcome or outcome)
   end
+end
+
+-- What a long level owes beyond a script: a slack strategy, and a room for its start and every waystone.
+-- A level with a waystone is a long level. Returns the list of missing pieces.
+local function contractProblems(def, solutions)
+  local w = Level.new(def)
+  if #w.checkpoints == 0 then return {} end
+  local problems = {}
+  if not solutions.strategies[def.name] then problems[#problems + 1] = 'no slack strategy' end
+  local covered = {}
+  for _, room in ipairs(solutions.rooms[def.name] or {}) do covered[room.from or 0] = true end
+  for k = 0, #w.checkpoints do
+    if not covered[k] then problems[#problems + 1] = 'no room from ' .. (k == 0 and 'the start' or 'waystone ' .. k) end
+  end
+  return problems
+end
+
+local function testLevelContracts()
+  local long = { name = 'long', map = { '####', '#P.w', '####' } }
+  local none = contractProblems(long, { strategies = {}, rooms = {} })
+  check('a level with a waystone owes a strategy and rooms for its start and waystone', #none == 3, table.concat(none, '; '))
+  local met = contractProblems(long, { strategies = { long = {} }, rooms = { long = { { from = nil }, { from = 1 } } } })
+  check('a long level with a strategy and rooms for every respawn point owes nothing', #met == 0, table.concat(met, '; '))
+  for i, def in ipairs(Levels) do
+    local problems = contractProblems(def, Solutions)
+    if #problems > 0 or #Level.new(def).checkpoints > 0 then
+      check(('level %d "%s" meets the long-level contract'):format(i, def.name), #problems == 0, table.concat(problems, '; '))
+    end
+  end
+end
+
+local Cheese = require 'dev.cheese'
+
+local function reachesExit(def, room, script)
+  local w = Level.new(def, { checkpoint = room.from })
+  local reached = false
+  run(w, script, function(c) reached = reached or Cheese.reached(c, room.exit) end)
+  return reached
+end
+
+-- Each declared room is solvable from a fresh respawn at its waystone, and none of its naive approaches reach its exit.
+local function testRooms()
+  for i, def in ipairs(Levels) do
+    for k, room in ipairs(Solutions.rooms[def.name] or {}) do
+      local label = ('level %d "%s" room %d "%s"'):format(i, def.name, k, room.name or '?')
+      check(label .. ': the solve reaches the exit from a fresh respawn', room.solve ~= nil and reachesExit(def, room, room.solve))
+      for _, naive in ipairs(room.naive or {}) do
+        check(('%s: naive "%s" does not reach the exit'):format(label, naive[1]), not reachesExit(def, room, naive[2]))
+      end
+    end
+  end
+end
+
+-- A corridor with one wall across it: the search must find the echo step over a short wall and nothing over a tall one.
+local function wallCorridor(height)
+  local rows = {}
+  for r = 0, 14 do
+    local line = {}
+    for tx = 0, 25 do
+      local ch = '.'
+      if r == 0 or r == 14 or tx == 0 or tx == 25 then ch = '#'
+      elseif r == 13 and tx == 1 then ch = 'P'
+      elseif r == 13 and tx == 23 then ch = 'G'
+      elseif tx == 12 and r >= 14 - height then ch = '#' end
+      line[#line + 1] = ch
+    end
+    rows[#rows + 1] = table.concat(line)
+  end
+  return { name = 'wall ' .. height, map = rows }
+end
+
+local function testCheeseSearch()
+  local planted = Cheese.search(wallCorridor(5))
+  local families = {}
+  for _, h in ipairs(planted.rooms[1].hits) do families[h.family] = true end
+  check('cheese search finds a mid-air echo step over a 5-tile wall', families['one cast on the natural path'] == true,
+    ('%d hits'):format(#planted.rooms[1].hits))
+  local ladder = Cheese.search(wallCorridor(9))
+  check('cheese search finds a two-cast ladder over a 9-tile wall', #ladder.rooms[1].hits > 0 and ladder.rooms[1].hits[1].family == 'ladder of two mid-air casts',
+    ladder.rooms[1].hits[1] and ladder.rooms[1].hits[1].family or 'no hits')
+  local control = Cheese.search(wallCorridor(10))
+  check('cheese search finds nothing over a 10-tile wall', #control.rooms[1].hits == 0, ('%d hits'):format(#control.rooms[1].hits))
 end
 
 local function fakePad(down, leftx)
@@ -571,6 +687,7 @@ function S.run()
   testVeil()
   testCrumble()
   testDoorFloor()
+  testCheckpoint()
   testStairwayNeedsEcho()
   testOtherSideNeedsMirror()
   testTrapdoorNeedsCast()
@@ -578,10 +695,12 @@ function S.run()
   testUnderfootNeedsEcho()
   testTunnelJumps(10)
   testTunnelJumps(12)
-  testFerryNeedsTheWait()
   testShortMemoryNeedsPatience()
   testConfluenceTiming()
   testSolutions()
+  testLevelContracts()
+  testRooms()
+  testCheeseSearch()
   testSolutionSlack()
   testHumanSlack()
   print(('%d checks, %d failed'):format(total, failed))

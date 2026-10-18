@@ -90,6 +90,18 @@ local function generate()
     return (grit() * 2.2 * env(t, d, 1.6) + crack) * 0.5
   end)
 
+  generated.checkpoint = build(0.5, function(t, d)
+    local v = 0
+    for i, f in ipairs({ 587.33, 880 }) do
+      local s = (i - 1) * 0.09
+      if t >= s then
+        local lt = t - s
+        v = v + math.sin(2 * math.pi * f * lt) * math.exp(-lt * 6) * math.min(1, lt / 0.01)
+      end
+    end
+    return v * 0.28 * env(t, d, 0.5)
+  end)
+
   generated.goal = build(0.9, function(t)
     local v = 0
     for i, f in ipairs({ 523.25, 659.25, 783.99, 1046.5 }) do

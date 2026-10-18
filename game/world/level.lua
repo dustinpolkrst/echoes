@@ -20,6 +20,7 @@ M.LEGEND = {
   ['M'] = { kind = 'mirror' },
   ['~'] = { kind = 'veil' },
   ['%'] = { kind = 'crumble' },
+  ['w'] = { kind = 'checkpoint' },
 }
 for i = 1, 4 do
   local plate, door = string.char(96 + i), string.char(64 + i)
@@ -41,6 +42,7 @@ M.TILES = {
   mirror = { light = 56, mirror = true, worldList = 'mirrors' },
   veil = { light = 30, veil = true, rect = { 0, 0, T, T }, worldList = 'veils' },
   crumble = { solid = true, crumble = true, worldList = 'crumbles' },
+  checkpoint = { light = 44, checkpoint = true, rect = { 3, 0, T - 6, T }, worldList = 'checkpoints' },
 }
 local TILES = M.TILES
 
@@ -48,14 +50,21 @@ local WALL = { kind = 'solid' }
 local World = {}
 World.__index = World
 
-function M.new(def)
+local function overlaps(a, r)
+  return a.x < r.x + r.w and a.x + a.w > r.x and a.y < r.y + r.h and a.y + a.h > r.y
+end
+
+-- opts.checkpoint = k starts the player on the k-th checkpoint (map order) with everything else fresh: no echoes,
+-- an empty memory, doors shut, crumble stone intact. That is the whole respawn model, so a room is solvable from
+-- its checkpoint exactly when it is solvable with nothing carried in.
+function M.new(def, opts)
   local rows = def.map
   local width = 0
   for _, r in ipairs(rows) do width = math.max(width, #r) end
   local w = setmetatable({
     name = def.name, hint = def.hint,
     W = width, H = #rows, cells = {},
-    plates = {}, spikes = {}, mirrors = {}, veils = {}, crumbles = {},
+    plates = {}, spikes = {}, mirrors = {}, veils = {}, crumbles = {}, checkpoints = {},
     doorCells = {}, doorOpen = {}, lights = {},
     echoes = {}, rec = Echo.newRecorder(), events = {}, time = 0, castPrev = false,
   }, World)
@@ -87,7 +96,7 @@ function M.new(def)
           w.goal = c
         end
         if tile.light then
-          w.lights[#w.lights + 1] = { x = tx * T + T / 2, y = ty * T + T / 2, r = tile.light, kind = c.kind }
+          w.lights[#w.lights + 1] = { x = tx * T + T / 2, y = ty * T + T / 2, r = tile.light, kind = c.kind, cell = c }
         end
       else
         error(('level %q: unknown tile %q at %d,%d'):format(tostring(def.name), ch, tx + 1, ty + 1))
@@ -95,9 +104,37 @@ function M.new(def)
     end
   end
   assert(w.spawn, 'level ' .. tostring(def.name) .. ' has no player start')
-  w.player = Player.new(w.spawn.x, w.spawn.y)
+  local at = w.spawn
+  if opts and opts.checkpoint then
+    local c = w.checkpoints[opts.checkpoint]
+    assert(c, ('level %q has no checkpoint %s'):format(tostring(def.name), tostring(opts.checkpoint)))
+    w:activate(opts.checkpoint, true)
+    at = M.standingOn(c)
+  end
+  w.player = Player.new(at.x, at.y)
   w:updateDoors(true)
   return w
+end
+
+-- Where a body stands when it spawns on a cell.
+function M.standingOn(c)
+  return { x = c.tx * T + (T - Player.W) / 2, y = (c.ty + 1) * T - Player.H }
+end
+
+-- The respawn point is the checkpoint touched last. Only that one is lit.
+function World:activate(k, silent)
+  for i, c in ipairs(self.checkpoints) do c.active = (i == k) end
+  self.respawn = k
+  local c = self.checkpoints[k]
+  if not silent then self:emit('checkpoint', c.tx * T + T / 2, c.ty * T + T / 2) end
+end
+
+function World:touchCheckpoints()
+  local p = self.player
+  if not Player.isAlive(p) then return end
+  for k, c in ipairs(self.checkpoints) do
+    if not c.active and overlaps(p, c.rect) then return self:activate(k) end
+  end
 end
 
 function World:emit(name, x, y, v)
@@ -181,10 +218,6 @@ function World:moveY(b, dy)
     end
   end
   return support
-end
-
-local function overlaps(a, r)
-  return a.x < r.x + r.w and a.x + a.w > r.x and a.y < r.y + r.h and a.y + a.h > r.y
 end
 
 function World:bodies()
@@ -326,6 +359,7 @@ function M.step(w, input, dt)
   w.castPrev = input.cast or false
 
   w:checkHazards()
+  w:touchCheckpoints()
   w:updateDoors()
 end
 
