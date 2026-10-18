@@ -1,6 +1,6 @@
 ---
-title: "What's next"
-description: "A playtest of the new Ferry and Confluence, slack strategies for the other ten levels, and three cleanups the code already points to."
+title: "Next: playtests and cleanup"
+description: "The rebuilt Ferry and Confluence need a playtest, and the code already shows where the cleanup should go."
 part: 9
 weight: 9
 date: 2026-10-17

@@ -1,6 +1,6 @@
 ---
-title: "Three acts: new mechanics and seven puzzles"
-description: "A mirror shrine, a veil and crumbling stone, mostly added as registry rows. Seven levels built on one idea each, with checks that the naive approach fails and that sloppy timing still wins."
+title: "Mirrors, veils and crumbling stone"
+description: "Three new tiles change what an echo can do, and seven new levels build their puzzles on them."
 part: 3
 weight: 3
 date: 2026-10-17
@@ -8,7 +8,7 @@ commits: ["d1844e5", "9591f41", "c31b489", "55a8f02", "10d1344"]
 cover: "images/03-puzzles/other-side-mirror.png"
 ---
 
-Five levels teach the echo without asking much of it. Next I asked Claude for harder puzzles, a real interface, and a look at performance. It split that into three branches that ran at the same time: the puzzles here, which grew the game to twelve levels in three acts, the interface pass in [part 4]({{< relref "04-interface" >}}), and the performance pass in [part 5]({{< relref "05-measuring" >}}). Each had its own git worktree and its own agent, and the branches merged afterwards. The puzzles came in with the merge `55a8f02`, and `10d1344` then grouped the levels into acts.
+Five levels teach the echo without asking much of it. The next round of work covered harder puzzles, a real interface and performance, split into three branches that ran at the same time: the puzzles here, which grew the game to twelve levels in three acts, the interface work in [part 4]({{< relref "04-interface" >}}), and the performance work in [part 5]({{< relref "05-measuring" >}}). Each had its own git worktree and its own agent, and the branches merged afterwards. The puzzles came in with the merge `55a8f02`, and `10d1344` then grouped the levels into acts.
 
 ## Three new tiles
 
@@ -63,7 +63,7 @@ Commit `9591f41` added levels 6 to 12. Its message names the idea each level is 
 
 Level 10, Ferry, is missing here on purpose. It gets [part 7]({{< relref "07-ferry" >}}) to itself, because it turned out to be much harder for a person than the tests said.
 
-## Is it a puzzle?
+## Checking that a level is a puzzle
 
 A scripted solution shows a level can be beaten. It doesn't show the level is a puzzle, or that a person can beat it. So besides clearing its solution, each new level got two more checks in `selftest.lua`.
 

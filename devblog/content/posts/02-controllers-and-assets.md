@@ -1,6 +1,6 @@
 ---
-title: "Controllers, droppable assets, and the raylib question"
-description: "Xbox pad support from one binding table, a folder where dropped-in art replaces the procedural kind, and why the game stayed on LÖVE."
+title: "Gamepad support and swappable art"
+description: "Keyboard and Xbox pad input share one binding table, and art dropped into a folder replaces the procedural drawing."
 part: 2
 weight: 2
 date: 2026-10-17
@@ -8,11 +8,11 @@ commits: ["a72332d"]
 cover: "images/02-controls/hints-gamepad.png"
 ---
 
-My next asks were practical. I wanted it to work with an Xbox controller, and I wanted to be able to swap in real sprites later without touching code. I also asked whether raylib would be a better engine for this.
+The next work was practical. The game needed to run on an Xbox controller, and real sprites needed a way in later without code changes. The engine choice also got a second look, LÖVE against raylib.
 
 The controller and the asset folder both made it into the first-build commit, `a72332d`. Rerun for this post, its selftest has 40 checks. That's the 29 from [part 1]({{< relref "01-the-pitch" >}}) plus 11 for the pad, like "pad stick inside deadzone does nothing" and "hint swaps button names for pad".
 
-## Actions, not keys
+## One binding table
 
 All input goes through `input.lua`. Game code never asks whether Z is down. It asks whether `jump` is held, and the module answers from a table that lists keys and pad buttons side by side:
 
@@ -62,8 +62,8 @@ The fallback works slot by slot, so an artist can replace just the player and le
 
 The repository has no sprite or sound files yet. Every screenshot on this blog is the procedural fallback.
 
-## Staying on LÖVE
+## Why LÖVE and not raylib
 
-Claude's answer on raylib was no, at least for this project. The game already worked, and a rewrite would have cost real time and bought nothing it needed. LÖVE already had everything the game used: canvases for the lightmap and the pixel-scaled view, blend modes for the glow, generated sound data for the audio, and built-in gamepad mappings for the controller work above.
+The game stayed on LÖVE. It already worked, and a rewrite in raylib would have cost real time and bought nothing it needed. LÖVE already had everything the game used: canvases for the lightmap and the pixel-scaled view, blend modes for the glow, generated sound data for the audio, and built-in gamepad mappings for the controller work above.
 
 raylib is the better pick for a web export, for raw speed with a lot of objects on screen, or when the point is to learn or ship C and C++. None of that applied here. [Part 5]({{< relref "05-measuring" >}}) later measured how much headroom the game has on LÖVE, and there was a lot of it.

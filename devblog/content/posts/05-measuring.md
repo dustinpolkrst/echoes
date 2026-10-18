@@ -1,6 +1,6 @@
 ---
-title: "Measuring before optimizing"
-description: "Claude built a benchmark before touching any rendering code. Every scene was far under budget, so it fixed one thing and left the rest alone."
+title: "Benchmarking the pause screen"
+description: "A benchmark showed every scene far under its frame budget, so the one optimization was to stop redrawing the pause screen."
 part: 5
 weight: 5
 date: 2026-10-17
@@ -8,9 +8,9 @@ commits: ["b9d194a", "a53d252", "af3114f"]
 cover: "images/05-bench/pause-after-fix.png"
 ---
 
-The third branch running next to the puzzles and the interface was performance. Claude didn't start by changing code. It started by building a way to measure the game, so any change after that would have a number to answer to.
+The third branch running next to the puzzles and the interface was performance. It started with a benchmark, not a code change, so any change after that would have a number to answer to.
 
-## The harness
+## The benchmark
 
 Commit `b9d194a` added `love echoes --bench LABEL`. It plays every scene the game has: the title, pause, level select, a loop of iris restarts, and every level's scripted solution. Vsync is off, so a frame's time is the game's own cost and not the monitor's refresh. Each scene gets:
 
@@ -22,13 +22,13 @@ It prints the median, p95, p99 and max frame time per scene, with draw calls and
 
 The same commit added a way to check that an optimization didn't change the picture. `--diff A.png B.png` compares two screenshots pixel by pixel and writes a mask of the differences. And `--shot` became deterministic. It seeds the random generators and freezes the menu clock, so the same shot gives the same pixels every time.
 
-## Nothing was slow
+## Every scene was far under budget
 
 Across scenes, frames took 0.14 to 0.31 ms. At 60 frames a second the budget is 16.7 ms, so the heaviest scene used less than 2% of it.
 
-Shaving a frame that small saves time no player can feel, and every edit to working rendering code is a chance to break how the game looks. So Claude only went after a cost the numbers pointed at.
+Shaving a frame that small saves time no player can feel, and every edit to working rendering code is a chance to break how the game looks. So the only change went after a cost the numbers pointed at.
 
-## Pause redrew a still picture
+## Pause redrew a still picture every frame
 
 One scene was doing work for nothing. Pause draws a blurred, dimmed copy of the level behind the menu. Nothing under it moves, yet every frame it redrew the whole world and then four full-window blur copies on top.
 
@@ -67,8 +67,8 @@ The commit message rounds the 4K numbers to 0.49 and 0.23 ms, each the median of
 
 If those look identical, they are. The blog's screenshot script runs `af3114f`'s own `--diff` on them, and it reports 0 of 518400 pixels differ. The before shot is from `a53d252` because `--shot` was only deterministic from `b9d194a` on. An earlier shot would differ in its drifting dust and prove nothing.
 
-## The rest stayed as it was
+## Nothing else changed
 
-Nothing else the harness measured stood out from the noise, so Claude left it alone. A tidier draw loop or a pooled particle table might have looked like progress in a diff. With no measured cost behind it, it would only have been churn with a small chance of a visual regression.
+Nothing else the benchmark measured stood out from the noise, so the rest of the rendering code stayed as it was. A tidier draw loop or a pooled particle table might have looked like progress in a diff. With no measured cost behind it, it would only have been churn with a small chance of a visual regression.
 
-The harness is still in the repository. If larger levels or sprite art ever make a scene slow, `--bench` will show which one and by how much.
+The benchmark is still in the repository. If larger levels or sprite art ever make a scene slow, `--bench` will show which one and by how much.

@@ -1,6 +1,6 @@
 ---
-title: "The interface pass"
-description: "A HUD that shows what the echo will remember, menus built on one model, a save file that survives corruption, and a --flow mode that drives the real menus with key presses."
+title: "Menus, saves and a HUD for memory"
+description: "Echoes gets menus and a save file, plus a HUD that shows how much of the last three seconds the next echo will replay."
 part: 4
 weight: 4
 date: 2026-10-17
@@ -32,7 +32,7 @@ end
 
 Because the model is separate from the drawing, the selftest can check HUD values without a window.
 
-## Every menu is a list
+## One model for every menu
 
 Title, pause, level select, settings and the level-clear card are the same thing underneath: a list of items, a cursor, and actions. `menu.lua` holds that model and every screen builds on it. An item is a label and an action, or for sliders and toggles, a value and an adjust function. The keyboard and the pad both produce `up`, `down`, `confirm` and `back`, so no screen needs input code of its own.
 
@@ -45,7 +45,7 @@ Title, pause, level select, settings and the level-clear card are the same thing
 
 {{< figure src="images/04-interface/clear-card.png" caption="The clear card after a scripted run of level 1, with a new best time and a new fewest-deaths record." >}}
 
-## A save file you can fix by hand
+## A plain-text save file
 
 Progress and settings go to `save.txt` in the LÖVE save directory, as plain text with one fact per line:
 
@@ -66,8 +66,8 @@ Scene changes close the screen down to a circle, swap the scene while it's fully
 
 {{< figure src="images/04-interface/iris-transition.png" caption="The iris 9 frames in, closing over level 2." >}}
 
-## Pressing the real keys with --flow
+## Driving the real menus with --flow
 
 Scripted solutions never reach the menus. The selftest drives the simulation, and nothing in it presses Esc halfway through a level. So commit `96bcc4f` added `love echoes --flow`. It boots the real scenes against an in-memory save and sends them key events. It opens pause and checks the simulation is frozen, resumes, opens settings, lowers the volume and checks the save text changed, then clears a level and checks the next one unlocked. At that commit it runs 21 checks, and all 21 pass when rerun for this post.
 
-Claude leaned on it hard in [part 6]({{< relref "06-review" >}}), where every fix added a `--flow` check that failed on the old code first.
+`--flow` got heavy use in [part 6]({{< relref "06-review" >}}), where every fix added a `--flow` check that failed on the old code first.

@@ -1,6 +1,6 @@
 ---
-title: "\"The game like speeds through and then crashes?\""
-description: "A bug report the tests couldn't reproduce, a review by two reviewers, and four fixes that each came with a check that failed on the old code first."
+title: "Four bugs behind a quit button"
+description: "A code review found four bugs, and two of them were the likely reason the game seemed to race through levels and crash."
 part: 6
 weight: 6
 date: 2026-10-17
@@ -8,17 +8,17 @@ commits: ["d33fa5e", "a4155a1", "e865580", "1b2f9ce"]
 cover: "images/06-review/pause-settings-before.png"
 ---
 
-Once the three branches merged, I played the game and told Claude, "the game like speeds through and then crashes?" Every automated check was green. So the tests and I were looking at different things.
+Once the three branches merged, I played the game. It seemed to race through levels and then crash. Every automated check was green, so the tests and I were looking at different things.
 
-## Claude couldn't reproduce it
+## Trying to reproduce it
 
-Claude's first guesses were a simulation running too fast and a Lua error. It drove the real game loop with real frame timing through a 10-minute playthrough of all 12 levels. It held a steady 60 simulation steps per second and threw no Lua error. Neither guess held up.
+The first suspects were a simulation running too fast and a Lua error. A 10-minute playthrough of all 12 levels drove the real game loop with real frame timing. It held a steady 60 simulation steps per second and threw no Lua error. Neither suspect held up.
 
-That run made a mess of its own. It wrote its level clears into my real save file. Claude moved the file aside, and the file still sits next to the real one as `save.from-test-run.txt`. The screenshot script for this blog avoids the same trap by rewriting `t.identity` in every exported commit to a scratch name before it runs anything.
+That run made a mess of its own. It wrote its level clears into my real save file. That file was moved aside, and it still sits next to the real one as `save.from-test-run.txt`. The screenshot script for this blog avoids the same trap by rewriting `t.identity` in every exported commit to a scratch name before it runs anything.
 
-## Two reviewers
+## Two code reviews
 
-With nothing reproduced, Claude had two independent reviewers go through the code, one reading for correctness and one for maintainability. Both found the same visual bug on their own. Claude then confirmed every finding below by running the game, rather than taking a reviewer's word for it.
+With nothing reproduced, two independent reviewers went through the code, one reading for correctness and one for maintainability. Both found the same visual bug on their own. Each finding below was then confirmed in the running game, not taken on a reviewer's word.
 
 ### 1. Pause, a menu, resume, and the wrong level
 
@@ -40,13 +40,13 @@ Menus wrapped from the top item to the bottom one, and on the title and pause me
 {{< figure src="images/06-review/title-up-after.png" caption="At `1b2f9ce`, the same press leaves it on Play." >}}
 {{< /pair >}}
 
-To the person playing, a window that vanishes is a crash. This was the most likely explanation for "and then crashes". The fix, `d33fa5e`, stops menus at their ends and makes Quit ask first.
+To the person playing, a window that vanishes is a crash. This was the most likely cause of the crash. The fix, `d33fa5e`, stops menus at their ends and makes Quit ask first.
 
 {{< figure src="images/06-review/quit-confirm.png" caption="Confirm Quit once and the label only changes to \"Really quit?\". A second confirm within two seconds quits." >}}
 
 ### 3. Held keys leaked into the next screen
 
-A jump or stick direction still held when a level ended went straight into the level-clear card. A held jump could skip the card, and a held stick drifted its cursor. That's the most likely "speeds through". Levels seemed to skip ahead by themselves.
+A jump or stick direction still held when a level ended went straight into the level-clear card. A held jump could skip the card, and a held stick drifted its cursor. That's the most likely reason the game seemed to race through levels. They appeared to skip ahead by themselves.
 
 The fix, `e865580`, only listens to fresh presses. A scene change bumps an epoch, and keys and stick directions already down at that moment stay silent until they're released:
 
@@ -72,8 +72,8 @@ A key repeat counts only if the key went down after the scene began. The stick w
 
 Press <kbd>R</kbd> or Back just after touching the goal and the level restarted before the clear was recorded. The fix, `a4155a1`, ignores restart once the player state is `cleared`.
 
-## Each check failed first
+## Checks that fail on the old code
 
-Every fix landed as its own commit with a regression check, and Claude ran each check against the old code first to see it fail. A check that passes on broken code says nothing about the fix. The selftest went from 139 to 149 checks and `--flow` from 21 to 33. Rerun for this post at `1b2f9ce`, all 149 and all 33 pass.
+Every fix landed as its own commit with a regression check, and each check ran against the old code first to confirm it failed. A check that passes on broken code says nothing about the fix. The selftest went from 139 to 149 checks and `--flow` from 21 to 33. Rerun for this post at `1b2f9ce`, all 149 and all 33 pass.
 
 The selftest drove the simulation, and the simulation was fine. The bugs were in the gaps between scenes, where a player's hands are still on the keys from the last screen. A test that sends one clean key event per action never presses Up out of habit.
