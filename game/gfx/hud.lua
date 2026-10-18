@@ -1,6 +1,6 @@
-local Echo = require 'echo'
-local Ui = require 'ui'
-local Model = require 'hudmodel'
+local Echo = require 'world.echo'
+local Ui = require 'gfx.ui'
+local Model = require 'gfx.hudmodel'
 
 local gfx = love.graphics
 local sin, pi = math.sin, math.pi

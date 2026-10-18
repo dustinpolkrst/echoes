@@ -1,5 +1,5 @@
-local Level = require 'level'
-local Levels = require 'levels'
+local Level = require 'world.level'
+local Levels = require 'content.levels'
 
 local M = {}
 

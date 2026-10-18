@@ -27,7 +27,7 @@ end
 
 if diffPair then
   function love.load()
-    local same = require('imgdiff').run(diffPair[1], diffPair[2])
+    local same = require('dev.imgdiff').run(diffPair[1], diffPair[2])
     io.stdout:flush()
     love.event.quit(same and 0 or 1)
   end
@@ -37,8 +37,8 @@ end
 if selftest or slackArgs then
   function love.load()
     local ok, passed = xpcall(function()
-      if slackArgs then return require('slack').run(slackArgs) end
-      return require('selftest').run()
+      if slackArgs then return require('dev.slack').run(slackArgs) end
+      return require('dev.selftest').run()
     end, function(e)
       return debug.traceback(e, 2)
     end)
@@ -62,28 +62,28 @@ local shot = { target = shotTarget, captured = false }
 
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
-  local Render = require 'render'
-  local Sfx = require 'sfx'
+  local Render = require 'gfx.render'
+  local Sfx = require 'platform.sfx'
   Render.init()
   Sfx.init()
-  Scenes = require 'scenes'
-  Input = require 'input'
+  Scenes = require 'screens.scenes'
+  Input = require 'platform.input'
   navState = Input.newNavState()
   love.keyboard.setKeyRepeat(true)
 
   if flow then
-    local ok = require('flowtest').run(Scenes)
+    local ok = require('dev.flowtest').run(Scenes)
     io.stdout:flush()
     love.event.quit(ok and 0 or 1)
   elseif bench ~= nil then
-    local ok = require('bench').run(Scenes, bench or nil, benchOpts)
+    local ok = require('dev.bench').run(Scenes, bench or nil, benchOpts)
     io.stdout:flush()
     love.event.quit(ok and 0 or 1)
   elseif shot.target then
-    shot.file = require('shot').setup(Scenes, shot.target, shotArg)
+    shot.file = require('dev.shot').setup(Scenes, shot.target, shotArg)
     love.audio.setVolume(0)
   else
-    Scenes.init(require('save').open(require('save').fileIO()))
+    Scenes.init(require('platform.save').open(require('platform.save').fileIO()))
     Scenes.go('title')
   end
 end
@@ -114,7 +114,7 @@ end
 
 function love.keypressed(key, _, isRepeat)
   if key == 'f5' then
-    require('assets').reload()
+    require('platform.assets').reload()
   else
     Scenes.dispatch(Input.fromKey(key, isRepeat))
   end

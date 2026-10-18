@@ -1,8 +1,8 @@
-local Level = require 'level'
-local Levels = require 'levels'
-local Echo = require 'echo'
-local Solutions = require 'solutions'
-local Input = require 'input'
+local Level = require 'world.level'
+local Levels = require 'content.levels'
+local Echo = require 'world.echo'
+local Solutions = require 'dev.solutions'
+local Input = require 'platform.input'
 
 local S = {}
 
@@ -506,7 +506,7 @@ end
 
 -- Every decision a human makes in a strategy must have a window a human can hit: half a second, or a tile and a half.
 local function testHumanSlack()
-  local Slack = require 'slack'
+  local Slack = require 'dev.slack'
   for i, def in ipairs(Levels) do
     if Solutions.strategies[def.name] then
       local r = Slack.measure(i)
@@ -561,7 +561,7 @@ end
 
 function S.run()
   testGamepadInput()
-  require('uitest')(check)
+  require('dev.uitest')(check)
   testPhysics()
   testHazards()
   testDoors()

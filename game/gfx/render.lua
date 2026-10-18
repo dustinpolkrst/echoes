@@ -1,6 +1,6 @@
-local Level = require 'level'
-local Echo = require 'echo'
-local Assets = require 'assets'
+local Level = require 'world.level'
+local Echo = require 'world.echo'
+local Assets = require 'platform.assets'
 
 local gfx = love.graphics
 local TILES = Level.TILES

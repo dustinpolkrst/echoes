@@ -1,12 +1,12 @@
-local Save = require 'save'
-local Progress = require 'progress'
-local Menu = require 'menu'
-local Input = require 'input'
-local Trans = require 'transition'
-local Model = require 'hudmodel'
-local Level = require 'level'
-local Echo = require 'echo'
-local Solutions = require 'solutions'
+local Save = require 'platform.save'
+local Progress = require 'screens.progress'
+local Menu = require 'screens.menu'
+local Input = require 'platform.input'
+local Trans = require 'screens.transition'
+local Model = require 'gfx.hudmodel'
+local Level = require 'world.level'
+local Echo = require 'world.echo'
+local Solutions = require 'dev.solutions'
 
 return function(check)
   local d = Save.defaults()

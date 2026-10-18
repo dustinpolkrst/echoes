@@ -1,4 +1,4 @@
-local Echo = require 'echo'
+local Echo = require 'world.echo'
 
 local Model = {}
 local STEP = 1 / 60

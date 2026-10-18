@@ -1,6 +1,6 @@
-local Level = require 'level'
-local Levels = require 'levels'
-local Solutions = require 'solutions'
+local Level = require 'world.level'
+local Levels = require 'content.levels'
+local Solutions = require 'dev.solutions'
 
 local M = {}
 

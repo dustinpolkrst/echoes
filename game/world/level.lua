@@ -1,5 +1,5 @@
-local Player = require 'player'
-local Echo = require 'echo'
+local Player = require 'world.player'
+local Echo = require 'world.echo'
 
 local M = {}
 
