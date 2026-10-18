@@ -1,6 +1,6 @@
 # Level design for Echoes
 
-This is the rulebook for acts IV and V. Part 1 is what the game's rules actually allow, measured in the simulation. Part 2 reads the twelve existing levels against those numbers. Part 3 is the rules every new level follows. Part 4 is the waystone (checkpoint) and what a respawn resets. Part 5 is the file layout, the room declaration format and the tools that check a level. Part 6 is the spec for levels 13 to 22.
+This is the rulebook for acts IV and V. Part 1 is what the game's rules actually allow, measured in the simulation. Part 2 reads the twelve existing levels against those numbers. Part 3 is the rules every new level follows. Part 4 is the waystone (checkpoint) and what a respawn resets. Part 5 is the file layout, the room declaration format and the tools that check a level. Part 6 is the spec for levels 13 to 22, with what was built recorded beside it. Scaffold was dropped from the original plan and Let Go took its slot.
 
 Every number below was produced by running the headless simulation (`game/world`), not estimated. Where a number came from `--cheese` sweeps the sweep is named so it can be rerun.
 
@@ -33,7 +33,7 @@ The tile is 16 px. The player is 10 px wide and 12 px tall. The view is 480x270,
 | Cap | 2 echoes | The third cast removes the oldest. |
 | Standing cast on a plate | the plate is held for 7 s after the cast | The basic timer of every plate puzzle. |
 | Cast on arriving at a plate | the plate is held from 3 s to 7 s after the cast | The door opens when the ghost gets there, which is after you have left. |
-| Passing press | an echo running across a 14 px plate presses it for about 14 frames (0.24 s) | Enough to open a hatch under a standing player. This is how level 9 is cheesed, see part 2. |
+| Passing press | an echo running across a 14 px plate presses it for about 14 frames (0.24 s) | Enough to open a hatch under a standing player; this is how level 9 used to be cheesed (part 2). A player holding into a door needs only one frame of press: the door opens, they step into its cell, and a body inside a door keeps it open. |
 | Jump ride | a rider on an echo that replays a jump is lifted the full 50.8 px | Measured: a player standing on a standing echo rode its replayed jump up 50.8 px and never lost support. |
 | Ghost of a ghost | an echo recorded while standing on a mid-air echo floats at that spot after the first fades | Measured: echo 2 stayed solid at the recorded height after echo 1 expired. The player has to jump up through it to stand on it, because it occupies the spot they stood in. |
 | Mid-air step | a cast up a jump leaves a frozen step; it is landable only if cast less than about 38 px up | At the apex (50.8 px) the step is 62.8 px up and nothing can reach it from the floor below. Level 3 works because the player comes from a ledge. |
@@ -45,7 +45,7 @@ The tile is 16 px. The player is 10 px wide and 12 px tall. The view is 480x270,
 | Mirror shrine | a cast while touching it reflects the recording about the shrine's centre column; same height, through walls | A sealed room is reachable by a ghost only if the player can stand at its mirror image. |
 | Veil | the player walks through; an echo whose next step would enter it stops at the edge and lingers 4 s | A horizontal strip catches a falling ghost; a vertical column is a dock. An echo whose first frame is already inside a veil never moves (a statue). |
 | Plate over veil | a plate cell directly above a veil cell is pressed by an echo halted on the veil | A pad only ghosts can press: the player falls through both cells. Measured: halted echo bottom at the veil top, plate pressed, door open. |
-| Crumble | cracks 0.5 s after a body stands on it, then gone; regrows 3 s after nothing is inside the cell; echoes count as bodies and keep standing when it goes | Running across a tile takes 0.16 s and never cracks it. A ghost standing on the far side of a shrine breaks stone where the player cannot stand. A ghost sitting in the hole keeps it open. |
+| Crumble | cracks 0.5 s after a body stands on it, then gone; regrows 3 s after nothing is inside the cell; echoes count as bodies and keep standing when it goes | The crack starts on the first frame any body stands on the cell, so running across cracks it too; the runner is gone before it falls. A walking ghost breaks stone like a standing one. A ghost standing on the far side of a shrine breaks stone where the player cannot stand. A ghost sitting in the hole keeps it open. |
 | Door | solid unless its plate is pressed by the player or an echo; a body already inside the door keeps it open | A door can be a wall, a floor (level 9) or a ceiling hatch. |
 | One-way | catches a body only from above | A ladder of one-ways at 3-tile spacing is climbable (50.8 > 48). |
 | Waystone | lights when touched; death and R return you there with everything reset | Part 4. |
@@ -67,19 +67,21 @@ A ceiling does not stop a climb unless it is flush with the wall top: one tile o
 | --- | --- | --- |
 | 1 Wake, 2 First Echo, 3 Stairway, 4 Two Minds | run and jump; one cast on the path | Tutorials. Their solutions are supposed to be shallow. |
 | 5 Ascent | none | Long and clean, but its difficulty is mostly a sequence of jumps; the only insight (the apex cast at the top) is level 3's. |
-| 6 Other Side | one cast on the path | Weak. Run to the door and press X: the reflected echo replays your approach and sweeps across the plate for 14 frames, which is long enough to walk into the door cell, and a body inside a door keeps it open. The insight the hint names (where is the reflection of the plate) is never needed. |
+| 6 Other Side | none (fixed) | Was weak: the plate's reflection lay on the floor between the start and the shrine, so running to the door and pressing X swept the reflected ghost across the plate for 14 frames, which opened the door the player was pressed against. Now the plate sits on a ledge in the sealed room and its reflection is a matching ledge above the player's floor. A body on the floor is below the reflection and a jump past it collides with the ledge, so only standing on the ledge presses the plate. Proven naives: cast at the door every half second, bounce off the far wall first, stand under the ledge, cast on the ledge away from the shrine. |
 | 7 Trapdoor | one cast on the path | The intended solution is itself shallow (walk onto the plate, cast, fall). Fine for a teaching level. |
 | 8 Undertow | standing stack | The hit is the intended solution: the walk-to-x phase fell off the ledge, the recording captured the fall and the echo parked under the veil. Fine for a teaching level. |
-| 9 Underfoot | one cast on the path | Weak. Run onto the hatch and press X: the replayed run crosses the plate 3 s later, the hatch opens for a quarter second under a standing player, and that is enough to fall through. The 3 s stand is never needed. |
+| 9 Underfoot | none (fixed) | Was weak: a ghost replays a crossing of the plate exactly 3 s after it happened, and the hatch was 2.5 s of running from the plate, so the replayed run opened the hatch under a player already standing on it. Now the plate sits on a pedestal behind the start (off the run, out of reach of a walk) and the hatch is 4 s of running away, so the replayed crossing comes while the player is still on the bridge: 45 frames early, measured on the touch-then-cast naive. Casting on the plate and running is a solution, because that leaves a ghost on the plate. |
 | 10 Ferry | none | Strong. The insight (a reflection waits as long as you waited) cannot be stumbled into; slack is measured at 30+ frames on every decision. |
-| 11 Short Memory | one cast on the path, 24-frame window | Mostly strong. The insight (the three seconds must start on the right side of the veil) is real, but a player who mashes X at the shrine hits an accidental 24-frame window where the reflection's first frame lands on the plate inside the veil. |
+| 11 Short Memory | none (fixed) | Was mostly strong with a 24-frame window: mashing X at the door made an echo whose memory began while the player ran across the block, its first frames ran over the three-plate pad, and the plate next to the veil let an echo frozen in the veil stand on it. Now the pad is one plate two tiles clear of the veil, and past the door the way on is a hatch in a one-tile shaft that takes 28 frames to reach from the door. A running ghost holds the plate for 14 frames, 18 counting the frames the player holds the door open themselves, measured. Mashing every 2, 10 and 30 frames is a proven naive. The standing spot is one plate wide, 22 px measured, declared with `need = 20`. |
 | 12 Confluence | none | Strong. Two insights chained (ferry, then the ghost of the ride) under a time budget the selftest measures. |
 
-Three lessons for the new levels come straight from this table.
+Five lessons for the new levels come straight from this table and the levels built from it.
 
-1. A single-room level whose plate lies on the natural path is solved by running and pressing X. Rooms need the plate or the standing spot off the path, or a reason the passing press is not enough.
-2. A passing echo presses a plate for 14 frames. Any door that only has to be open for an instant (a hatch under a standing player, a door cell the player is already touching) is opened by a passing ghost. Use that on purpose (level 21) or design against it (keep the exploit distance longer than 14 frames of running).
+1. A single-room level whose plate lies on the natural path is solved by running and pressing X. Rooms need the plate or the standing spot off the path, or a reason the passing press is not enough. Levels 6 and 9 now put it off the path: a ledge the floor runs under, a pedestal behind the start.
+2. A passing echo presses a plate for 14 frames, 3 s after you crossed it (sooner when the memory is not yet full after a respawn). Any door that only has to be open for an instant (a hatch under a standing player, a door cell the player is already touching) is opened by a passing ghost. Use that on purpose (level 20, Three Steps Behind) or design against it: keep the exploit distance longer than 14 frames of running (level 11's shaft is 28 frames from the door), or put the door more than 3 s of travel from the plate so the replayed crossing comes before the player gets there (level 9).
 3. The strong levels (10, 12) are the ones where the player has to predict where and when a ghost will be, not just that there will be one.
+4. Two doors on one plate do not make the press last. The player can wait at the second door (or on level 11's hatch) for any later press, so two quick crossings of the plate get through as well as one long stand. Level 11 accepts that because a second crossing inside the same 3 s has to be deliberate; a room that needs a long press must also make the second crossing impossible.
+5. The view is 30 x 17 with the player 8 px below centre, so a room's key pieces must lie within eight rows of its waystone. Stacking rooms vertically breaks R3 for every room but the first. Level 14 shows the fix: a 17-row map with chimneys between the rooms.
 
 ## 3. Rules
 
@@ -125,13 +127,15 @@ Within a level: teach, test, twist, and the twist is the room the expected solve
 
 Every room beyond act I passes `--cheese` clean (no shallow strategy reaches its exit from its waystone) and declares its naive approaches, which the selftest proves fail. Builders also check the catalogue of known cheeses by hand:
 
-- A passing echo presses a plate for 14 frames (level 9).
-- An echo whose first frame is inside a veil is a statue at that frame (level 11's 24-frame window).
+- A passing echo presses a plate for 14 frames, and longer if you paused on it (how level 9 was cheesed before its fix). A player holding into the door needs one frame of it.
+- An echo whose first frame is inside a veil is a statue at that frame, and a statue on a plate holds it 4 s from the cast (level 11's old 24-frame window; Crawlspace's old Wrong Way Round). Any plate beside a veil the player can step into has this window.
+- A masher who casts every half second and stops when the door opens solves any room whose insight is a cast-time window on the natural path (Plumb Line). Keep the right memory start off the default route, or accept it in a teach room.
 - A mid-air step cast under 38 px up a jump, and the ladder from it, climb 7 and 9 tiles.
 - A standing echo is a 12 px step; two are 24 px.
 - A rider is lifted 50.8 px by a replayed jump.
 - A fresh memory right after a respawn makes a short echo that arrives early.
 - A player inside a door cell keeps it open.
+- A veil halts a ghost entering it from any side, so a pad over a veil is safe from a replayed jump from below. The only ghost that presses it comes from above.
 
 ## 4. The waystone
 
@@ -173,8 +177,8 @@ rooms = {
     {
       name = 'Loop',
       insight = 'a ghost cast on arrival opens the door three seconds later, which is when you get back',
-      from = 1,                         -- nil: the level start; k: the k-th waystone in map order (row-major)
-      exit = { 58, 10, 59, 12 },        -- tile rect { tx0, ty0, tx1, ty1 }, inclusive; nil means the goal
+      from = 1,                         -- nil: the level start; k: the k-th waystone in map order, row-major, not room order (The Last Light's rooms run from 3, 1, 2)
+      exit = { 58, 10, 59, 12 },        -- tile rect { tx0, ty0, tx1, ty1 }, inclusive; nil means the goal; never a door column
       solve = { ... },                  -- a script from a fresh respawn at `from` that reaches `exit` without dying
       naive = {                         -- each must NOT reach `exit`; dying counts as not reaching it
         { 'stand three seconds on each plate', { ... } },
@@ -191,27 +195,44 @@ Scripts use `dev/script.lua`: a segment is `{ frames, 'RLJX' }` or `{ 'RLJX', co
 
 - `love game --selftest` runs everything: physics, every level's script, the long-level contract, every room's solve and naives, the slack of every strategy, and the cheese search's own controls.
 - `love game --slack N` prints the winning window of each decision of level N's strategy, with a strip of `#` and `.` per swept value.
-- `love game --cheese N` prints, per room, any shallow strategy that reaches the exit, with the parameters that did it (direction, hold, the frame or height of the cast, the stack position). No hits reads "no shallow strategy reaches the exit". It runs about 1000 strategies per room in one or two seconds. Validation: planted walls of 5 and 9 tiles are caught (by the single-cast step and by the ladder) and a 10-tile wall is clean; level 10 and 12 are clean; levels 6, 9 and 11 are flagged for the reasons in part 2.
+- `love game --cheese N` prints, per room, any shallow strategy that reaches the exit, with the parameters that did it (direction, hold, the frame or height of the cast, the stack position). No hits reads "no shallow strategy reaches the exit". It runs about 1000 strategies per room in one or two seconds. Validation: planted walls of 5 and 9 tiles are caught (by the single-cast step and by the ladder) and a 10-tile wall is clean; every level from 6 on is clean except Three Steps Behind's declared teach room, whose hits are its intended move. Acts I and II's teach levels (1 to 4, 7, 8) hit as part 2 says.
 
 A room is done when: the solve passes from a fresh respawn, every naive fails, `--slack` shows 30 frames or 24 px on every decision, `--cheese` is clean for the room, and the builder has walked the known-cheese catalogue in R8.
 
-## 6. The ten levels
+## 6. The new levels
 
 | # | Act | Name | Size (tiles) | Rooms | Core idea | Reasoning | Solve time |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 13 | IV | Relay | 72 x 18 | 3 | A ghost cast on arrival opens its door 3 s later. Use the delay. | time | 5 to 8 min |
-| 14 | IV | Plumb Line | 24 x 64 | 3 | A falling ghost stops at the first veil below where its memory began. | time, space | 6 to 10 min |
-| 15 | IV | Undercroft | 64 x 22 | 3 | A standing ghost breaks stone; a reflected one breaks it where you cannot stand. | space, time | 8 to 12 min |
-| 16 | IV | Crawlspace | 80 x 20 | 3 | Under a low roof ghosts cannot be steps; a veil overhead fixes a ghost's height. | space | 8 to 12 min |
-| 17 | IV | Ferryman's Toll | 70 x 20 | 3 | The ferry docks on the pad and pays the toll itself. | space, time | 10 to 15 min |
-| 18 | V | Clockwork | 60 x 20 | 3 | Two ghosts can share one memory; one ghost can hold two plates in turn. | time, resources | 12 to 20 min |
-| 19 | V | Hall of Mirrors | 72 x 20 | 3 | A reflection of a ride is a ride; two shrines copy a walk 2d away. | space | 15 to 25 min |
-| 20 | V | Scaffold | 30 x 70 | 2 | A ghost cast from a ghost's back floats there after the first is gone. | time, resources | 10 to 20 min |
-| 21 | V | Three Steps Behind | 80 x 24 | 3 | A running ghost presses each plate for a quarter second, three seconds after you did. | time | 15 to 25 min |
-| 22 | V | The Last Light | 96 x 32 | 4 | The finale: ferry, scaffold, shared memory, and a ghost that does two jobs. | all | 20 to 35 min |
+| 13 | IV | Relay | 48 x 17 | 3 | A ghost cast on arrival opens its door 3 s later. Use the delay. | time | 5 to 8 min |
+| 14 | IV | Plumb Line | 75 x 17 | 3 | A falling ghost stops at the first veil below where its memory began. | time, space | 6 to 10 min |
+| 15 | IV | Undercroft | 64 x 17 | 3 | A reflected ghost breaks stone where you cannot stand, at your height. | space, time | 8 to 12 min |
+| 16 | IV | Crawlspace | 40 x 20 | 3 | A walking ghost stops at a veil and stands where it stops. | space | 8 to 12 min |
+| 17 | IV | Ferryman's Toll | 81 x 17 | 3 | The ferry docks on the pad and pays the toll itself. | space, time | 10 to 15 min |
+| 18 | V | Clockwork | 74 x 17 | 3 | One memory serves two ghosts; one ghost presses two plates in turn. | time, resources | 12 to 20 min |
+| 19 | V | Hall of Mirrors | 39 x 17 | 2 | A reflection stands where you stood, even on air; two shrines reflect one stand twice. | space | 10 to 20 min |
+| 20 | V | Three Steps Behind | 57 x 29 | 3 | A running ghost presses each plate for a quarter second, three seconds after you; a pause holds it. | time | 15 to 25 min |
+| 21 | V | Let Go | 43 x 21 | 3 | A third cast takes the oldest ghost with it: a cast can shut a door. | resources, time | 15 to 25 min |
+| 22 | V | The Last Light | 101 x 17 | 4 | Finale: toll gate ferry, which shrine, twice mirrored, one memory as plate-holder and ferry. | all | 20 to 35 min |
 
-Sizes are targets within the brief's 40 to 90 tiles; builders adjust to fit the sightline rule. Coordinates in the room notes are tiles from the top-left of the map.
+Sizes are targets within the brief's 40 to 90 tiles; builders adjust to fit the sightline rule. Every row is as built; the sections record what changed from the spec and why. Scaffold was dropped and Let Go took its slot, so the game has 22 levels: act V is 18 to 22, and every test keys levels by name. Coordinates in the room notes are tiles from the top-left of the map.
 
+### Act IV as built
+
+The five act IV levels were built and measured against the simulation; where the built level differs from the spec below, the simulation forced it. Three sim facts the spec got wrong, each confirmed with a headless probe before the level was changed:
+
+- A standing cast right after a respawn holds its plate for the memory length plus 4 s, not 7 s. Relay's "stand on the gate plate" means a full 3 s stand.
+- A crumble cell starts its 0.5 s crack on the first frame any body stands on it, so a walking ghost breaks stone just as a standing one does (`updateCrumbles` in `world/level.lua`). Undercroft's "weight" insight does not exist; the level is built on what crumble actually does: a reflection breaks stone where you cannot stand, the hole lasts 3 s, a halted ghost standing on a regrown cell re-breaks it, and the reflection keeps your height.
+- A ghost halted under a veil strip has its top at the strip's bottom, so a strip 4 tiles up is a step 64 px up that no 50.8 px jump reaches, and a second rung needs a memory that begins above the first strip, which takes 2.7 s of standing on a ghost that lives 4 s. Veils park ghosts; they do not stack them. Crawlspace's ladder cannot exist, and the level uses veils sideways instead.
+
+A red-team pass after the build changed two levels (marked below) and proved each exploit as a failing naive in its room.
+
+Per level, what was built (rooms, insight, measured slack minimum, cheese):
+
+- **13 Relay** (48 x 17, two storeys). Handoff: plates a and b, doors A and B, cast on arrival at b opens B as you reach it. Loop: standing cast on c holds gate C 7 s, arrival cast at the dead-end plate d, back through C to hatch D in the floor (a hatch instead of the spec's shelf, so the return goes through the gate and every door is full height). Encore: the same loop below with the exit door far from the gate, so the far ghost's 7 s must also cover the walk out. Slack minimum 84 frames (the arrival cast's window at d), cheese clean in 5100 runs.
+- **14 Plumb Line** (75 x 17, three rooms side by side joined by two-wide one-way chimneys, one-ways at rows 13, 10 and 7). The camera shows eight rows above and below the player, so a stacked shaft can never show a room's pad from its waystone. The level is laid out like the rest of the act, and each room is on screen from its waystone (R1, R3). The Well: as before, one empty row shorter. Wait on the ledge between the strips, drop, cast. Red team: a masher at the bottom wins with a single cast 122 to 168 frames after landing. This is accepted as a teach room, since the winning ghost is the intended one (it begins on the ledge and halts on the pad) and the three before it halt on strip 1. Twin Well: the corridor from waystone 1 ends at a hole whose fall mirrors beside the pad (16 px clear of it). Jumping it leads to a second hole onto the ledge below the first twin strip, whose slot mirrors onto the pad. The shrine is below the pad strip as before. Mashing at the shrine after the first hole, every 10 or 30 frames, is a proven naive. Mashing after the ledge route wins in three casts, which is the insight. Deep Drop (twist): no ledge on the way down. The natural fall lands beside a sealed pad shaft. A one-way ladder from the floor is the only way to its top, so the ghost reaches the pad only by replaying the climb and the drop through the pad, and the cast must come within three seconds of the drop (window 2 to 158 frames after landing, the top wait fully open). Casting at the top of the ladder leaves a ghost standing there (a climbed memory never falls, now a visible herring). Mashing at the door after the natural fall, every 10 or 30 frames, is a proven naive. So are casting on landing, mid-fall, after a long wait, and three seconds after the drop. A replayed jump from below cannot press the pad: a ghost rising into the strip halts under it. Slack minimum 117 frames, cheese clean in 6720 runs. Room retries take 7.5 to 7.7 s from the waystone with nominal waits.
+- **15 Undercroft** (64 x 17, three rooms stepping down). Trapfloor: the reflection of the approach walk crosses the gallery's crumble floor; drop into the crawlspace and jump up through the hole within 3 s. Far Side: one stone, whose mirror is in a pocket off the natural path. Sunken Gallery: the gallery floor is one tile lower, so only a walk through the one-deep pit beside the shrine puts the reflection on the stone. The crawlspace is 1 tile tall where the jump goes up through the hole (the spec's 2 tall leaves 2.8 px, not 18). Slack minimum 138 frames, cheese clean in 6060 runs.
+- **16 Crawlspace** (38 x 20, three 3-tall corridors). Each room: a plate on a three-wide crumble bed over spikes, a veil column beside it, a pocket beyond, and the door behind the start so the cheese runner never returns to it. Parked: run over the plate into the pocket, cast; the ghost halts at the veil standing on the plate; return over the bed on a one-way ledge, since a halted ghost re-breaks the stone the moment it regrows. Short Memory Lane: an extra veil on the way in; cast only once it is three seconds behind you. Wrong Way Round: the veil is before the plate, so the ghost must walk at it from the pocket side after the stone regrows. The bed is three wide because a body pressing a one-wide plate can stand half on the solid neighbour (found by `--cheese`). Red team: stepping onto the plate and straight back pressed it for up to 18 frames, and three seconds later the replayed step opened the door for a player holding into it (Short Memory Lane fell to one cast, any time in a 50-frame window). Each door now stands behind a three-tile crumble bridge, which takes 32 frames to cross from standing, so the waiting player falls. In Wrong Way Round, stepping into the veil beside the plate and back left a statue on the plate (a 13-frame cast window, mashable at the door), and hopping over the veil skipped the pocket; the bed now runs two tiles past the veil, so the door side cannot reach the plate. The map is 40 wide. Slack minimum 60 frames, cheese clean in 4620 runs.
+- **17 Ferryman's Toll** (81 x 17). Three copies of level 10's measured ferry block. Dock: level 10 with a waystone. Toll Gate: the dock is a plate at floor level over a veil over a 2-deep pocket (the reflection's outbound leg is at floor level, so the pad must be too); the halted ferry presses it against the dock column and door A opens for 4 s. Hatch: the pad is mid-pit under a three-wide ceiling hatch; the rider's bottom sits at 212 on a floor-level ghost, so the jump reaches only the upper floor's top (36 px to spare) and the rider jumps up and to the right so the landing clears the open cells whatever their offset on the ferry's back. Pits are two spikes wide because the walk-away must reach the dock yet leave the reflection waiting when you board (a 98 px walk leaves 0.4 s of waiting; 70 px leaves enough). Slack minimum 24 px (castOff) and 7 frames on stepHold with its justified need of 6, as in level 10; cheese clean in 7080 runs.
 ### 13. Relay (act IV)
 
 Hint: "A ghost opens the door when it reaches the plate, not when you cast."
@@ -238,32 +259,28 @@ Sketch of room 2 (tiles 62 to 96, floor row 15):
 
 Hint: "A ghost falls where you fell, and stops at the first veil beneath where it began."
 
-A shaft 24 tiles wide and 64 tall, descended top to bottom. Veil strips (rows of `~`) cross the shaft at several depths; a plate over a veil pad sits at the side of some strips (`a` above `~`, with `#` under). One-way ledges on the shaft wall at 3-tile spacing let the player climb back a few tiles where the room needs it.
+Three rooms side by side in a 75 x 17 map, joined by two-wide one-way chimneys (one-ways at rows 13, 10 and 7). The view is 17 rows tall with the player 8 px below its centre, so a room's key pieces must lie within eight rows of its waystone. A stacked shaft breaks R3 for every room but the first, so each room is one 17-row screen and the chimneys carry the player between them. Veil strips (rows of `~`) cross each room's shaft, and a plate over a veil is the pad (`c` above `~`, with `#` under).
 
-**Room 1, The Well (teach, from the start, depth 0 to 30).** Strips at depths 10 and 25; the pad is on strip 25; door A at depth 29 leads to waystone 1. A ledge at depth 14 juts from the wall. The player sees the two strips and the pad before dropping. Intended: drop to the ledge, wait 3 s, drop to the floor, cast; the ghost begins on the ledge, falls, halts on the pad, A opens for 4 s. Naive: cast at the bottom straight after the fall (the memory begins above strip 10; the ghost halts there). Naive: cast while standing on the ledge (the memory still begins above strip 10).
+**Room 1, The Well (teach, from the start).** Two strips with a ledge between them. The pad is on the lower strip and door A leads to waystone 1. This is the earlier design, one empty row shorter. Intended: wait on the ledge between the strips, drop, cast. The ghost begins on the ledge, falls, halts on the pad, and A opens for 4 s. Naive: cast at the bottom straight after the fall (the memory begins above the first strip and the ghost halts there). Red team: a masher at the bottom wins with a single cast 122 to 168 frames after landing. That is accepted in a teach room, because the winning ghost is the intended one and the three casts before it halt on strip 1.
 
-**Room 2, Twin Well (test, from waystone 1, depth 30 to 50).** The shaft splits around a 1-tile wall: the main shaft (left) and a sealed twin (right) the player can see across. Twin strips at depths 45 and 52 with the pad on 52. Main-shaft ledges at 43 and 47. The shrine stands on a ledge at depth 50 in the main shaft; door A at the bottom of the main shaft. Intended: wait on the 47 ledge (below the twin's 45 strip), drop to the shrine, cast; the reflection begins at depth 47 in the twin shaft, skips nothing, halts on 52. Naive: wait on the 43 ledge (the reflection halts on 45). Naive: a plain cast at the shrine's foot (not reflected; the ghost falls in the main shaft).
+**Room 2, Twin Well (test, from waystone 1).** The corridor from waystone 1 ends at a hole. Its fall mirrors beside the pad, 16 px clear of it, so the natural way down fails. Jumping the hole leads to a second hole onto the ledge below the first twin strip, and the slot there mirrors onto the pad. The shrine is below the pad strip. Naive: mashing at the shrine after the first hole, every 10 or 30 frames. Mashing after the ledge route wins in three casts, which is the insight.
 
-**Room 3, Climb to Cast (twist, from waystone 2, depth 50 to 64).** As room 2 but the shrine is *above* the correct ledge: the ledge is at 60, the shrine at 56 on a one-way ladder, the twin's strips at 58 and 62 with the pad on 62. The player must wait on the 60 ledge, climb two one-ways to the shrine (under 3 s) and cast. Insight: the ghost begins where you were three seconds ago even if you climbed since. Naive: wait at the shrine's ledge (reflection halts on 58). Goal at the bottom.
+**Room 3, Deep Drop (twist, from waystone 2).** No ledge on the way down. The natural fall lands beside a sealed pad shaft. A one-way ladder from the floor is the only way to its top, so the ghost reaches the pad only by replaying the climb and the drop through the pad. The cast must come within three seconds of the drop. The window is 2 to 158 frames after landing, with the top wait fully open. Casting at the top of the ladder leaves a ghost standing there, a visible red herring because a climbed memory never falls. Naives that fail: mashing at the door after the natural fall (every 10 or 30 frames), casting on landing, casting mid-fall, casting after a long wait, and casting three seconds after the drop. A replayed jump from below cannot press the pad, because a ghost rising into the strip halts under it (R8).
 
-Sketch of room 2 (depth 40 to 54, main shaft left, twin right):
+Sketch of room 3 (room-local columns, rows 5 to 16; `w` waystone, `=` one-way, `~` veil, `c` pad, `C` door, `G` goal, `t` torch):
 
 ```
-   #..........#..........#   40
-   #..........#..........#
-   #..........#..........#
-   #===.......#..........#   43  ledge (wrong)
-   #..........#..........#
-   #..........#~~~~~~~~~~#   45  twin strip (no pad)
-   #..........#..........#
-   #===.......#..........#   47  ledge (right)
-   #..........#..........#
-   #..........#..........#
-   #......M...#..........#   50  shrine on a solid ledge
-   #......###.#..........#
-   #..........#.........a#   52  pad: a over ~
-   #..........#~~~~~~~~~~#
-   #....A.....#..........#   54  door A
+.....w.......#......###    5  corridor; the shaft starts at column 8
+########.....#......###    6
+########..t..#==....###    7  ladder top: step off right into the pad shaft
+########~~~~~#......###    8  strip 1 across the main shaft
+########.....#..ccc.###    9  pad
+########.....#==~~~~###   10  pad strip; ladder rung
+########.....#......###   11
+########..t..#.....t###   12
+########.....#==....###   13  ladder bottom rung
+########............C.#   14  floor corridor runs under the wall to the door
+########.t.........tCG#   15
 ```
 
 ### 15. Undercroft (act IV)
@@ -274,7 +291,7 @@ Two storeys: an upper corridor the player walks and a lower corridor 2 tiles tal
 
 **Room 1, Trapfloor (teach, from the start).** A 4-tile crumble section in the upper floor; the goal of the room is the lower corridor. Running across does nothing; standing 0.5 s drops you. Waystone 1 below.
 
-**Room 2, Far Side (test, from waystone 1).** Back in the upper corridor (a one-way ladder returns the player). The shrine at tile 30. A sealed gallery to the right, tiles 32 to 40, floor of crumble, containing waystone 2 and the way on. The lower corridor runs under both. The player sees the gallery through its open left wall above head height (the gallery is 3 tiles above the corridor floor, walled by a 10-tile column). Intended: stand 0.5 s or more at tile 28 (whose reflection is gallery floor tile 32), step onto the shrine, cast. The reflection stands on tile 32 for the 0.5 s it remembers, the stone cracks and goes, the ghost walks off. The hole regrows 3 s after the ghost leaves, about 4 s after the cast. Drop through the room 1 trapfloor behind you (0.8 s), run under (0.5 s), jump up through the hole (the lower corridor is 2 tiles tall, so the full 50.8 px jump clears the 32 px floor with 18 px to spare) and land beside it. Naive: cast at the shrine without standing first (the reflection crosses the stones at 0.16 s per tile and nothing cracks). Naive: stand at the wrong tile (the reflection stands on solid gallery floor). Naive: a plain echo in the lower corridor as a step (the ceiling is solid everywhere but the hole, and there is no hole).
+**Room 2, Far Side (test, from waystone 1).** Back in the upper corridor (a one-way ladder returns the player). The shrine at tile 30. A sealed gallery to the right, tiles 32 to 40, floor of crumble, containing waystone 2 and the way on. The lower corridor runs under both. The player sees the gallery through its open left wall above head height (the gallery is 3 tiles above the corridor floor, walled by a 10-tile column). Intended: stand 0.5 s or more at tile 28 (whose reflection is gallery floor tile 32), step onto the shrine, cast. The reflection stands on tile 32 for the 0.5 s it remembers, the stone cracks and goes, the ghost walks off. The hole regrows 3 s after the ghost leaves, about 4 s after the cast. Drop through the room 1 trapfloor behind you (0.8 s), run under (0.5 s), jump up through the hole (spec arithmetic, wrong: from a 2-tall corridor the jump clears the 32 px floor by 2.8 px, not 18; the built crawlspace is 1 tile tall) and land beside it. Naive: cast at the shrine without standing first (the reflection crosses the stones at 0.16 s per tile and nothing cracks). Naive: stand at the wrong tile (the reflection stands on solid gallery floor). Naive: a plain echo in the lower corridor as a step (the ceiling is solid everywhere but the hole, and there is no hole).
 
 **Room 3, Borrowed Ground (twist, from waystone 2).** The same trick, but the standing spot whose reflection is the gallery stone lies over a 3-tile spike pit. The player cannot stand there; a ghost can. Intended: cast a plain echo at the apex of a short hop so it freezes over the pit as a step (under 38 px up), stand on it 0.5 s or more, walk to the shrine within 3 s, cast. The second cast is reflected and breaks the stone; the first echo is still the step the recording remembers, and it does not matter that it fades. Naive: the room 2 recipe (there is nowhere to stand). Naive: two standing echoes stacked at the pit's edge (12 px each; the reflection then stands one tile short of the stone). Goal in the gallery.
 
@@ -315,83 +332,87 @@ Hint: "The ferry carries you. The toll is paid by the one who stays behind."
 
 ### 18. Clockwork (act V)
 
+Built as specified in spirit; two of the three rooms changed shape once they were measured.
+
 Hint: "Two ghosts can share one memory."
 
-Plates and doors with budgets the player has to write down. All distances chosen so the naive timelines miss by at least 1 s and the intended ones have at least 1.5 s of slack.
+**Room 1, Overlap (teach, from the start).** Plates a at 3 and b at 9, doors A at 33 and B at 37 with a waiting room between. Both doors are more than 19 tiles (3 s of running) past both plates, so a passing press can never reach a player standing at a door. Intended: cast standing on a (A held 0 to 7), run to b, cast on arrival (B held from 3 to 7 after that cast), run; A is passed at about 5.0 s. Naive that fails: standing 3 s on both (A shuts 0.8 s before the player arrives). The doors are 3 tiles beyond the first screen; the player sees them after three steps.
 
-**Room 1, Overlap (teach, from the start).** Plates a and b 25 tiles apart; doors A then B 4 tiles apart in the exit corridor 25 tiles past b. Standing 3 s on each plate: A shuts at 7, the player reaches it at 8. Intended: cast on a standing (A: 0 to 7); run to b (2.5 s) and cast on arrival (B: 5.5 to 9.5); run to the doors (5 s) and wait half a second for B. Naive: 3 s stands on both. Waystone 1.
+**Room 2, One Ghost (test, from waystone 1).** Plate c beside the waystone, a two tiles on, b two tiles past a, a two-tile crumble bridge over spikes, door A, a waiting room, doors B and C side by side. The ghost on c must be a standing cast made first; the other ghost must press a (stand 1 s or more) and then b (cast on arrival). The spec put c "far behind" and used a cap trick in room 3; measured, the cap never forces sharing: a ghost that presses a then b holds a only during its first second, so by the time a third cast could drop an a-ghost its door has already been passed. What forces sharing here is the third plate needing a standing ghost at the end. The crumble bridge is the defence against the level 9 exploit: a player who runs past a and b, casts, and waits at A for the quarter-second press stands on crumble for more than 0.5 s and falls (R8). Keep plates one tile clear of crumble and of shrines: a player stopping on a plate overshoots by about 5 px, and a ghost replaying that stand cracks the next tile.
 
-**Room 2, One Ghost (test, from waystone 1).** Plates a and b 10 tiles apart, doors A and B with a 3-tile waiting room between them, A 6 tiles past b. Only one cast is useful because a second plate c far behind needs the other ghost for door C at the very end. Intended: stand on a for 1 s, walk to b (1 s), cast on arrival at b. The ghost holds a for its first second (A open from the cast to +1), walks, and holds b from +3 to +7. The player walks through A within the first second (6 tiles is 1 s, so they must already be moving), waits in the waiting room, and B opens at +3. Naive: two ghosts on a and b (then nothing holds c; door C stays shut at the end and the room's exit is beyond C). Naive: stand on a for 3 s (the memory then holds only a; the ghost never reaches b). Waystone 2 past C.
+**Room 3, Double Cast (twist, from waystone 2).** The hall drops a storey; the player lands on plate a, the shrine stands by the wall four tiles on, and the sealed pocket beyond the wall holds plate c at the mirror of a, between spikes. The way on climbs the wall onto the pocket's roof, over a crumble bridge, through doors A and C side by side. One memory, cast twice: plain while standing on a (A held 7 s) and mirrored at the shrine (c held while the reflection stands, about 2 s). The spec's "Three Clocks" was dropped for the reason above.
 
-**Room 3, Three Clocks (twist, from waystone 2).** Three plates a, b, c and three doors in the order A, B, C with the waiting-room pattern, two ghosts: one ghost does a then b in one memory as in room 2; the other holds c and must be cast *last* so it is not the one the third cast drops. The twist is the order of casting versus the order of need. Naive: the room 2 ghost cast first and then c (works only if the player then needs no fourth cast; the room makes them need one by putting a crumble step before C that drops the player once, so they must recast). Builders set the budgets with `--slack`. Goal past C.
-
-Sketch of room 2 (floor row 12):
-
-```
- tiles  30   34        44        50    53 56
-        w....a.........b.........A.....A...B...B.............C...
-        ###############################################################
-                 10 tiles          6     3-tile wait     far end: C, held by the other ghost
-```
+Measured: selftest clean, `--cheese` clean in all three rooms, slack minimum 90 frames (mirrorDelay), the rest 110 to 410 frames. Failure cost: every room is under 10 s from its waystone.
 
 ### 19. Hall of Mirrors (act V)
 
-Hint: "A ghost cast from a ghost's back reflects the ride."
+Two rooms instead of three. The spec's premise, "a reflection of a ride is a ride", is false in the simulation: a mirrored ghost replays its memory in time order, so its ride portion runs from the far mirror point back toward the shrine, and its final pose is always within a tile of the shrine (the player had to touch it to cast). A ferry only goes outward because the walk-away is recorded before the walk back. The same fact kills the spec's "double image": a cast from a ghost's back must touch the second shrine, so the twice-reflected stand lands beside it. A floating reflected stand over a pit was also tried as a stepping stone and dropped: landing on a 10 px ghost by a jump is a 20 px window, under the 24 px bar (R5).
 
-**Room 1, Second Crossing (teach, from the start).** Two spike pits in a row with a shrine on the shore between them. Ferry across the first (shrine 1 on the near shore). On the middle shore, cast on shrine 2 while the memory still holds the ride: the reflection replays the ride mirrored about shrine 2, which is a ferry over the second pit. Intended: ride, land, walk to shrine 2 within 3 s, cast, step on. Naive: a plain cast on the middle shore (the ghost replays the ride back over the first pit, level 12's move, which goes nowhere here). Waystone 1.
+Hint: "A reflection stands where you stood. Even on air."
 
-**Room 2, Sealed Twice (test, from waystone 1).** A ferry's far shore is a sealed room with a pad at ride height and door A beyond; the second shrine stands on the near shore 4 tiles from the pit. The reflected ride must dock on the pad; the dock is a veil column at the sealed room's near wall. Intended as room 1, with the walk to shrine 2 shorter than 3 s. Naive: ferrying straight into the sealed wall. Waystone 2.
+**Room 1, Which Shrine (from the start).** A three-tile spike pit, the far shrine at 12, the near shrine at 15 by the pocket wall, a sealed pocket whose plate a (two cells) floats over spikes. The plate's reflection about the near shrine is the far shrine's own cell; its reflection about the far shrine lies on the spikes. Stand on the far shrine, walk to the near one, cast, climb the wall onto the pocket's roof, cross the crumble, pass A while the reflection stands on air. Naives that fail: casting at the far shrine, standing beside the near shrine, casting on the move.
 
-**Room 3, Double Image (twist, from waystone 2).** Two shrines 6 tiles apart on one floor, a sealed corridor beyond them at the same height with a plate 12 tiles to the right of the walk the player can make. Reflect about shrine 1 (ride the reflection), then cast on shrine 2 from the ghost's back: the second reflection's path is the player's physical path while riding, mirrored again, which is the original walk shifted right by twice the shrine distance. The player must plan a walk, 12 tiles short of the plate, that the copy will finish on. Naive: a single reflection (lands 2d short or in the wall). Goal past the door.
+**Room 2, Twice Mirrored (from waystone 1).** Drop into the hall, two shrines side by side, a sealed pocket with plates a and b (two cells each) two shrine-spacings apart. One stand reflects onto a about the first shrine and onto b about the second: cast at both within the memory, climb, cross the crumble, pass A and B. Two-cell plates give the stand a 40 px window; one-cell plates give exactly 24. The roof the player walks in on must end three or more tiles before the shrines, or the mirrored walk-in runs along the next roof at that height and cracks its crumble.
 
-### 20. Scaffold (act V)
+Measured: selftest clean, `--cheese` clean, slack minimum 38 px (standX2) and 80 frames (castDelay2, castDelay3).
 
-Hint: "A ghost that stood on a ghost floats there, long after the first is gone."
+### Scaffold (dropped, replaced by level 21, Let Go)
 
-A shaft 30 wide and 70 tall. Crumble ledges every 3 tiles on alternating walls are rests that give way after 0.5 s; they are the red herring and the pacing.
+Measured infeasible under R5 and R8 together. The cycle "jump, cast under 38 px, land on the step after it arrives, cast again from its back" has this timing: step k+1 arrives 3 s after its cast, and step k fades 4 s after it arrived. The player needs about 0.5 s to land on k and 0.3 s to be back in the air for the next cast, which leaves a cast window of 0.2 s (12 frames) per rung. A fresh memory after a respawn shortens the first replay and allows two rungs with wide windows, which is exactly the two-cast ladder `--cheese` plays, so any wall a human could scaffold is flagged as cheese. Veil strips fix a ghost's height but not the time it arrives. No room survives both rules, so the level is not built. Level 21, Let Go, took its slot and rests on a different idea, the echo cap. Act V has five levels.
 
-**Room 1, The Rule (teach, from the start, 8 tiles tall).** A 6-tile wall with a 1-tile clearance under the ceiling, out of reach of one cast (part 1 says a single step clears 7, so this one is 8). Intended: jump and cast under 38 px up, land on the step after it arrives (3 s), and while standing on it cast again within a second. The second ghost arrives 3 s later at the spot the player stands on, right as the first fades; jump up through it and land on it (bottom at 50 px), jump: 100.8 px, over the wall. Naive: the ladder (two mid-air casts, tops at 9 tiles; the room's wall is 8, so the builder raises it to 10 with the one-tile clearance kept, or puts the ceiling flush). Naive: resting on a crumble ledge to stand 3 s (it drops at 0.5). Waystone 1.
-
-**Room 2, The Climb (test and twist, from waystone 1, 60 tiles tall).** The shaft: each cycle is jump, cast under 38 px, land, cast from the ghost's back within a second, jump through the arriving second ghost, and the player gains about 50 px per cycle and spends about 7 s. The twist, two thirds up, is a veil strip across the shaft: a ghost cast on the way up into it halts under it instead of where it was cast, which gives a free fixed step (level 16) and resets the rhythm. The cast-from-the-back window is 1 s wide (60 frames); the builder proves it with `--slack` and widens it, if needed, by placing one-way rests the player can wait on instead of ghosts every third cycle. Goal at the top.
-
-### 21. Three Steps Behind (act V)
+### 20. Three Steps Behind (act V)
 
 Hint: "A running ghost presses each plate for a quarter second, three seconds after you did."
 
-The level 9 exploit as a mechanic. Hatches (doors as floors) open for 14 frames when a replaying ghost runs across their plate, which is enough for a standing player to fall through.
+Corridors are two tiles tall. A hatch is a door in the floor at the end of a corridor; standing on it and casting is the natural move, and the rooms differ in what the ghost must do three seconds later. A second rule the player discovers in room 2: a ghost that paused on a plate holds it for as long as the pause.
 
-**Room 1, Quarter Second (teach, from the start).** An upper corridor with plate a at tile 10 and hatch A at tile 20; below, the way on. Run across a, keep running, stand on the hatch, cast: 3 s after the cast the ghost crosses a and the hatch drops you. No stand needed; standing 3 s on a works too but then the ghost ends on a and the hatch stays open, which is fine. Naive: stand on the hatch and wait (nothing presses a). Waystone 1 below.
+**Room 1, Quarter Second (teach, from the start).** Plate a at 6, hatch A at 11. Run across a, stand on A, cast; the hatch drops you when the ghost crosses a. This is the one room in the act where `--cheese` hits, and every hit is the intended move (one cast on the path, or a standing ghost on a that holds the hatch open), which R5 allows for a teach room.
 
-**Room 2, Three Steps Behind (test, from waystone 1).** A 30-tile upper corridor with plates a, b, c every 8 tiles; a lower corridor of hatches A, B, C under them at descending levels, each hatch reachable only from the previous drop. The player runs the whole upper corridor, drops to the first hatch and casts. The ghost runs the corridor 3 s behind; the hatches open in sequence as it passes each plate; the player must be on each hatch when it opens, which means walking the lower corridor at the same pace they ran the upper one, three seconds behind themselves. If they are early they wait; if late (more than 4 s behind, since the ghost's linger does not press plates it is not on) the hatch is shut. The slack is the ghost's 3 s of replay minus the walk between hatches; builders measure it. Naive: stand on each plate 3 s (the memory holds only the last plate; one hatch opens). Naive: two ghosts (the second cast, made later, replays a later stretch; it can cover the last two hatches only if the player plans it, which is the intended solution to room 3). Waystone 2.
+**Room 2, Three Steps (test, from waystone 1).** Plates a, b, c at 17, 19, 21 two tiles apart, hatch A at 23; below, hatch B four tiles on, then hatch C four tiles on, then the waystone. Running the plates sends the ghost over b and c a third of a second apart while the drops and walks below take 0.8 s each, so pause on b and on c: the ghost holds each hatch for the pause. The memory bounds the pauses from above (about 1.8 s together). Naives that fail: no pauses, standing 3 s on c, casting on arrival at c (B flickers before you reach it), a standing ghost on each plate (the third cast drops the first).
 
-**Room 3, Gallery (twist, from waystone 2).** The plates are in a sealed gallery and the only way to run across them is a reflection: the player runs the near corridor, casts at a shrine at its end, and the reflection runs the gallery 3 s behind over the hatches the player is now walking under. Goal below the last hatch.
+**Room 3, Gallery (twist, from waystone 2).** The plates are sealed in a gallery past the shrine; hatch A is the floor under the shrine. A reflection runs the gallery, so the pauses happen at the mirror spots of the plates on the way in (two tiles apart, the first two tiles past the waystone), and the cast is made standing on A touching the shrine. Naives that fail: running straight to the shrine, one long pause at the first spot, a plain cast beside the shrine.
+
+Measured: selftest clean, `--cheese` clean in rooms 2 and 3, slack minimum 40 frames (holdA2), pauses 60 to 80 frames.
+
+### 21. Let Go (act V)
+
+Built to replace Scaffold. Hint: "A third cast takes the oldest ghost with it. Sometimes that is the point."
+
+Three storeys of three-tall corridor joined by one-way shafts. Door A is both a one-tile gate standing on crumble over spikes and, past one more crumble tile, a five-tile floor over spikes (five, so no jump, step or stack crosses it). Plate a sits behind each waystone, 21 tiles or more from its gate, so the natural run never presses it and a passing press comes while you are still on the way. The kill is cast from inside the doorway, where your own body keeps the gate open, and the crumble under the doorway means you cannot wait there.
+
+**Room 1, Let Go (teach, from the start).** Plate a is behind the start and the gate is 23 tiles on. Stand on a, cast, run, and cast twice from inside the doorway. The third cast takes the ghost on a, and the floor beyond is solid. Naives that fail: no ghost, straight through, one cast in the doorway, two casts before it, waiting in the doorway for the fade, the passing press, the masher, two standing ghosts on a, and jumping the open floor.
+
+**Room 2, Oldest First (test, from waystone 1).** Plate b is met first and a lies behind the waystone. Door B past the floor is held by the ghost on b. The kill takes the oldest ghost, so cast on a first, then on b, then once in the doorway. Two casts in the doorway, room 1's move, take the keeper. Casting at the near plate first leaves the floor open. Standing three seconds on both lets the ghost on a fade before the gate. The budget is standB up to 2.8 s.
+
+**Room 3, Borrowed Time (twist, from waystone 2).** Plate c is on the way and exit door C is behind a crumble tile past the floor. The two kill casts replay a pause on c three seconds later, so the pause is 0.7 to 2.8 s. A shorter pause opens C after the stone before it has gone. A three-second standing cast on c outlives the ghost on a, because the gate is 26 tiles from a and that ghost lives seven seconds.
+
+Measured: selftest clean (369 checks), `--cheese` clean in all three rooms (4800 runs), slack minimum 42 px (killX1) and 140 frames (pauseC). Still open: a blind route that waits at the gate's edge for the ghost on a to fade and walks straight through has a 24-frame window in every room, under the 30-frame bar. From waystones 1 and 2 the gate and exit door lie beyond the first screen (21 and 23 tiles). The plates, which carry each room's new idea, are on it.
+
+Candidates probed for this slot: (A) the echo cap as a tool, picked. (B) The fresh memory after a respawn as a tunable delay, rejected because the intended move is the one-cast sweep `--cheese` already plays. (C) A rider deposited on a shelf by a replayed jump, rejected by arithmetic (rider bottom tops out at 62.8 px against a 64 px shelf) and a window of about 24 frames.
 
 ### 22. The Last Light (act V, finale)
 
 Hint: "Everything you have learned, one ghost at a time."
 
-Four rooms, 96 wide, 32 tall, laid out as a loop: across the top, down the right, back along the bottom, up to the centre where the goal waits in a chamber lit by the first waystone of the game's final screen.
+Four rooms left to right, 101 x 17. The ferry rooms copy level 10's dock exactly (one-way shelf, two-tile pedestal with the shrine on its far cell under open sky, a two-tile-tall tunnel past it): the boarding step from the pedestal onto the waiting reflection lands with a 1 px overlap, and every other dock shape tried (one-tile pedestal, two-tile-tall pedestal) lost either the landing or the tap window.
 
-**Room 1, Toll Relay (from the start).** A ferry over a pit whose far dock is a pad (level 17), with a gate mid-pit held by plate a on the near shore (level 13): cast on a on arrival, do the ferry within 7 s (wait 1, walk 1, climb 1, cast), ride through the gate at about 5.5 s, dock, the pad opens the far door. The budget has 1.5 s of slack; the naive (standing 3 s on a) has none. Waystone 1.
+**Room 1, Toll Gate (from the start).** Plate a at 5, the dock, gate A mid-tunnel held by a, a spike, pad c floating over a deeper pit, the veil, door C on the far shore. Cast standing on a (1.5 s or more), do the ferry, ride through the gate, dock on the pad, walk through C. Naives that fail: the ferry alone (the open-tunnel gate scrapes the rider off, and the ghost goes on without them), casting on a on arrival with a fresh memory (the gate shuts 0.5 s before the ride).
 
-**Room 2, The Well (from waystone 1).** A 14-tile scaffold climb (level 20) with one veil strip (level 16). Waystone 2 at the top.
+**Room 2, Which Shrine (from waystone 1)** and **Room 3, Twice Mirrored (from waystone 2)** are level 19's rooms with the finale's letters (b; a and d). Room 2's approach from the waystone is 15 tiles so the memory is full at the cast; with a shorter approach the fresh memory made the reflection arrive early enough to beat the crumble.
 
-**Room 3, Hall (from waystone 2).** Two shrines 6 tiles apart and a sealed corridor with a plate 12 tiles right of the walkable floor (level 19). The copy of the walk presses the plate; the door opens the way down. Waystone 3.
+**Room 4, The Last Light (from waystone 3).** The dock again, with plate d at the end of the walk-away and the far shore running fourteen tiles to doors D and C. One memory, two ghosts: idle at the foot, walk away to d and cast there on arrival (that ghost ends on d and holds D from 3 to 7 s), walk back, hop up and cast at the shrine: the same memory mirrored is the ferry, and it docks on pad c. Ride and run the shore: D is reached with 1.5 s to spare. Naive that fails by 0.9 s: standing 3 s on d first. Naives that fail outright: the ferry alone; a standing ghost on d then a ferry prepared afterwards (the ferry's wait is the mirror of the foot idle, which that memory no longer holds). The spec's "two ghosts, three plates" was dropped: the ferry must be the last cast, so only one plain ghost can hold doors at the end, and it holds one plate; a plate pressed early in its memory never needs to survive a third cast.
 
-**Room 4, The Last Light (from waystone 3).** The goal chamber is sealed by doors A, B and C in sequence with a 3-tile waiting room between A and B. Plate a and plate b are 10 tiles apart on the approach; plate c is a pad on a veil column mid-pit in front of the chamber with a shrine on the near shore. Two ghosts, three plates: one ghost does a then b (level 18's shared memory, cast on arrival at b); the other is the ferry that docks on the pad and holds C while carrying the player to the doors (level 17). Cast order matters: the ferry's wait, walk and climb take about 4 s, so the a-and-b ghost must be cast *after* the ferry is cast and before stepping onto it, or A is already shut when the ride ends. The player must see that the ferry is the one to prepare first and the double-plate ghost the one to cast last, from the pedestal, just before stepping aboard. Naive: the natural order (plates first, then the ferry: A shuts at +7, the ride docks at +8). Naive: three casts (the third drops the ferry mid-ride; the player falls into the pit). Goal.
+Waystones: `from` counts waystones in row-major order, so the roof waystones of rooms 2 and 3 are 1 and 2 and room 1's floor waystone is 3.
 
-Expected: 20 to 35 minutes for a player who has finished act V's first four levels.
+Measured: selftest clean (232 checks), `--cheese` clean in all four rooms, slack minimum 38 px (turnX1) and 39 frames (hopHold), with stepHold at `need = 6` as in level 10.
 
-Sketch of room 4 (floor row 28, pit between tiles 70 and 78, chamber from 80):
+### Lessons from building act V
 
-```
- tiles  58   62        70          74   78  80 82 86
-        w....a.........b....M##....c....==.A..A..B..B.C.G.#      c is the pad: the plate cell
-        ###################.##....~....##########.......#      with the veil column under it
-        ####################.#^^^^^^^^^####################     spikes under the pit
-```
-
-The shrine M stands on a pedestal at 68 to 69; the pad at 74 is 5 tiles from the axis, so the ferry docks on it after a walk-away of 5 tiles or more.
+- A crumble bridge of two or more tiles in front of a door is the general defence against the quarter-second press: the player who waits at the door for it falls.
+- The memory after a room respawn is empty. Every room solve is proved from a fresh respawn, and a naive that relies on an early ghost (a cast on arrival with a short memory) must be proved to fail from one too.
+- Plates sit one tile clear of crumble and shrines, because stopping overshoots by 5 px.
+- Two-cell plates widen a reflected stand's window from 24 px to 40 px.
+- Anything that lands a jumping player on a single ghost is a 20 px window and fails R5; board ghosts by stepping off ledges, as the ferry does.
 
 ## Appendix: what Phase 2 does for one level, in order
 
