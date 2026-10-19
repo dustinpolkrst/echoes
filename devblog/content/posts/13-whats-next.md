@@ -1,20 +1,23 @@
 ---
 title: "Next: playtests and cleanup"
-description: "Acts IV and V need people to play them, a few weak spots are known, and adding a tile should touch one table, not five places."
-part: 12
-weight: 12
+description: "The new levels, rewind and embers need people to play them, a few weak spots are known, and adding a tile should touch one table, not five places."
+part: 13
+weight: 13
 date: 2026-10-18
-commits: ["37c1380", "df9c112"]
+commits: ["37c1380", "df9c112", "4d85699"]
 cover: "images/11-act-five/select-five-acts.png"
+aliases: ["/posts/12-whats-next/"]
 ---
 
-Echoes now has 22 levels in five acts, waystones in every long level, menus, saved progress and controller support. Here's what's left.
+Echoes now has 22 levels in five acts, waystones in every long level, rewind, the echo trail, an ember in every level, menus, saved progress and controller support. Here's what's left.
 
 {{< figure src="images/11-act-five/select-five-acts.png" caption="All five acts on the level select. The records shown are sample data." >}}
 
-## Put acts IV and V in front of people
+## Put acts IV and V, rewind and embers in front of people
 
 Every room in acts IV and V passes its solve, its naives, `--slack` and `--cheese`. None of those tools can say whether a person sees the insight from the waystone, or reads the hint and gets it. That takes playing each level with a pad, from the title, through every waystone, dying once per room on purpose. The real test is someone playing all ten levels cold while someone else watches where they get stuck.
+
+The changes in [part 12]({{< relref "12-making-it-fun" >}}) need the same treatment. The questions are whether players find rewind from the death prompt alone, whether the trail helps them plan or just clutters the screen, and whether they notice embers and want them.
 
 ## Close the known weak spots
 
@@ -24,10 +27,12 @@ Each of these is either a fix to try or a decision to confirm in the playtests:
 - **Plumb Line.** In The Well, a masher at the bottom wins with one cast 122 to 168 frames after landing. It's accepted because The Well is the teach room and the winning ghost is the intended one.
 - **Ferryman's Toll and The Last Light.** The tap that steps onto the ferry has 7 frames on Ferryman's Toll, with a declared need of 6. On both levels the need is justified the same way as level 10's, because the ghost is only 10 px wide.
 - **Clockwork.** The doors of the first room are three tiles beyond the first screen, so the player sees them only after three steps.
+- **Tight ember routes.** The standing jumps for the embers in Other Side (16 to 20 px), Short Memory (12 to 16 px), Relay and Clockwork (about 20 px) are under the 24 px bar, and so is Ferry's wall hop. They're optional, but they should get `--slack` strategies or wider spots.
+- **Underfoot's ember** is the weakest idea of the 22, and four act IV and V embers share one move, standing on your own ghost to reach higher.
 
 ## Make one table describe each tile
 
-Adding a tile still means editing five places. The waystone shows it. In `game/world/level.lua`, `LEGEND` maps `w` to the kind `checkpoint`:
+Adding a tile still means editing five places, which adding the ember just did again. The waystone shows it. In `game/world/level.lua`, `LEGEND` maps `w` to the kind `checkpoint`:
 
 ```lua
   ['w'] = { kind = 'checkpoint' },

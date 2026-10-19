@@ -129,6 +129,6 @@ These sweeps now run with the game's other checks, and they fail if any decision
 
 ## What --slack can't measure
 
-`--slack` measures only the decisions someone thought to model. It can't tell whether a person will think of waiting at the foot of a pedestal at all. That's why the hint names the rule. Whether that's enough takes a person at the keyboard, and [part 12]({{< relref "12-whats-next" >}}) is about the playtests still to come.
+`--slack` measures only the decisions someone thought to model. It can't tell whether a person will think of waiting at the foot of a pedestal at all. That's why the hint names the rule. Whether that's enough takes a person at the keyboard, and [part 13]({{< relref "13-whats-next" >}}) is about the playtests still to come.
 
 It also changes how to read part 3, which presented the timing check as the guard against frame-perfect levels. It is a guard, just a weaker one than it looked. At this point only Ferry and Confluence had strategies, so the other ten levels still had only the timing check.

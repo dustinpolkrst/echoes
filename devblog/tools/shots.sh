@@ -75,6 +75,16 @@ SHOTS='
 11-act-five   df9c112  let-go-doorway          21 360
 11-act-five   df9c112  last-light-ferry        22 430
 11-act-five   df9c112  select-five-acts        select 21
+12-fun        4d85699  trail-first-echo        2 150
+12-fun        4d85699  trail-ascent            5 300
+12-fun        4d85699  trail-shrine            atshrine 10
+12-fun        4d85699  rewind-ascent           rewind 5
+12-fun        4d85699  death-prompt            deathprompt 1
+12-fun        4d85699  ember-wake              1 20
+12-fun        4d85699  ember-undertow          embertaken 8
+12-fun        4d85699  ember-hall              embertaken 19
+12-fun        4d85699  ember-clear             emberclear 4
+12-fun        4d85699  select-embers           emberselect 6
 '
 
 game_dir() {
