@@ -3,7 +3,7 @@ name: Deploy dev blog
 on:
   push:
     branches: [main]
-    paths: ["devblog/**", ".github/workflows/devblog.yml"]
+    paths: ["devblog/**", "game/**", "web/**", "scripts/build-web.sh", ".github/workflows/devblog.yml"]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,11 @@ jobs:
         run: |
           wget -qO "${{ runner.temp }}/hugo.deb" "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
           sudo dpkg -i "${{ runner.temp }}/hugo.deb"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build the browser version of the game
+        run: bash scripts/build-web.sh devblog/static/play/game
       - id: pages
         uses: actions/configure-pages@v5
       - name: Build

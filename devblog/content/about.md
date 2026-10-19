@@ -9,6 +9,8 @@ Echoes is a puzzle platformer for LÖVE 11.5. You are a small lantern-spirit in 
 
 ## Run it
 
+The quickest way is to [play it in your browser]({{< relref "play" >}}). To run the desktop version:
+
 With LÖVE 11.5 installed, run the play script from the repository root:
 
 ```

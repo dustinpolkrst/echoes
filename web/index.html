@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echoes</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07060f; color: #c9c3e6; font: 15px/1.4 system-ui, sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #canvas { display: block; background: #000; image-rendering: pixelated; outline: none; visibility: hidden; }
+  #status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+<div id="status">Loading Echoes…</div>
+<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+<script>
+  var canvas = document.getElementById('canvas');
+  var statusEl = document.getElementById('status');
+
+  // The game draws at 960x540; scale the canvas to the largest 16:9 box that fits the window.
+  function fit() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var s = Math.min(w / 960, h / 540);
+    canvas.style.width = Math.floor(960 * s) + 'px';
+    canvas.style.height = Math.floor(540 * s) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  window.addEventListener('keydown', function (e) {
+    if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace'].indexOf(e.key) > -1) e.preventDefault();
+  }, false);
+  window.addEventListener('click', function () { canvas.focus({ preventScroll: true }); });
+
+  var Module = {
+    arguments: ['./game.love'],
+    INITIAL_MEMORY: 67108864,
+    printErr: console.error.bind(console),
+    canvas: canvas,
+    setStatus: function (text) {
+      if (text) {
+        statusEl.textContent = text;
+      } else if (Module.remainingDependencies === 0) {
+        statusEl.style.display = 'none';
+        canvas.style.visibility = 'visible';
+        canvas.focus({ preventScroll: true });
+      }
+    },
+    totalDependencies: 0,
+    remainingDependencies: 0,
+    monitorRunDependencies: function (left) {
+      this.remainingDependencies = left;
+      this.totalDependencies = Math.max(this.totalDependencies, left);
+      Module.setStatus(left ? 'Loading Echoes… (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : '');
+    }
+  };
+  canvas.addEventListener('webglcontextlost', function (e) {
+    statusEl.textContent = 'The graphics context was lost. Reload the page to keep playing.';
+    statusEl.style.display = 'flex';
+    e.preventDefault();
+  }, false);
+  window.onerror = function () {
+    statusEl.textContent = 'Echoes hit an error. The browser console has the details.';
+    statusEl.style.display = 'flex';
+  };
+</script>
+<script src="game.js"></script>
+<script async src="love.js" onload="Love(Module)"></script>
+</body>
+</html>

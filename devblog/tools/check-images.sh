@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Fails if content references an image that does not exist, if a built page has an <img> whose
-# file is missing from the output, or if static/images holds a PNG no page uses.
+# Fails if content references an image that does not exist, if a built page has a src (an image, a script or
+# the game's frame) whose file is missing from the output, or if static/images holds a PNG no page uses.
 #
 #   bash devblog/tools/check-images.sh
 set -euo pipefail
@@ -31,7 +31,13 @@ while IFS= read -r line; do
 	page=${line%%:*}
 	src=${line#*:src=\"}
 	src=${src%\"}
-	if [ ! -f "$OUT/${src#/}" ]; then
+	case $src in
+		http://* | https://*) continue ;;
+		/*) path="$OUT/${src#/}" ;;
+		*) path="$(dirname "$page")/$src" ;;
+	esac
+	[[ $path == */ ]] && path="${path}index.html"
+	if [ ! -f "$path" ]; then
 		echo "broken: ${page#"$OUT/"} -> $src"
 		fail=1
 	fi
@@ -42,4 +48,4 @@ if [ "$fail" -ne 0 ]; then
 	echo "image check failed"
 	exit 1
 fi
-echo "ok: $count images referenced, all present, none unused, every built <img> resolves"
+echo "ok: $count images referenced, all present, none unused, every built src resolves"

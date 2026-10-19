@@ -38,11 +38,28 @@ end
 local function clamp(v, lo, hi) return max(lo, min(hi, v)) end
 local function lerp(a, b, f) return a + (b - a) * f end
 
+-- WebGL offers no 8-bit canvas, and LÖVE's default there has 4 bits a channel, which bands every light. Half
+-- floats keep the precision but do not saturate at 1, so the lightmap is clamped as it is drawn, the way an 8-bit
+-- canvas clamps it on desktop.
+local CLAMP = [[
+vec4 effect(vec4 color, Image tex, vec2 uv, vec2 px) { return clamp(Texel(tex, uv), 0.0, 1.0) * color; }
+]]
+
+function R.newCanvas(w, h)
+  if R.canvasFormat == nil then
+    local formats = gfx.getCanvasFormats()
+    R.canvasFormat = (not formats.rgba8 and formats.rgba16f) and 'rgba16f' or false
+  end
+  if R.canvasFormat then return gfx.newCanvas(w, h, { format = R.canvasFormat }) end
+  return gfx.newCanvas(w, h)
+end
+
 function R.init()
   if Assets.version == 0 then Assets.load() end
-  R.game = gfx.newCanvas(R.W, R.H)
+  R.game = R.newCanvas(R.W, R.H)
   R.game:setFilter('nearest', 'nearest')
-  R.lightmap = gfx.newCanvas(R.W, R.H)
+  R.lightmap = R.newCanvas(R.W, R.H)
+  R.clampShader = R.canvasFormat and gfx.newShader(CLAMP) or nil
 
   local size = 128
   local data = love.image.newImageData(size, size)
@@ -477,7 +494,7 @@ end
 -- Level layer --------------------------------------------------------------
 
 local function bake(world)
-  local canvas = gfx.newCanvas(world.W * T, world.H * T)
+  local canvas = R.newCanvas(world.W * T, world.H * T)
   canvas:setFilter('nearest', 'nearest')
   gfx.push('all')
   gfx.setCanvas(canvas)
@@ -863,6 +880,7 @@ function R.drawLighting(world, camx, camy, extra)
   gfx.origin()
   gfx.setBlendMode('multiply', 'premultiplied')
   gfx.setColor(1, 1, 1, 1)
+  gfx.setShader(R.clampShader)
   gfx.draw(R.lightmap)
   gfx.pop()
 end

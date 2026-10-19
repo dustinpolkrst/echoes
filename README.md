@@ -1,6 +1,6 @@
 # ECHOES
 
-**[Read the dev blog](https://dustinpolkrst.github.io/echoes/)**: how this game was built, one post per milestone, with screenshots.
+**[Play it in your browser](https://dustinpolkrst.github.io/echoes/play/)** or **[read the dev blog](https://dustinpolkrst.github.io/echoes/)**: how this game was built, one post per milestone, with screenshots.
 
 A side-scrolling puzzle platformer built with LÖVE 11.5. You play a small lantern-spirit in a dark, glowing ruin. Press the echo key and a ghost of your last three seconds appears. Echoes are solid on top and press plates, so you can leave yourself behind to hold a door open or to climb on.
 
@@ -18,6 +18,8 @@ You need [LÖVE 11.5](https://love2d.org). On Windows the scripts expect it in `
 Extra arguments pass through, so `scripts\play.cmd --shot title` runs a dev tool (see Dev tools).
 
 LÖVE loads the `game/` folder, not the repo root. By hand, run `love game` from the repo root. On Windows, `lovec.exe` is the console build and prints stdout.
+
+`bash scripts/build-web.sh` builds the browser version into `build/web` with [love.js](https://github.com/Davidobot/love.js) (LÖVE 11.4 compiled to WebAssembly; needs Node and Python). The blog's deploy runs it and serves the result at `/play/`. Serve the folder over HTTP to try it locally; opening `index.html` as a file does not work.
 
 ### Controls
 

@@ -137,6 +137,22 @@ kbd {
 .pair .shot { margin: 0 0 1.25rem; }
 @media (min-width: 40rem) { .pair { grid-template-columns: 1fr 1fr; } }
 
+/* The playable build: a live screen framed like a screenshot, with its controls in a caption line below. */
+.game { margin: 2rem 0; }
+.game .screen { position: relative; aspect-ratio: 16 / 9; background: var(--night); }
+.game iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.game .bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-top: 0.55rem; color: var(--soft); font-size: 0.875rem; }
+.game button {
+  font: 700 0.9rem var(--display);
+  color: var(--ink);
+  background: var(--paper-dim);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+.game button:hover { border-color: var(--ember); color: var(--ember); }
+
 /* Index: a contents page. The part number sits in the margin, the entry and its cover share the line. */
 .postlist { list-style: none; padding: 0; margin: 3rem 0 0; border-top: 3px solid var(--ink); }
 .postlist li { margin: 0; padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
@@ -193,6 +209,7 @@ main > .post .head { margin-top: 2.5rem; }
   .page > .shot > a { grid-column: text / end; grid-row: 1; }
   .page > .shot > figcaption { grid-column: note; grid-row: 1; margin: 0; text-align: right; }
   .page > .pair { grid-column: text / end; }
+  .page > .game { grid-column: text / end; }
   .page > pre, .page > .highlight { grid-column: text / end; }
 
   .postlist { grid-column: note / end; }

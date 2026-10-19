@@ -23,6 +23,17 @@ local C = Ui.colors
 local S = {}
 local current
 
+-- In a browser there is no window to quit or make fullscreen; the page owns both.
+S.web = love.system.getOS() == 'Web'
+
+local function forPlatform(items)
+  local out = {}
+  for _, item in ipairs(items) do
+    if not (S.web and item.desktopOnly) then out[#out + 1] = item end
+  end
+  return out
+end
+
 S.readInput = Input.read
 
 -- Replaced by --shot so a scripted run can drive the same scenes; receives the live world.
@@ -48,7 +59,7 @@ function S.applySettings()
   local s = data().settings
   love.audio.setVolume(s.master)
   Sfx.volume = s.sfx
-  if love.window.getFullscreen() ~= s.fullscreen then love.window.setFullscreen(s.fullscreen, 'desktop') end
+  if not S.web and love.window.getFullscreen() ~= s.fullscreen then love.window.setFullscreen(s.fullscreen, 'desktop') end
 end
 
 function S.init(store)
@@ -292,12 +303,12 @@ function S.title.enter()
   self.t = 0
   local resumeAt = Progress.furthest(d, #Levels)
   self.resumeAt = Progress.started(d) and resumeAt or nil
-  self.menu = Menu.new({
+  self.menu = Menu.new(forPlatform({
     { label = self.resumeAt and 'Continue' or 'Play', action = function() startLevel(resumeAt) end },
     { label = 'Level select', action = function() S.select.returnTo = { 'title' } S.to('select', resumeAt) end },
     { label = 'Settings', action = function() S.settings.returnTo = { 'title' } S.to('settings') end },
-    { label = 'Quit', confirm = 'Really quit?', action = function() love.event.quit() end },
-  })
+    { label = 'Quit', confirm = 'Really quit?', desktopOnly = true, action = function() love.event.quit() end },
+  }))
 end
 
 ambientScene(S.title)
@@ -317,11 +328,12 @@ function S.title.drawUI()
   end
   Ui.glowText('ECHOES', f.title, 40, { 1, 0.88, 0.55 }, 1, { 1, 0.6, 0.2 })
   Ui.text('a small light remembers where it has been', f.mid, 184, C.cyan, 0.8)
-  Ui.panel(Ui.W / 2 - 190, 236, 380, 218, 0.9)
+  local panelH = 34 + 46 * #S.title.menu.items
+  Ui.panel(Ui.W / 2 - 190, 236, 380, panelH, 0.9)
   Ui.menu(S.title.menu, Ui.W / 2, 250, { rowHeight = 46, width = 320 })
   if S.title.resumeAt then
     local l = Levels[S.title.resumeAt]
-    Ui.text(('resume at %d, %s'):format(S.title.resumeAt, l.name), f.tiny, 434, C.dim, 0.8)
+    Ui.text(('resume at %d, %s'):format(S.title.resumeAt, l.name), f.tiny, 216 + panelH, C.dim, 0.8)
   end
   local found = Save.embers(data())
   if found > 0 then
@@ -492,7 +504,7 @@ end
 
 local function freeze()
   if frozen() then return end
-  still, stillVersion = gfx.newCanvas(gfx.getDimensions()), Assets.version
+  still, stillVersion = Render.newCanvas(gfx.getDimensions()), Assets.version
   gfx.push('all')
   Render.present(still)
   Ui.begin()
@@ -515,7 +527,7 @@ end
 
 function pause.enter(under)
   pause.under = under
-  pause.menu = Menu.new({
+  pause.menu = Menu.new(forPlatform({
     { label = 'Resume', action = resume },
     { label = 'Restart level', action = function()
       Trans.start(function() loadAttempt(false) resume() end)
@@ -528,8 +540,8 @@ function pause.enter(under)
       S.settings.returnTo = { 'pause', 'playing' }
       S.to('settings')
     end },
-    { label = 'Quit game', confirm = 'Really quit?', action = function() love.event.quit() end },
-  })
+    { label = 'Quit game', confirm = 'Really quit?', desktopOnly = true, action = function() love.event.quit() end },
+  }))
 end
 
 function pause.update() end
@@ -546,7 +558,7 @@ function pause.drawUI()
   gfx.draw(still)
   gfx.pop()
   local f = Ui.fonts
-  Ui.panel(Ui.W / 2 - 230, 96, 460, 342)
+  Ui.panel(Ui.W / 2 - 230, 96, 460, 112 + 46 * #pause.menu.items)
   heading('PAUSED', 114)
   Ui.text(('%d. %s'):format(playing.index, playing.world.name), f.small, 160, C.dim, 0.9)
   Ui.menu(pause.menu, Ui.W / 2, 196, { rowHeight = 46, width = 380 })
@@ -736,9 +748,10 @@ local function slider(key, label)
   }
 end
 
-local function toggle(key, label)
+local function toggle(key, label, desktopOnly)
   return {
     label = label,
+    desktopOnly = desktopOnly,
     value = function() return data().settings[key] and 'On' or 'Off' end,
     adjust = function()
       local s = data().settings
@@ -751,13 +764,13 @@ end
 
 function settings.enter()
   loadAmbient()
-  settings.menu = Menu.new({
+  settings.menu = Menu.new(forPlatform({
     slider('master', 'Master volume'),
     slider('sfx', 'Sound effects'),
     toggle('shake', 'Screen shake'),
-    toggle('fullscreen', 'Fullscreen'),
+    toggle('fullscreen', 'Fullscreen', true),
     { label = 'Back', action = function() feedback('back') S.to(unpack(settings.returnTo)) end },
-  })
+  }))
 end
 
 ambientScene(settings)
