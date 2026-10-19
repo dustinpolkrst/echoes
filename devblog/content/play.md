@@ -9,15 +9,28 @@ This is the whole game, built for the browser with [love.js](https://github.com/
   <div class="screen"><iframe id="echoes" src="game/" title="Echoes" allow="fullscreen; gamepad; autoplay" loading="lazy"></iframe></div>
   <div class="bar">
     <button type="button" id="echoes-full">Fullscreen</button>
-    <span>Progress saves in this browser.</span>
+    <span id="echoes-note">Progress saves in this browser. <kbd>F</kbd> in the game also toggles fullscreen.</span>
   </div>
 </div>
 
 <script>
   (function () {
     var frame = document.getElementById('echoes');
+    var screen = frame.parentNode;
+    var note = document.getElementById('echoes-note');
+    function refused() {
+      note.textContent = 'This browser would not go fullscreen here. Try F inside the game, or open the game on its own page.';
+    }
     document.getElementById('echoes-full').addEventListener('click', function () {
-      (frame.requestFullscreen || frame.webkitRequestFullscreen).call(frame);
+      var request = screen.requestFullscreen || screen.webkitRequestFullscreen;
+      if (!request) return refused();
+      try {
+        var result = request.call(screen);
+        if (result && result.catch) result.catch(refused);
+      } catch (e) {
+        refused();
+      }
+      frame.focus();
       frame.contentWindow.focus();
     });
   })();

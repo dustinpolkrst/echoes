@@ -30,7 +30,21 @@
 
   window.addEventListener('keydown', function (e) {
     if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace'].indexOf(e.key) > -1) e.preventDefault();
+    if ((e.key === 'f' || e.key === 'F') && !e.repeat) toggleFullscreen();
   }, false);
+
+  // F toggles fullscreen for this page. Embedded in the blog, the frame needs allow="fullscreen".
+  function toggleFullscreen() {
+    var doc = document, root = doc.documentElement;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      (doc.exitFullscreen || doc.webkitExitFullscreen).call(doc);
+    } else {
+      var request = root.requestFullscreen || root.webkitRequestFullscreen;
+      if (!request) return;
+      var result = request.call(root);
+      if (result && result.catch) result.catch(function (err) { console.warn('fullscreen refused: ' + err.message); });
+    }
+  }
   window.addEventListener('click', function () { canvas.focus({ preventScroll: true }); });
 
   var Module = {
