@@ -242,6 +242,56 @@ function F.run(Scenes)
   check('pause Restart level starts over from the beginning with a fresh clock',
     Scenes.name == 'playing' and Scenes.playing.world.respawn == nil and Scenes.playing.attemptT < kept
     and math.abs(Scenes.playing.world.player.x - (1 * 16 + 3)) < 1, ('x=%.1f t=%.2f'):format(Scenes.playing.world.player.x, Scenes.playing.attemptT))
+
+  Levels[#Levels] = { name = 'ember test', map = {
+    '################',
+    '#..............#',
+    '#P.*..w....*^^G#',
+    '################',
+  } }
+  Scenes.go('playing', #Levels)
+  Scenes.inputSource = function() return { right = true } end
+  runUntil(function() return Scenes.playing.world.player.state == 'dead' end)
+  Scenes.inputSource = function() return {} end
+  settle()
+  settle()
+  check('an ember carried past a lit waystone survives the death', Scenes.playing.world:emberTaken())
+  Levels[#Levels] = { name = 'ember test', map = {
+    '################',
+    '#..............#',
+    '#P....w....*^^G#',
+    '################',
+  } }
+  Scenes.go('playing', #Levels)
+  Scenes.inputSource = function() return { right = true } end
+  runUntil(function() return Scenes.playing.world.player.state == 'dead' end)
+  Scenes.inputSource = function() return {} end
+  settle()
+  settle()
+  check('an ember grabbed on the way to dying is lost', Scenes.playing.world.respawn == 1 and not Scenes.playing.world:emberTaken())
+
+  Scenes.go('playing', #Levels)
+  settle()
+  local rw = Scenes.playing.world
+  local spawnX = rw.player.x
+  Scenes.inputSource = function() return { right = true } end
+  step(40)
+  local ahead = rw.player.x
+  Scenes.inputSource = function() return { rewind = true } end
+  step(20)
+  Scenes.inputSource = function() return { rewind = true, right = true } end
+  check('holding rewind walks the player back', rw.player.x < ahead - 5 and Scenes.playing.world == rw, ('x=%.1f from %.1f'):format(rw.player.x, ahead))
+  step(200)
+  local x1 = rw.player.x
+  step(1)
+  check('rewind holds still once its history runs out', rw.player.x == spawnX and x1 == spawnX, ('x=%.1f'):format(rw.player.x))
+  Scenes.inputSource = function() return { right = true } end
+  runUntil(function() return rw.player.state == 'dead' end)
+  Scenes.inputSource = function() return { rewind = true } end
+  step(120)
+  check('holding rewind through a death keeps the attempt and revives the player',
+    Scenes.playing.world == rw and (rw.player.state == 'ground' or rw.player.state == 'air'), 'state=' .. rw.player.state)
+  Scenes.inputSource = function() return {} end
   Levels[#Levels] = nil
 
   local function drawnWorld(doorRow)

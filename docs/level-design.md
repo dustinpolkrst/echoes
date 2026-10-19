@@ -147,6 +147,25 @@ Why everything resets: it is the only model under which "the room is solvable fr
 
 Placement: on solid ground, never on a one-way, crumble, plate or in a door's column, with the room's sightline from it (R7). One per room, at its entrance. The first room starts at `P` and has no waystone.
 
+## 4b. Embers
+
+`*` in a map is an ember: an optional pickup, one per level, off the main route. The player or any solid echo takes it by
+overlapping its 10x10 rect. It is recorded when the level is cleared and survives a respawn only if a waystone was lit
+while it was carried, so an ember touched on the way to a death is not kept. Each ember asks one more question of its
+level's own idea.
+
+`--selftest` proves for every level: exactly one ember, the main script leaves it in place, and the level's `embers`
+script (in `dev/solutions/actN.lua`, beside `scripts`) takes it and clears the level. The question each one asks is the
+comment above its script.
+
+Five maps changed geometry for their ember, and `--cheese` was rerun clean on each: Undercroft, Ferryman's Toll and The
+Last Light each turned one enclosed rock cell into the ember (only a reflection reaches it); Crawlspace and Let Go each
+opened a one-cell ceiling niche with the ember above it. `--slack` is unchanged for all five.
+
+Known below the 24 px / 30 frame bar, all on optional routes: the standing jumps in Other Side (16 to 20 px), Short
+Memory (12 to 16 px), Relay and Clockwork (about 20 px, steerable in the air), and Ferry's wall hop. Underfoot's ember
+is the weakest idea of the set.
+
 ## 5. Files, the room format and the tools
 
 ### Layout

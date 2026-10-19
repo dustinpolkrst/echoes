@@ -340,12 +340,13 @@ local playing = {}
 S.playing = playing
 
 -- Death and R retry from the last waystone and keep the clock running; the pause menu's Restart level
--- starts the level over with a fresh clock.
+-- starts the level over with a fresh clock. A taken ember survives a retry only once a waystone has been lit
+-- while carrying it, so an ember grabbed on the way to dying is not kept.
 local function loadAttempt(fromCheckpoint)
   local checkpoint = fromCheckpoint and playing.world and playing.world.respawn or nil
-  local banked = checkpoint and playing.world:emberTaken()
+  if not checkpoint then playing.emberBanked = false end
   setStage(playing, Level.new(Levels[playing.index], { checkpoint = checkpoint }))
-  if banked then
+  if playing.emberBanked then
     for _, c in ipairs(playing.world.embers) do c.taken = true end
   end
   playing.timeline = Timeline.new(playing.world)
@@ -366,7 +367,8 @@ function playing.enter(index)
   loadAttempt()
 end
 
--- Holding rewind runs the world backwards, faster the longer it is held. The clock keeps running.
+-- Holding rewind runs the world backwards, faster the longer it is held, and holds it still once history runs out.
+-- The clock keeps running.
 local REWIND_SPEEDS = { { 0, 1 }, { 1.2, 2 }, { 2.5, 4 } }
 local DEATH_WAIT = Player.DEATH_DELAY + 0.6
 
@@ -383,18 +385,22 @@ local function rewind(world)
   playing.rewindT = playing.rewindT + DT
   Particles.update(playing.particles, DT)
   Render.update(world, DT)
-  return moved
 end
 
 function playing.update()
   local world = playing.world
   local input = S.inputSource(world)
   local p = world.player
-  playing.rewinding = input.rewind and p.state ~= 'cleared' and rewind(world)
-  if not playing.rewinding then
+  playing.rewinding = input.rewind and p.state ~= 'cleared'
+  if playing.rewinding then
+    rewind(world)
+  else
     playing.rewindT = 0
     stepStage(playing, input)
     Timeline.push(playing.timeline, world)
+    for _, ev in ipairs(world.events) do
+      if ev.name == 'checkpoint' and world:emberTaken() then playing.emberBanked = true end
+    end
   end
   playing.t = playing.t + DT
   p = world.player

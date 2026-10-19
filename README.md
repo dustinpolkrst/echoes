@@ -26,6 +26,7 @@ LÖVE loads the `game/` folder, not the repo root. By hand, run `love game` from
 | Move | Left / Right, or A / D | D-pad or left stick |
 | Jump | Z, Space, W or Up (hold for height, release to cut the jump) | A |
 | Cast echo | X or K | X or B |
+| Rewind (hold) | C or Shift | Y or a shoulder button |
 | Restart level | R | Back |
 | Pause | Esc or P | Start |
 | Menus | Arrows or W/S, Z/Space/Enter to confirm, Esc/Backspace to go back | D-pad or stick, A confirm, B back |
@@ -39,14 +40,17 @@ The pad rumbles lightly on death and on cast. On-screen prompts follow whichever
 - An echo is a one-way platform. You can land on it and ride it as it moves, and you can jump up through it from below.
 - Echoes weigh down pressure plates. A door is open only while its plate (same letter) is pressed by you or an echo.
 - At most 2 echoes exist. A third cast removes the oldest.
+- A dotted trail shows the path an echo cast now would walk, with a faint ghost where it would start (reflected when you stand at a mirror shrine, cut short at a veil). A live echo shows the rest of its route the same way.
+- Hold rewind to run the world backwards, up to the last 30 seconds, faster the longer you hold it. It works after a death too. The clock keeps running.
 
 Standing on a plate for 3 seconds before you cast gives an echo that sits on the plate for about 7 seconds. Casting at the peak of a jump leaves a platform in mid-air.
 
-Three tiles change what an echo does:
+These tiles change what an echo does, or what it is for:
 
 - Mirror shrine (violet). Cast while touching it and the echo replays reflected about the shrine, so it walks where you did not, through walls included. Mirrored echoes are violet.
 - Veil (amber). You walk through it. An echo whose next step would enter it stops right there and stays for 4 seconds, so a veil is where you park a ghost.
 - Crumble stone (ochre). Half a second after any body stands on it, you or an echo, it gives way. It grows back 3 seconds after nothing is left inside it. Echoes replay positions, so a ghost keeps standing where the stone used to be.
+- Ember (orange spark). Every level hides one off its main route. It is optional: you or any echo can take it by passing through it, and it counts once you clear the level carrying it. It survives a death only if you lit a waystone while carrying it.
 - Waystone (mint). Touch it and it lights. Dying or pressing R brings you back to the lit waystone with the level reset around you: no echoes, an empty memory, doors shut, crumble stone whole. The clock keeps running. Restart level in the pause menu starts the level over with a fresh clock.
 
 ### Levels

@@ -116,4 +116,29 @@ local rooms = {
   },
 }
 
-return { strategies = strategies, rooms = rooms }
+-- Each ember script starts from the level start, takes the ember and clears the level.
+local grounded = C.grounded
+local embers = {}
+
+-- Ferry: the far end past the goal is the mirror of the start; can a reflection that remembers the start reach it?
+embers['Ferry'] = append({
+  { 8, 'J' }, { '-', grounded }, { 'R', atX(130) }, { 6, 'RJ' }, { 'R', onTop(208, 134, 208) }, { 'R', atX(190) }, { 1, 'X' },
+  { 'L', atXLeft(120) }, { '-', onTop(224) },
+}, strategies['Ferry'].build(S.decisions(strategies['Ferry'])))
+
+-- Short Memory: the three seconds must start on the plate's side; can they also hold a jump at the ember's mirror?
+embers['Short Memory'] = {
+  { 'R', atX(26) }, { 6, 'RJ' }, { 'R', onTop(208, 54, 112) }, { '-', stopped }, { 'L', atXLeft(68) }, { 'R', atX(68) }, { '-', stopped },
+  { 12, 'J' }, { '-', onTop(208) }, { 'R', atX(87) }, { 'L', atXLeft(87) }, { 50, '-' },
+  { 'R', atX(163) }, { 10, '-' }, { 1, 'X' }, { 'R', atX(300) },
+}
+
+-- Confluence: once the crossing has left the memory, where does the second shrine reflect a hop at the dock?
+embers['Confluence'] = (function(p)
+  return append(ferry(p), {
+    { p.landDelay, '-' }, { 'R', atX(326) }, { 1, 'X' }, { '-', doorOpen('a') },
+    { 'L', atXLeft(296) }, { 8, 'J' }, { '-', grounded }, { 'R', atX(326) }, { 90, '-' }, { 1, 'X' }, { 70, '-' }, { 'R', atX(360) },
+  })
+end)(S.decisions(strategies['Confluence']))
+
+return { strategies = strategies, rooms = rooms, embers = embers }

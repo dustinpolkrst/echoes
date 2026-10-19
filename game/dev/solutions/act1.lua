@@ -64,4 +64,63 @@ local scripts = {
   },
 }
 
-return { scripts = scripts }
+local append = S.append
+
+-- Holding a direction until the player is over the last echo, so letting go drops them onto it.
+local function overEchoFromRight(w)
+  local e = w.echoes[#w.echoes]
+  return e ~= nil and w.player.x <= e.x + 3
+end
+local function overEchoFromLeft(w)
+  local e = w.echoes[#w.echoes]
+  return e ~= nil and w.player.x >= e.x - 2
+end
+
+-- The script with `detour` played after its first `at` segments.
+local function splice(script, at, detour)
+  local out = {}
+  for i = 1, at do out[#out + 1] = script[i] end
+  append(out, detour)
+  for i = at + 1, #script do out[#out + 1] = script[i] end
+  return out
+end
+
+-- Each ember script starts from the level start, takes the ember and clears the level.
+local embers = {}
+
+-- Wake: the hint says hold jump to go higher; what hangs just above a tapped jump, right where you start?
+embers['Wake'] = append({ { 20, 'J' }, { '-', grounded } }, scripts['Wake'])
+
+-- First Echo: the echo on the plate is solid; can you stand on it and reach higher than any jump?
+embers['First Echo'] = {
+  { 'R', atX(163) }, { 190, '-' }, { 1, 'X' },
+  { 'J', apex }, { '-', onLastEcho }, { 2, '-' }, { 'J', apex }, { '-', onLastEcho },
+  { 'R', atX(372) }, { 'RJ', atX(440) }, { 'R', grounded },
+  { 'R', atX(488) }, { 'RJ', atX(540) }, { 'R', grounded }, { 'R', atX(640) },
+}
+
+-- Stairway: a stair stands wherever you jump; what does one on the far side of the block reach?
+embers['Stairway'] = append({
+  { 'R', atX(40) }, { 10, '-' }, { 1, 'J' }, { 'J', apex }, { 1, 'JX' }, { '-', grounded },
+  { 'L', atXLeft(30) }, { '-', echoArrived },
+  { 'R', atX(66) }, { 'RJ', onTop(192, 80) }, { 'L', atXLeft(90) }, { 10, '-' },
+  { 10, 'LJ' }, { 'L', overEchoFromRight }, { '-', grounded }, { 2, '-' }, { 6, 'LJ' }, { 'LJ', grounded },
+  { 'L', atXLeft(36) }, { 20, '-' },
+}, scripts['Stairway'])
+
+-- Two Minds: two echoes hold two doors; can they also stand one on the other?
+embers['Two Minds'] = append({
+  { 'R', atX(99) }, { 190, '-' }, { 1, 'X' }, { 'J', apex }, { '-', onLastEcho },
+  { 190, '-' }, { 1, 'X' }, { 'J', apex }, { '-', onLastEcho }, { 2, '-' }, { 'J', apex }, { '-', grounded },
+  { 'L', atXLeft(66) },
+}, scripts['Two Minds'])
+
+-- Ascent: the peak cast that reaches the top works anywhere; what does one cast over the top rung reach?
+embers['Ascent'] = splice(scripts['Ascent'], 21, {
+  { 'L', atXLeft(414) }, { 10, '-' }, { 1, 'J' }, { 'J', apex }, { 1, 'JX' }, { '-', onTop(272) },
+  { 'L', atXLeft(386) }, { 'LJ', onTop(240, 256, 384) },
+  { 'R', atX(372) }, { '-', echoArrived }, { 8, 'RJ' }, { 'R', overEchoFromLeft }, { '-', onLastEcho }, { 4, '-' },
+  { 12, 'RJ' }, { 'R', onTop(272) },
+})
+
+return { scripts = scripts, embers = embers }

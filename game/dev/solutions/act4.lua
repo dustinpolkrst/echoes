@@ -564,4 +564,58 @@ rooms["Ferryman's Toll"] = {
   },
 }
 
-return { scripts = {}, strategies = strategies, rooms = rooms }
+local embers = {}
+
+-- Relay: the ghost you leave on b arrives under you; will it lift you to the ember two rows up while B is still held?
+embers['Relay'] = (function(p)
+  return append(append({
+    { 'R', atX(plate(3)) }, { p.standA, '-' }, { 1, 'X' },
+    { 'R', atX(plate(11)) }, { p.standB, '-' }, { 1, 'X' }, { '-', echoArrived },
+    { 20, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
+    { 'R', atX(22 * T - 20) }, { '-', doorOpen('b') }, { 'R', atX(plate(23) + 3) },
+  }, relayLoop(p)), relayEncore(p))
+end)(nominal('Relay'))
+
+-- Plumb Line: the reflection begins where your memory begins; what does it walk through if you wait at the far end of the ledge?
+embers['Plumb Line'] = (function(p)
+  local twin = append(append(append(twinLedge(), { { 'R', atX(47 * T) }, { p.ledgeWait2, '-' } }), twinCast(p.castWait2)),
+    twinOut({ { '-', doorOpen('b') }, { 'R', atX(50 * T + 2) } }))
+  return append(append(append(append(plumbWell(p), climb(24)), twin), climb(50)), plumbDrop(p))
+end)(nominal('Plumb Line'))
+
+-- Undercroft: the reflection keeps your height even underground; can one cast carry the ember out of the rock and break the stone?
+embers['Undercroft'] = (function(p)
+  local trapfloor = {
+    { 'R', atX(15 * T + 4) }, { '-', onTop(9 * T) }, { 'R', atX(21 * T + 4) }, { 'L', atXLeft(15 * T + 4) }, { 20, 'LJ' },
+    { 'L', onTop(7 * T, 0, 15 * T - 10) }, { 'L', atXLeft(220) },
+    { 'R', atX(14 * T + 6) }, { 12, 'RJ' }, { 'R', onTop(7 * T, 17 * T - 10, 18 * T) }, { 'R', atX(17 * T + 5) },
+    { p.castDelay1, '-' }, { 1, 'X' },
+    { 'L', atXLeft(16 * T + 2) }, { '-', onTop(9 * T) }, { 'R', atX(21 * T) }, { '-', stoneGone(2) },
+    { 20, 'RJ' }, { 'R', onTop(7 * T, 19 * T, 26 * T) }, { 'R', atX(plate(24) + 3) },
+  }
+  return append(append(trapfloor, underFarSide(p)), underSunken(p))
+end)(nominal('Undercroft'))
+
+-- Crawlspace: Wrong Way Round makes you wait in the pocket for the stone; what does that wait leave standing under you?
+embers['Crawlspace'] = (function(p)
+  local wrongWay = {
+    { 'L', atXLeft(23 * T + 2) }, { '-', stoneBack(13) }, { p.pocketWait3, '-' }, { 1, 'X' }, { '-', echoArrived },
+    { 12, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
+    { 'R', atX(32 * T + 2) }, { p.castDelay3, '-' }, { 1, 'X' },
+    { 'R', atX(36 * T - 12) }, { '-', doorOpen('c') }, { 'R', atX(38 * T) },
+  }
+  return append(append(crawlParked(p), crawlShortMemory(p)), wrongWay)
+end)(nominal('Crawlspace'))
+
+-- Ferryman's Toll: the ferry is a reflection of your wait at the foot; what does a reflection of a jump there reach?
+embers["Ferryman's Toll"] = (function(p)
+  local o = 27 * T
+  local foot = o + p.footX
+  local jump = {
+    { 'R', atX(foot) }, { 120, '-' }, { 20, 'J' }, { '-', grounded }, { 'R', atX(foot + p.castOff) }, { p.castDelay, '-' }, { 1, 'X' },
+    { 'L', atXLeft(o + 120) },
+  }
+  return append(append(append(tollDock(p), jump), tollGate(p)), tollHatch(p))
+end)(nominal("Ferryman's Toll"))
+
+return { scripts = {}, strategies = strategies, rooms = rooms, embers = embers }

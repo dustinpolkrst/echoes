@@ -100,4 +100,39 @@ local rooms = {
   },
 }
 
-return { scripts = scripts, strategies = strategies, rooms = rooms }
+-- Holding a direction until the player is under (or over) the last echo, from its right.
+local function atLastEcho(w)
+  local e = w.echoes[#w.echoes]
+  return e ~= nil and w.player.x <= e.x + 2
+end
+
+-- Each ember script starts from the level start, takes the ember and clears the level.
+local embers = {}
+
+-- Other Side: the reflection copies your jump as well as your stand; can it reach the ember high in the sealed room?
+embers['Other Side'] = {
+  { 'L', atXLeft(96) }, { 12, 'LJ' }, { 'L', onTop(192, 30, 90) }, { 'R', atX(64) }, { 30, '-' },
+  { 20, 'J' }, { '-', onTop(192) }, { 40, '-' },
+  { 'R', atX(163) }, { 10, '-' }, { 1, 'X' }, { 60, '-' }, { 'R', atX(300) },
+}
+
+-- Trapdoor: the floor will not hold you if you stop on it; will it hold you if you run?
+embers['Trapdoor'] = {
+  { 'R', atX(240) }, { 220, '-' }, { 'L', atXLeft(195) }, { 1, 'X' }, { '-', onTop(224) },
+  { 'R', atX(255) }, { '-', doorOpen('a') }, { 'R', atX(340) },
+}
+
+-- Undertow: your echo stops where you fell through; where must you fall for it to lift you to the ember and still take you home?
+embers['Undertow'] = {
+  { 'R', atX(50) }, { 19, 'RJ' }, { '-', onTop(224) }, { 1, 'X' }, { '-', echoArrived },
+  { 'L', atLastEcho }, { 'J', onLastEcho }, { 4, '-' }, { 20, 'RJ' }, { 'R', onTop(224) },
+  { 'L', atLastEcho }, { 'J', onLastEcho }, { 4, '-' }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
+}
+
+-- Underfoot: the hatch opens under whoever stands on it; what is on the far side if you jump it instead?
+embers['Underfoot'] = {
+  { 'L', atXLeft(70) }, { 12, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
+  { 190, '-' }, { 1, 'X' }, { 10, '-' }, { 'R', atX(400) }, { 14, 'RJ' }, { 'R', onTop(224) }, { 'L', atXLeft(440) },
+}
+
+return { scripts = scripts, strategies = strategies, rooms = rooms, embers = embers }

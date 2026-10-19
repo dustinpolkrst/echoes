@@ -602,4 +602,49 @@ local rooms = {
   },
 }
 
-return { scripts = {}, strategies = strategies, rooms = rooms }
+local embers = {}
+
+-- Clockwork: the ghost on a holds A for seven seconds and the run needs five; what else can it do with the other two?
+embers['Clockwork'] = (function(p)
+  local overlap = {
+    { 'R', atX(tile(CW.a1)) }, { p.standA1, '-' }, { 1, 'X' }, { 12, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
+    { 'R', atX(tile(CW.b1)) }, { p.holdB1, '-' }, { 1, 'X' },
+    { 'R', atX(tile(CW.w1 - 5)) }, { 'R', atX(tile(CW.w1)) },
+  }
+  return append(append(overlap, clockworkRoom2(p)), clockworkRoom3(p))
+end)(nominal('Clockwork'))
+
+-- Hall of Mirrors: a reflection keeps your height; which shrine reflects a hop on the roof into the air over the spikes?
+embers['Hall of Mirrors'] = (function(p)
+  return append({
+    { 'R', atX(68) }, { 'RJ', onTop(13 * T, 8 * T) }, { 'R', atX(HM.M1 * T + 2) }, { 'RJ', onTop(10 * T, HM.roof1 * T) },
+    { 'R', atX(290) }, { 8, 'J' }, { '-', grounded }, { 'L', atXLeft(200) }, { 1, 'X' }, { p.stand1, '-' },
+    { 'R', atX(HM.M1 * T + 2) }, { p.castDelay1, '-' }, { 1, 'X' },
+    { 'RJ', onTop(10 * T, HM.roof1 * T) }, { 'R', atX(tile(HM.w1)) },
+  }, hallRoom2(p))
+end)(nominal('Hall of Mirrors'))
+
+-- Three Steps Behind: the reflection runs the sealed gallery three seconds behind you; does it hop where you hopped?
+embers['Three Steps Behind'] = (function(p)
+  return append(append(stepsRoom1(p), stepsRoom2(p)), append({ { 'R', atX(580) }, { 8, 'RJ' }, { 'R', grounded } }, stepsRoom3(p)))
+end)(nominal('Three Steps Behind'))
+
+-- Let Go: the ghost on a must live until the gate and die there; can it lift you first and still leave time to pause on c?
+embers['Let Go'] = (function(p)
+  local borrowed = append(append({
+    { 'L', atXLeft(LG.foot1) }, { p.standA3, '-' }, { 1, 'X' }, { 12, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
+    { 'R', atX(tile(LG.c3)) }, { 60, '-' }, { 'R', atX(p.killX3) },
+  }, kill()), { { 'R', atX(LG.G3 * T) } })
+  return append(append(letgoRoom1(p), letgoRoom2(p)), borrowed)
+end)(nominal('Let Go'))
+
+-- The Last Light: a foot jump's reflection reaches the rock, as in level 17; with a plate ghost and a ferry to come, which cast goes first?
+embers['The Last Light'] = (function(p)
+  local tollGate = append(append({
+    { 'R', atX(LL.foot1) }, { 120, '-' }, { 20, 'J' }, { '-', grounded }, { 'R', atX(LL.cast1) }, { p.castDelay1, '-' }, { 1, 'X' },
+    { 'L', atXLeft(tile(LL.a1)) }, { p.standA, '-' }, { 1, 'X' }, { 'R', atX(LL.foot1) }, { p.idle1, '-' },
+  }, lastFerry(p, 1)), { { 'R', atX(tile(LL.w1)) } })
+  return append(append(append(tollGate, lastRoom2(p)), lastRoom3(p)), lastRoom4(p))
+end)(nominal('The Last Light'))
+
+return { scripts = {}, strategies = strategies, rooms = rooms, embers = embers }
