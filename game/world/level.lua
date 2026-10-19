@@ -21,6 +21,7 @@ M.LEGEND = {
   ['~'] = { kind = 'veil' },
   ['%'] = { kind = 'crumble' },
   ['w'] = { kind = 'checkpoint' },
+  ['*'] = { kind = 'ember' },
 }
 for i = 1, 4 do
   local plate, door = string.char(96 + i), string.char(64 + i)
@@ -43,6 +44,7 @@ M.TILES = {
   veil = { light = 30, veil = true, rect = { 0, 0, T, T }, worldList = 'veils' },
   crumble = { solid = true, crumble = true, worldList = 'crumbles' },
   checkpoint = { light = 44, checkpoint = true, rect = { 3, 0, T - 6, T }, worldList = 'checkpoints' },
+  ember = { light = 40, ember = true, rect = { 3, 3, T - 6, T - 6 }, worldList = 'embers' },
 }
 local TILES = M.TILES
 
@@ -64,7 +66,7 @@ function M.new(def, opts)
   local w = setmetatable({
     name = def.name, hint = def.hint,
     W = width, H = #rows, cells = {},
-    plates = {}, spikes = {}, mirrors = {}, veils = {}, crumbles = {}, checkpoints = {},
+    plates = {}, spikes = {}, mirrors = {}, veils = {}, crumbles = {}, checkpoints = {}, embers = {},
     doorCells = {}, doorOpen = {}, lights = {},
     echoes = {}, rec = Echo.newRecorder(), events = {}, time = 0, castPrev = false,
   }, World)
@@ -324,6 +326,28 @@ function World:updateCrumbles(dt)
   end
 end
 
+-- An ember is taken by anything that carries light through it: you, or one of your echoes.
+function World:touchEmbers()
+  for _, c in ipairs(self.embers) do
+    if not c.taken then
+      for _, b in ipairs(self:bodies()) do
+        if overlaps(b, c.rect) then
+          c.taken = true
+          self:emit('ember', c.tx * T + T / 2, c.ty * T + T / 2, b ~= self.player)
+          break
+        end
+      end
+    end
+  end
+end
+
+function World:emberTaken()
+  for _, c in ipairs(self.embers) do
+    if c.taken then return true end
+  end
+  return false
+end
+
 function World:checkHazards()
   local p = self.player
   if not Player.isAlive(p) then return end
@@ -334,6 +358,52 @@ function World:checkHazards()
   if self.goal and overlaps(p, { x = self.goal.tx * T + 3, y = self.goal.ty * T, w = T - 6, h = T }) then
     Player.clear(p, self)
   end
+end
+
+-- Everything a step can change, captured so the world can be put back exactly. Tiles, lights and the map are
+-- fixed at load; echo frames and recorded frames are never mutated, so they are shared rather than copied.
+function World:save()
+  local p = {}
+  for k, v in pairs(self.player) do p[k] = v end
+  local echoes, supportAt = {}, nil
+  for i, e in ipairs(self.echoes) do
+    echoes[i] = e:copy()
+    if self.player.support == e then supportAt = i end
+  end
+  local crumbles = {}
+  for i, c in ipairs(self.crumbles) do crumbles[i] = { c.crack, c.gone, c.regrow } end
+  local plates = {}
+  for i, c in ipairs(self.plates) do plates[i] = c.pressed end
+  local embers = {}
+  for i, c in ipairs(self.embers) do embers[i] = c.taken end
+  local doors = {}
+  for id, open in pairs(self.doorOpen) do doors[id] = open end
+  return {
+    player = p, supportAt = supportAt, echoes = echoes, rec = Echo.copyRecorder(self.rec),
+    crumbles = crumbles, plates = plates, embers = embers, doors = doors,
+    respawn = self.respawn, time = self.time, castPrev = self.castPrev,
+  }
+end
+
+function World:load(s)
+  local p = self.player
+  for k in pairs(p) do p[k] = nil end
+  for k, v in pairs(s.player) do p[k] = v end
+  self.echoes = {}
+  for i, e in ipairs(s.echoes) do self.echoes[i] = e:copy() end
+  if s.supportAt then
+    p.support = self.echoes[s.supportAt]
+  elseif p.support ~= true then
+    p.support = nil
+  end
+  self.rec = Echo.copyRecorder(s.rec)
+  for i, c in ipairs(self.crumbles) do c.crack, c.gone, c.regrow = s.crumbles[i][1], s.crumbles[i][2], s.crumbles[i][3] end
+  for i, c in ipairs(self.plates) do c.pressed = s.plates[i] end
+  for i, c in ipairs(self.embers) do c.taken = s.embers[i] end
+  for id, open in pairs(s.doors) do self.doorOpen[id] = open end
+  for i, c in ipairs(self.checkpoints) do c.active = (i == s.respawn) end
+  self.respawn, self.time, self.castPrev = s.respawn, s.time, s.castPrev
+  self.events = {}
 end
 
 function M.step(w, input, dt)
@@ -359,6 +429,7 @@ function M.step(w, input, dt)
   w.castPrev = input.cast or false
 
   w:checkHazards()
+  w:touchEmbers()
   w:touchCheckpoints()
   w:updateDoors()
 end

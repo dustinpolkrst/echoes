@@ -1,6 +1,7 @@
 local Level = require 'world.level'
 local Levels = require 'content.levels'
 local Player = require 'world.player'
+local Timeline = require 'world.timeline'
 local Render = require 'gfx.render'
 local Particles = require 'gfx.particles'
 local Sfx = require 'platform.sfx'
@@ -34,6 +35,14 @@ S.store = Save.open({ read = function() return nil end, write = function() retur
 
 local function data() return S.store.data end
 local function persist() Save.persist(S.store) end
+
+local function totalEmbers()
+  local n = 0
+  for _, def in ipairs(Levels) do
+    if Progress.hasEmber(def) then n = n + 1 end
+  end
+  return n
+end
 
 function S.applySettings()
   local s = data().settings
@@ -108,6 +117,11 @@ local function react(stage, ev)
   elseif ev.name == 'goal' then
     Sfx.play('goal')
     burst(30, { speed = 90, life = 1.0, drag = 1.5, color = { 0.7, 1, 0.95 }, glow = true })
+  elseif ev.name == 'ember' then
+    Sfx.play('ember', ev.v and 1.25 or 1)
+    Input.rumble(0.2, 0.15)
+    stage.emberT = 0
+    burst(30, { speed = 80, life = 0.9, drag = 1.6, grav = -30, color = { 1, 0.7, 0.25 }, glow = true })
   elseif ev.name == 'checkpoint' then
     Sfx.play('checkpoint')
     Input.rumble(0.15, 0.1)
@@ -133,7 +147,7 @@ end
 
 
 local function setStage(stage, world)
-  stage.world, stage.cam, stage.particles, stage.shake, stage.checkpointT = world, {}, Particles.new(), 0, nil
+  stage.world, stage.cam, stage.particles, stage.shake, stage.checkpointT, stage.emberT = world, {}, Particles.new(), 0, nil, nil
   followCamera(stage, true)
 end
 
@@ -146,6 +160,7 @@ local function stepStage(stage, input)
   Render.update(world, DT)
   stage.shake = stage.shake * 0.88
   if stage.checkpointT then stage.checkpointT = stage.checkpointT + DT end
+  if stage.emberT then stage.emberT = stage.emberT + DT end
 end
 
 local function drawScene(stage)
@@ -308,6 +323,13 @@ function S.title.drawUI()
     local l = Levels[S.title.resumeAt]
     Ui.text(('resume at %d, %s'):format(S.title.resumeAt, l.name), f.tiny, 434, C.dim, 0.8)
   end
+  local found = Save.embers(data())
+  if found > 0 then
+    local label = ('%d of %d embers'):format(found, totalEmbers())
+    local w = f.tiny:getWidth(label)
+    Ui.ember(Ui.W / 2 - w / 2 - 12, 472, true, 0.9, 0.8)
+    Ui.text(label, f.tiny, 465, C.amber, 0.8)
+  end
   Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Select' }))
 end
 
@@ -321,7 +343,13 @@ S.playing = playing
 -- starts the level over with a fresh clock.
 local function loadAttempt(fromCheckpoint)
   local checkpoint = fromCheckpoint and playing.world and playing.world.respawn or nil
+  local banked = checkpoint and playing.world:emberTaken()
   setStage(playing, Level.new(Levels[playing.index], { checkpoint = checkpoint }))
+  if banked then
+    for _, c in ipairs(playing.world.embers) do c.taken = true end
+  end
+  playing.timeline = Timeline.new(playing.world)
+  playing.rewindT = 0
   if not checkpoint then
     playing.t = 0
     playing.attemptT = 0
@@ -338,24 +366,67 @@ function playing.enter(index)
   loadAttempt()
 end
 
+-- Holding rewind runs the world backwards, faster the longer it is held. The clock keeps running.
+local REWIND_SPEEDS = { { 0, 1 }, { 1.2, 2 }, { 2.5, 4 } }
+local DEATH_WAIT = Player.DEATH_DELAY + 0.6
+
+local function rewind(world)
+  local speed = 1
+  for _, s in ipairs(REWIND_SPEEDS) do
+    if playing.rewindT >= s[1] then speed = s[2] end
+  end
+  local moved = false
+  for _ = 1, speed do
+    moved = Timeline.back(playing.timeline, world) or moved
+  end
+  if moved and floor(playing.rewindT * 60) % 5 == 0 then Sfx.play('rewind', 0.9 + 0.1 * speed) end
+  playing.rewindT = playing.rewindT + DT
+  Particles.update(playing.particles, DT)
+  Render.update(world, DT)
+  return moved
+end
+
 function playing.update()
   local world = playing.world
-  stepStage(playing, S.inputSource(world))
-  playing.t = playing.t + DT
+  local input = S.inputSource(world)
   local p = world.player
+  playing.rewinding = input.rewind and p.state ~= 'cleared' and rewind(world)
+  if not playing.rewinding then
+    playing.rewindT = 0
+    stepStage(playing, input)
+    Timeline.push(playing.timeline, world)
+  end
+  playing.t = playing.t + DT
+  p = world.player
   if p.state ~= 'cleared' then playing.attemptT = playing.attemptT + DT end
   followCamera(playing)
-  if p.state == 'dead' and p.stateT >= Player.DEATH_DELAY then
+  if p.state == 'dead' and p.stateT >= DEATH_WAIT and not input.rewind then
     local cx, cy = playerFocus()
     Trans.start(function() loadAttempt(true) end, cx, cy)
   elseif p.state == 'cleared' and p.stateT >= 1.1 then
     local cx, cy = playerFocus()
-    Trans.start(function() S.go('levelclear', playing.index, playing.attemptT) end, cx, cy)
+    Trans.start(function() S.go('levelclear', playing.index, playing.attemptT, world:emberTaken()) end, cx, cy)
   end
 end
 
 function playing.draw()
   drawScene(playing)
+end
+
+local function drawRewind()
+  local t = playing.rewindT
+  gfx.setBlendMode('add')
+  gfx.setColor(0.25, 0.45, 0.9, 0.1)
+  gfx.rectangle('fill', 0, 0, Ui.W, Ui.H)
+  gfx.setColor(0.5, 0.8, 1, 0.05)
+  for y = floor(t * 240) % 6, Ui.H, 6 do gfx.rectangle('fill', 0, y, Ui.W, 2) end
+  gfx.setBlendMode('alpha')
+  local x, y = Ui.W / 2 - 22, 70
+  gfx.setColor(0.75, 0.92, 1, 0.85 + 0.15 * sin(t * 12))
+  gfx.polygon('fill', x + 20, y, x + 20, y + 24, x, y + 12)
+  gfx.polygon('fill', x + 44, y, x + 44, y + 24, x + 24, y + 12)
+  local left = Timeline.seconds(playing.timeline)
+  Ui.text(('%.1fs'):format(left), Ui.fonts.tiny, y + 32, C.white, 0.7)
 end
 
 function playing.drawUI()
@@ -369,8 +440,16 @@ function playing.drawUI()
   Hud.draw(world, {
     index = playing.index, name = world.name, time = playing.attemptT, deaths = stats.deaths,
     camx = playing.cam.x, camy = playing.cam.y, nameAlpha = 1 - a, checkpointT = playing.checkpointT,
+    emberT = playing.emberT,
   })
   local p = world.player
+  if playing.rewinding then
+    drawRewind()
+  elseif p.state == 'dead' and p.stateT > 0.25 then
+    local a = min(1, (p.stateT - 0.25) * 4)
+    local n = Input.names()
+    Ui.text(('Hold %s to rewind     %s to retry'):format(n.rewind, n.restart), f.mid, Ui.H / 2 + 40, C.white, a)
+  end
   if p.state == 'cleared' then
     gfx.setColor(1, 1, 1, min(0.6, p.stateT * 0.7))
     gfx.rectangle('fill', 0, 0, Ui.W, Ui.H)
@@ -567,8 +646,10 @@ local function drawCard(i, x, y, selected, pulse)
       local n = rec.bestDeaths
       Ui.text(n == nil and '' or (n == 0 and 'no deaths' or (n == 1 and '1 death' or n .. ' deaths')), f.tiny, y + 59, C.dim, 0.8, tx, CARD_W - 64, 'left')
       drawCheck(x + CARD_W - 20, y + CARD_H - 18, 0.9)
+      if Progress.hasEmber(Levels[i]) then Ui.ember(x + CARD_W - 20, y + 20, rec.ember, 0.95) end
     else
       Ui.text('not cleared', f.tiny, y + 40, C.dim, 0.7, tx, CARD_W - 64, 'left')
+      if Progress.hasEmber(Levels[i]) then Ui.ember(x + CARD_W - 20, y + 20, false, 0.95) end
     end
   else
     Ui.text('locked', f.small, y + 30, C.locked, 0.8, tx, CARD_W - 64, 'left')
@@ -689,10 +770,10 @@ settings.actions = withBack(menuActions(function() return settings.menu end), fu
 local clear = {}
 S.levelclear = clear
 
-function clear.enter(index, time)
-  clear.index, clear.time, clear.t = index, time, 0
+function clear.enter(index, time, ember)
+  clear.index, clear.time, clear.t, clear.ember = index, time, 0, ember
   clear.deaths = stats.deaths
-  clear.result = Save.recordClear(data(), index, time, clear.deaths)
+  clear.result = Save.recordClear(data(), index, time, clear.deaths, ember)
   persist()
   local last = index >= #Levels
   clear.menu = Menu.new({
@@ -738,7 +819,13 @@ function clear.drawUI()
   local best = ('best  %s,  %s'):format(rec.bestTime and clock(rec.bestTime) or '--',
     rec.bestDeaths == 1 and '1 death' or (rec.bestDeaths or 0) .. ' deaths')
   Ui.text(best, f.tiny, py + 186, C.dim, a * 0.85)
-  Ui.menu(clear.menu, Ui.W / 2, py + 220, { rowHeight = 46, width = 340 })
+  if Progress.hasEmber(Levels[clear.index]) then
+    local found = clear.ember or rec.ember
+    local label = clear.ember and (r.newEmber and 'ember found' or 'ember carried out') or (rec.ember and 'ember found before' or 'an ember is still here somewhere')
+    Ui.ember(Ui.W / 2 - f.tiny:getWidth(label) / 2 - 14, py + 210, found, a)
+    Ui.text(label, f.tiny, py + 202, found and C.amber or C.dim, a * 0.9)
+  end
+  Ui.menu(clear.menu, Ui.W / 2, py + 236, { rowHeight = 46, width = 340 })
   Ui.footer(hints({ 'move', 'Move' }, { 'confirm', 'Select' }, { 'restart', 'Replay' }))
 end
 

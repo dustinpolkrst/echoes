@@ -173,6 +173,22 @@ function U.menu(m, cx, y, o)
 end
 
 -- hints: { {key, label}, ... } centred along the bottom edge.
+-- The ember as a UI icon, centred on x, y: lit when found, an outline when not.
+function U.ember(x, y, lit, alpha, size)
+  local k = size or 1
+  local pts = { x, y - 7 * k, x + 5 * k, y, x, y + 5 * k, x - 5 * k, y }
+  if lit then
+    love.graphics.setColor(1, 0.5, 0.15, alpha)
+    love.graphics.polygon('fill', pts)
+    love.graphics.setColor(1, 0.85, 0.45, alpha)
+    love.graphics.polygon('fill', x, y - 3 * k, x + 2.5 * k, y + 0.5 * k, x, y + 3 * k, x - 2.5 * k, y + 0.5 * k)
+  else
+    love.graphics.setLineWidth(1.5)
+    love.graphics.setColor(1, 0.7, 0.35, alpha * 0.45)
+    love.graphics.polygon('line', pts)
+  end
+end
+
 function U.footer(hints, y)
   local font = U.fonts.small
   y = y or 496

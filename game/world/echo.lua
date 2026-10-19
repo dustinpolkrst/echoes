@@ -13,16 +13,18 @@ end
 
 function Echo.record(rec, x, y, facing, state)
   rec.head = rec.head % Echo.FRAMES + 1
-  local f = rec.buf[rec.head]
-  if not f then
-    f = {}
-    rec.buf[rec.head] = f
-  end
-  f.x, f.y, f.facing, f.state = x, y, facing, state
+  rec.buf[rec.head] = { x = x, y = y, facing = facing, state = state }
   rec.count = math.min(rec.count + 1, Echo.FRAMES)
 end
 
--- Oldest to newest; copies so later recording can't mutate a live echo.
+-- Recorded frames are never mutated after they are written, so a timeline snapshot can share them.
+function Echo.copyRecorder(rec)
+  local buf = {}
+  for k, f in pairs(rec.buf) do buf[k] = f end
+  return { buf = buf, head = rec.head, count = rec.count }
+end
+
+-- Oldest to newest; copies so mirroring can't reach the recorder's frames.
 function Echo.snapshot(rec)
   local out = {}
   for k = 1, rec.count do
@@ -56,7 +58,7 @@ local function slideToContact(self, isBlockedAt)
     local mid = (lo + hi) / 2
     if isBlockedAt(f.x + (n.x - f.x) * mid, f.y + (n.y - f.y) * mid, self.w, self.h) then hi = mid else lo = mid end
   end
-  f.x, f.y = f.x + (n.x - f.x) * lo, f.y + (n.y - f.y) * lo
+  self.stopX, self.stopY = f.x + (n.x - f.x) * lo, f.y + (n.y - f.y) * lo
 end
 
 function Echo:update(dt, isBlockedAt)
@@ -74,7 +76,13 @@ function Echo:update(dt, isBlockedAt)
     self.lingerT = self.lingerT + dt
   end
   local f = self.frames[self.i]
-  self.x, self.y, self.facing, self.state = f.x, f.y, f.facing, f.state
+  self.x, self.y, self.facing, self.state = self.stopX or f.x, self.stopY or f.y, f.facing, f.state
+end
+
+function Echo:copy()
+  local c = {}
+  for k, v in pairs(self) do c[k] = v end
+  return setmetatable(c, Echo)
 end
 
 function Echo:arrived()

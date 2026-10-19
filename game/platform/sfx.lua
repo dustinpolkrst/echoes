@@ -102,6 +102,23 @@ local function generate()
     return v * 0.28 * env(t, d, 0.5)
   end)
 
+  generated.ember = build(0.45, function(t, d)
+    local v = 0
+    for i, f in ipairs({ 783.99, 1174.66, 1567.98 }) do
+      local s = (i - 1) * 0.06
+      if t >= s then
+        local lt = t - s
+        v = v + math.sin(2 * math.pi * f * lt) * math.exp(-lt * 9) * math.min(1, lt / 0.005)
+      end
+    end
+    return v * 0.25
+  end)
+
+  local tickPhase = sweep(1400, 700)
+  generated.rewind = build(0.05, function(t, d)
+    return sine(tickPhase(t, d)) * 0.22 * env(t, d, 2)
+  end)
+
   generated.goal = build(0.9, function(t)
     local v = 0
     for i, f in ipairs({ 523.25, 659.25, 783.99, 1046.5 }) do

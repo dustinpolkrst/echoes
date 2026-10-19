@@ -5,16 +5,18 @@ local Script = require 'dev.script'
 -- keyed by level name, so adding a level touches only its act's content and solution files.
 --   scripts     a full scripted playthrough; --selftest proves every level has one that reaches the goal.
 --   strategies  a solution written as a human plays it, every decision a swept parameter (dev/slack.lua).
+--   embers      a scripted run that takes the level's ember and then clears the level; --selftest proves it, and that
+--               the plain script leaves the ember where it is.
 --   rooms       the level's rooms: where each starts, where it ends, its insight, a solve from a fresh respawn at its
 --               checkpoint and the naive approaches that must fail. See docs/level-design.md.
 local ACTS = { 'dev.solutions.act1', 'dev.solutions.act2', 'dev.solutions.act3', 'dev.solutions.act4', 'dev.solutions.act5' }
 
-local M = { scripts = {}, strategies = {}, rooms = {} }
+local M = { scripts = {}, strategies = {}, rooms = {}, embers = {} }
 M.run, M.driver, M.cond, M.decisions = Script.run, Script.driver, Script.cond, Script.decisions
 
 for _, path in ipairs(ACTS) do
   local act = require(path)
-  for _, key in ipairs({ 'scripts', 'strategies', 'rooms' }) do
+  for _, key in ipairs({ 'scripts', 'strategies', 'rooms', 'embers' }) do
     for name, v in pairs(act[key] or {}) do
       assert(M[key][name] == nil, ('%s: %s for %q defined twice'):format(path, key, name))
       M[key][name] = v

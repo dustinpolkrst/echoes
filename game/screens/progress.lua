@@ -10,8 +10,22 @@ function Progress.done(data, i)
   return r ~= nil and r.done == true
 end
 
+-- Clearing a level opens the next two, so one stubborn level never walls off the rest of the game.
 function Progress.unlocked(data, i)
-  return i == 1 or Progress.done(data, i - 1)
+  return i <= 1 or Progress.done(data, i - 1) or (i > 2 and Progress.done(data, i - 2))
+end
+
+local emberCache = setmetatable({}, { __mode = 'k' })
+
+function Progress.hasEmber(def)
+  if emberCache[def] == nil then
+    local found = false
+    for _, row in ipairs(def.map) do
+      if row:find('*', 1, true) then found = true break end
+    end
+    emberCache[def] = found
+  end
+  return emberCache[def]
 end
 
 function Progress.started(data)

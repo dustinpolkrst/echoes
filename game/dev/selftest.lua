@@ -655,6 +655,114 @@ local function fakePad(down, leftx)
   }
 end
 
+local function deepEqual(a, b, seen)
+  if a == b then return true end
+  if type(a) ~= 'table' or type(b) ~= 'table' then return false end
+  seen = seen or {}
+  if seen[a] == b then return true end
+  seen[a] = b
+  for k, v in pairs(a) do
+    if not deepEqual(v, b[k], seen) then return false end
+  end
+  for k in pairs(b) do
+    if a[k] == nil then return false end
+  end
+  return true
+end
+
+-- Rewinding must put the world back exactly: replaying the same inputs after a rewind ends in the same state.
+local function testRewind()
+  local Timeline = require 'world.timeline'
+  for i, def in ipairs(Levels) do
+    local w = Level.new(def)
+    local tl = Timeline.new(w)
+    local drive = Solutions.driver(Solutions.scripts[def.name])
+    local inputs, n = {}, 0
+    while w.player.state ~= 'cleared' and n < 20000 do
+      local input = drive(w) or {}
+      n = n + 1
+      inputs[n] = input
+      Level.step(w, input)
+      Timeline.push(tl, w)
+    end
+    local final = w:save()
+    local back = math.min(600, n)
+    for _ = 1, back do Timeline.back(tl, w) end
+    local rewound = w.player.state
+    for k = n - back + 1, n do Level.step(w, inputs[k]) end
+    check(('level %d %q: rewinding %d steps and replaying them ends in the same state'):format(i, def.name, back),
+      rewound ~= 'cleared' and w.player.state == 'cleared' and deepEqual(final, w:save()))
+  end
+
+  local w = arena {
+    '##########',
+    '#........#',
+    '#.P...^^.#',
+    '##########',
+  }
+  local tl = Timeline.new(w)
+  for _ = 1, 120 do
+    Level.step(w, { right = true })
+    Timeline.push(tl, w)
+  end
+  check('player dies on the spikes before rewinding', w.player.state == 'dead')
+  while w.player.state == 'dead' and Timeline.back(tl, w) do end
+  check('rewinding from death brings the player back alive', w.player.state == 'ground' or w.player.state == 'air')
+  while Timeline.back(tl, w) do end
+  check('rewind stops at the start of the timeline', w.player.x == w.spawn.x and w.time == 0)
+end
+
+local function testEmbers()
+  local w = arena {
+    '##########',
+    '#........#',
+    '#.P..*...#',
+    '##########',
+  }
+  idle(w, 10)
+  check('an ember starts in place', not w:emberTaken())
+  idle(w, 40, 'R')
+  check('walking through an ember takes it', w:emberTaken())
+
+  local mirrorRoom = arena {
+    '#################',
+    '#........#......#',
+    '#P......M#..*...#',
+    '#################',
+  }
+  idle(mirrorRoom, 10)
+  run(mirrorRoom, { { 90, 'R' } })
+  check('the player alone cannot reach the sealed ember', not mirrorRoom:emberTaken())
+  run(mirrorRoom, { { 1, 'RX' } })
+  idle(mirrorRoom, 120)
+  check('a mirrored echo carries an ember out of a sealed room', mirrorRoom:emberTaken() and #mirrorRoom.echoes == 1,
+    ('echo x=%s'):format(mirrorRoom.echoes[1] and ('%.0f'):format(mirrorRoom.echoes[1].x) or '-'))
+end
+
+-- Every level hides one ember off its main route, and a scripted run proves it can be carried out.
+local function testEmberRoutes()
+  for i, def in ipairs(Levels) do
+    local count = 0
+    for _, row in ipairs(def.map) do
+      for _ in row:gmatch('%*') do count = count + 1 end
+    end
+    local label = ('level %d %q'):format(i, def.name)
+    check(label .. ' has exactly one ember', count == 1, 'embers=' .. count)
+    local w = Level.new(def)
+    run(w, Solutions.scripts[def.name])
+    check(label .. ' main route leaves the ember in place', w.player.state == 'cleared' and not w:emberTaken())
+    local route = Solutions.embers[def.name]
+    if route then
+      local e = Level.new(def)
+      local ok, err = pcall(run, e, route)
+      check(label .. ' ember route takes the ember and clears the level', ok and e:emberTaken() and e.player.state == 'cleared',
+        ok and ('state=' .. e.player.state) or tostring(err))
+    else
+      check(label .. ' has an ember route', false)
+    end
+  end
+end
+
 local function testGamepadInput()
   local noKeys = function() return false end
   local function read(pad) return Input.read({ pad }, noKeys) end
@@ -698,6 +806,9 @@ function S.run()
   testShortMemoryNeedsPatience()
   testConfluenceTiming()
   testSolutions()
+  testRewind()
+  testEmbers()
+  testEmberRoutes()
   testLevelContracts()
   testRooms()
   testCheeseSearch()

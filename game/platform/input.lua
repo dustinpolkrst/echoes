@@ -10,12 +10,13 @@ local BINDINGS = {
   down = { keys = { 'down', 's' }, buttons = { 'dpdown' } },
   jump = { keys = { 'z', 'space', 'w', 'up' }, buttons = { 'a' } },
   cast = { keys = { 'x', 'k' }, buttons = { 'x', 'b' } },
+  rewind = { keys = { 'c', 'lshift', 'rshift' }, buttons = { 'y', 'leftshoulder', 'rightshoulder' } },
   confirm = { keys = { 'z', 'space', 'return', 'kpenter' }, buttons = { 'a' } },
   back = { keys = { 'escape', 'backspace' }, buttons = { 'b' } },
   pause = { keys = { 'escape', 'p' }, buttons = { 'start' } },
   restart = { keys = { 'r' }, buttons = { 'back' } },
 }
-local HELD = { 'left', 'right', 'jump', 'cast' }
+local HELD = { 'left', 'right', 'jump', 'cast', 'rewind' }
 local EDGE = { 'confirm', 'back', 'pause', 'restart', 'up', 'down', 'left', 'right', 'jump', 'cast' }
 local NAV = { 'up', 'down', 'left', 'right' }
 Input.BINDINGS = BINDINGS
@@ -160,6 +161,7 @@ local PAD_WORDS = {
   { 'Arrows move', 'D-pad or stick moves' },
   { 'Z, Space or Up', 'A' },
   { 'Press R to restart', 'Press Back to restart' },
+  { 'Hold C', 'Hold Y' },
 }
 
 function Input.hint(text)
@@ -177,9 +179,9 @@ end
 
 function Input.names()
   if Input.pad() then
-    return { confirm = 'A', back = 'B', pause = 'Start', restart = 'Back', move = 'D-pad' }
+    return { confirm = 'A', back = 'B', pause = 'Start', restart = 'Back', move = 'D-pad', rewind = 'Y' }
   end
-  return { confirm = 'Z', back = 'Esc', pause = 'Esc', restart = 'R', move = 'Arrows' }
+  return { confirm = 'Z', back = 'Esc', pause = 'Esc', restart = 'R', move = 'Arrows', rewind = 'C' }
 end
 
 return Input

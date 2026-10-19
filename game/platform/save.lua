@@ -51,6 +51,9 @@ function Save.decode(text)
         parseSetting(data.settings, a, b)
       elseif kind == 'level' then
         parseLevel(data, a, b, c ~= '-' and c or nil, d ~= '-' and d or nil)
+      elseif kind == 'ember' then
+        local rec = data.levels[tonumber(a)]
+        if rec then rec.ember = true end
       end
     end
   end
@@ -71,6 +74,9 @@ function Save.encode(data)
     local r = data.levels[i]
     out[#out + 1] = ('level %d %d %s %s'):format(i, r.done and 1 or 0,
       r.bestTime and ('%.3f'):format(r.bestTime) or '-', r.bestDeaths and tostring(r.bestDeaths) or '-')
+  end
+  for _, i in ipairs(indices) do
+    if data.levels[i].ember then out[#out + 1] = ('ember %d'):format(i) end
   end
   return table.concat(out, '\n') .. '\n'
 end
@@ -100,21 +106,31 @@ function Save.open(io)
   return { io = io, data = Save.decode(ok and text or nil) }
 end
 
+function Save.embers(data)
+  local n = 0
+  for _, r in pairs(data.levels) do
+    if r.ember then n = n + 1 end
+  end
+  return n
+end
+
 function Save.persist(store)
   local ok, wrote = pcall(store.io.write, PATH, Save.encode(store.data))
   if not (ok and wrote) then print('WARN  could not write save file') end
   return ok and wrote == true
 end
 
--- A first clear sets the records without counting as a "new best".
-function Save.recordClear(data, index, time, deaths)
+-- A first clear sets the records without counting as a "new best". An ember counts once it leaves with you.
+function Save.recordClear(data, index, time, deaths, ember)
   local rec = data.levels[index]
-  local result = { first = not (rec and rec.done), newTime = false, newDeaths = false }
+  local result = { first = not (rec and rec.done), newTime = false, newDeaths = false,
+    newEmber = ember == true and not (rec and rec.ember) }
   if not rec then
     rec = {}
     data.levels[index] = rec
   end
   rec.done = true
+  rec.ember = rec.ember or ember == true
   if not rec.bestTime or time < rec.bestTime then
     result.newTime = not result.first
     rec.bestTime = time

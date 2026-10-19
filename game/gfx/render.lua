@@ -21,9 +21,11 @@ local LIGHTS = {
   mirror = { color = MIRROR, breathe = 4, alpha = 0.8 },
   veil = { color = VEIL, breathe = 2, alpha = 0.5 },
   checkpoint = { color = BEACON, breathe = 3, alpha = 0.85, idle = 0.18 },
+  ember = { color = { 1, 0.62, 0.22 }, breathe = 7, alpha = 0.9 },
 }
 
 local function lightAlpha(spec, l)
+  if l.cell.taken then return 0 end
   if spec.idle and not l.cell.active then return spec.idle end
   return spec.alpha
 end
@@ -360,6 +362,19 @@ local function proceduralCheckpoint(world, c, x, y, t)
   end
 end
 
+-- An ember: a loose spark of the player's own fire, bobbing in place until something carries it off.
+local function proceduralEmber(world, c, x, y, t)
+  local cx = x + T / 2
+  local cy = y + T / 2 + sin(t * 3 + c.tx) * 1.5
+  local fl = sin(t * 17 + c.ty) * 0.8
+  gfx.setColor(1, 0.45, 0.1, 0.9)
+  gfx.polygon('fill', cx, cy - 6 - fl, cx + 4, cy, cx, cy + 4, cx - 4, cy)
+  gfx.setColor(1, 0.8, 0.35)
+  gfx.polygon('fill', cx, cy - 3 - fl, cx + 2, cy + 0.5, cx, cy + 2.5, cx - 2, cy + 0.5)
+  gfx.setColor(1, 1, 0.9)
+  gfx.rectangle('fill', cx - 0.5, cy - 1, 1, 2)
+end
+
 local function variantOf(c) return { v = hash(c.tx, c.ty) } end
 
 TILES.solid.draw = withSlot('solid', proceduralSolid, variantOf)
@@ -375,6 +390,10 @@ TILES.veil.draw = withSlot('veil', proceduralVeil)
 TILES.crumble.draw = withSlot('crumble', proceduralCrumble, function(c)
   return { frame = c.gone and 3 or c.crack and 2 or 1 }
 end)
+local drawEmber = withSlot('ember', proceduralEmber)
+TILES.ember.draw = function(world, c, x, y, t)
+  if not c.taken then drawEmber(world, c, x, y, t) end
+end
 TILES.checkpoint.draw = withSlot('checkpoint', proceduralCheckpoint, function(c)
   return { frame = c.active and 2 or 1 }
 end)
@@ -723,6 +742,56 @@ function R.drawEcho(e)
   end
 end
 
+-- The memory trail: where an echo cast now would start and the path it would walk, so a cast is planned rather
+-- than guessed. A cast at a mirror previews the reflection. Each live echo also shows the rest of its route.
+local TRAIL_STEP = 6
+
+local function trailDot(x, y, r, a, col)
+  paint(col, a)
+  gfx.circle('fill', floor(x + Echo.W / 2) + 0.5, floor(y + Echo.H / 2) + 0.5, r, 6)
+end
+
+local function drawMemoryTrail(world)
+  local p = world.player
+  local rec = world.rec
+  if not (p.state == 'ground' or p.state == 'air') or rec.count < 2 then return end
+  local mirror = world:touchedMirror()
+  local axis = mirror and mirror.tx * T + T / 2
+  local pal = ECHO_PALETTE[mirror ~= nil]
+  local function at(k)
+    local f = rec.buf[(rec.head - rec.count + k - 1) % Echo.FRAMES + 1]
+    if not axis then return f end
+    return { x = 2 * axis - f.x - Echo.W, y = f.y, facing = -f.facing }
+  end
+  local full = rec.count / Echo.FRAMES
+  for k = 1, rec.count - TRAIL_STEP, TRAIL_STEP do
+    local f = at(k)
+    if world:inVeil(f.x, f.y, Echo.W, Echo.H) then
+      trailDot(f.x, f.y, 2, 0.4, pal.edge)
+      break
+    end
+    trailDot(f.x, f.y, 1, 0.25 + 0.45 * k / rec.count, pal.core)
+  end
+  local first = at(1)
+  local ghost = { w = Echo.W, h = Echo.H, mirrored = mirror ~= nil, frames = { first } }
+  drawGhost(ghost, first, (0.45 + 0.15 * sin(R.t * 5)) * (0.4 + 0.6 * full))
+end
+
+local function drawEchoRoute(world, e)
+  if e.halted or e.i >= #e.frames then return end
+  local pal = ECHO_PALETTE[e.mirrored]
+  local last = e.frames[#e.frames]
+  for k = e.i + TRAIL_STEP, #e.frames, TRAIL_STEP do
+    local f = e.frames[k]
+    if world:inVeil(f.x, f.y, e.w, e.h) then
+      last = f
+      break
+    end
+    trailDot(f.x, f.y, 1, 0.4 * (1 - (k - e.i) / #e.frames) + 0.15, pal.core)
+  end
+  trailDot(last.x, last.y, 2, 0.6, pal.edge)
+end
+
 function R.drawWorld(world)
   local t = R.t
   gfx.setColor(1, 1, 1)
@@ -801,6 +870,8 @@ end
 function R.drawGlows(world, camx, camy)
   gfx.push('all')
   gfx.translate(-camx, -camy)
+  for _, e in ipairs(world.echoes) do drawEchoRoute(world, e) end
+  drawMemoryTrail(world)
   gfx.setBlendMode('add')
   local p = world.player
   if p.state ~= 'dead' then

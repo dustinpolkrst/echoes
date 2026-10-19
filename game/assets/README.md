@@ -23,6 +23,7 @@ A PNG whose width is a multiple of its height is a horizontal strip of square fr
 | `veil` | 16x16 | Top-left of the cell. Animated at 8 fps. Drawn over the background with alpha; echoes halt at it and the player walks through. |
 | `crumble` | 16x16 | Top-left of the cell. Frame 1 intact, frame 2 cracking, frame 3 gone. |
 | `checkpoint` | 16x16 | Top-left of the cell. Frame 1 unlit, frame 2 lit. The waystone that becomes the respawn point when touched. |
+| `ember` | 16x16 | Top-left of the cell. Animated at 8 fps. The optional spark in each level; hidden once taken. |
 | `bg_far` | 480x270 or wider | Replaces the sky gradient. Tiles horizontally at parallax 0.05, fixed vertically. Make it opaque. |
 | `bg_mid` | 480x270 or wider | Replaces the arches. Parallax 0.12, hangs from the bottom edge. Use transparency. |
 | `bg_near` | 480x270 or wider | Replaces the hanging vines. Parallax 0.35, hangs from the top edge. Use transparency. |
@@ -44,3 +45,5 @@ Looked up in that order. Sounds are loaded as static sources and played at the g
 | `goal` | Level cleared | |
 | `crumble` | Crumble stone collapses or regrows | Pitch 1.0 collapse, 1.4 regrowth. |
 | `checkpoint` | A waystone lights | |
+| `ember` | An ember is taken | Pitch 1.0 by you, 1.25 by an echo. |
+| `rewind` | Rewinding | A short tick every few steps; pitch rises with rewind speed. |

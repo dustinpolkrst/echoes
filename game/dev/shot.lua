@@ -33,7 +33,7 @@ local function playSolution(Scenes, level, n)
   for _ = 1, n do Scenes.update() end
 end
 
--- target: a level number (0 is the title), or title, pause, select, settings, clear, transition.
+-- target: a level number (0 is the title), or title, pause, select, settings, clear, rewind, transition.
 -- arg: frames of the scripted solution for a level number; the level or cleared-count for named screens.
 function Shot.setup(Scenes, target, arg)
   love.math.setRandomSeed(1)
@@ -81,6 +81,10 @@ function Shot.setup(Scenes, target, arg)
       if Scenes.name == 'levelclear' then break end
     end
     frames(Scenes, 50)
+  elseif target == 'rewind' then
+    Scenes.init(seededStore(0))
+    playSolution(Scenes, arg or 5, 420)
+    frames(Scenes, 40, function() return { rewind = true } end)
   elseif target == 'transition' then
     Scenes.init(seededStore(0))
     playTo(Scenes, arg or 2, 90)

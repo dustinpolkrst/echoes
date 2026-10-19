@@ -19,6 +19,7 @@ A.SLOTS = {
   veil    = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'tile', note = 'drawn with alpha over the background; echoes halt at it' },
   crumble = { kind = 'sprite', size = { 16, 16 }, mode = 'state', anchor = 'tile', note = 'frame 1 intact, frame 2 cracking, frame 3 gone' },
   checkpoint = { kind = 'sprite', size = { 16, 16 }, mode = 'state', anchor = 'tile', note = 'the waystone; frame 1 unlit, frame 2 lit (the respawn point)' },
+  ember   = { kind = 'sprite', size = { 16, 16 }, fps = 8, anchor = 'tile', note = 'the optional spark; hidden once taken' },
   bg_far  = { kind = 'sprite', size = { 480, 270 }, fps = 4, par = 0.05, vpar = 0, valign = 'top', note = 'replaces the sky gradient' },
   bg_mid  = { kind = 'sprite', size = { 480, 270 }, fps = 4, par = 0.12, vpar = 0.08, valign = 'bottom', note = 'replaces the arches' },
   bg_near = { kind = 'sprite', size = { 480, 270 }, fps = 4, par = 0.35, vpar = 0.35, valign = 'top', note = 'replaces the hanging vines' },
@@ -35,6 +36,8 @@ A.SOUNDS = {
   goal  = { kind = 'sound' },
   crumble = { kind = 'sound', note = 'played at two pitches for collapse and regrowth' },
   checkpoint = { kind = 'sound', note = 'a waystone lights' },
+  ember = { kind = 'sound', note = 'an ember is taken; pitch 1.0 by you, 1.25 by an echo' },
+  rewind = { kind = 'sound', note = 'a tick while rewinding, every few steps' },
 }
 
 A.version = 0

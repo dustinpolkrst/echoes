@@ -86,6 +86,11 @@ function Hud.draw(world, ctx)
   Ui.text(Model.clock(ctx.time), f.small, 14, Ui.colors.white, 0.7, -20, Ui.W, 'right')
   local d = ctx.deaths
   Ui.text(d == 0 and 'no deaths' or (d == 1 and '1 death' or d .. ' deaths'), f.tiny, 36, Ui.colors.dim, 0.7, -20, Ui.W, 'right')
+  if #world.embers > 0 then
+    local lit = world:emberTaken()
+    local pop = ctx.emberT and ctx.emberT < 0.4 and 1 + 0.6 * (1 - ctx.emberT / 0.4) or 1
+    Ui.ember(28, 58, lit, lit and 0.95 or 0.6, pop)
+  end
   local slots = Model.slots(world)
   for k = 1, #slots do drawPip(slots[k], 36 + (k - 1) * 32, Ui.H - 46, t) end
   drawMemory(world, 98, Ui.H - 52)
