@@ -145,11 +145,19 @@ print(f'{w} {h} {mean/3:.2f} {(var ** 0.5)/3:.2f}')
 PY
 }
 
+# play.sh passes "<repo>/scripts/../game", which is this repo's game/ after resolution.
+game_arg_is_ours() {
+  local arg real
+  [[ -r "/proc/$PID/cmdline" ]] || return 1
+  arg=$(tr '\0' '\n' <"/proc/$PID/cmdline" | awk 'NR==2{print; exit}')
+  [[ -n "$arg" ]] || return 1
+  real=$(readlink -f "$arg" 2>/dev/null || true)
+  [[ "$real" == "$GAME" ]]
+}
+
 our_process() {
   [[ -d "/proc/$PID" ]] || return 1
-  local cmd
-  cmd=$(tr '\0' ' ' <"/proc/$PID/cmdline")
-  [[ "$cmd" == *"$GAME"* ]]
+  game_arg_is_ours
 }
 
 focus_window() {
@@ -268,7 +276,7 @@ cmd_launch() {
 
 cmd_doctor() {
   load_state
-  local reason= ver cmd data_env name class
+  local reason= ver data_env name class
   reason=
   if ! our_process; then
     reason="pid $PID is not the Echoes process"
@@ -282,8 +290,7 @@ cmd_doctor() {
     [[ -n "$exe" && "$exe" == "$love_real" ]] || reason="running binary is '${exe:-missing}', want $love_real"
   fi
   if [[ -z "$reason" ]]; then
-    cmd=$(tr '\0' ' ' <"/proc/$PID/cmdline")
-    [[ "$cmd" == *"$GAME"* ]] || reason="process command does not include $GAME"
+    game_arg_is_ours || reason="process is not running $GAME"
     data_env=$(tr '\0' '\n' <"/proc/$PID/environ" | awk -F= '$1=="XDG_DATA_HOME"{print substr($0, index($0,"=")+1)}')
     [[ "$data_env" == "$DATA" ]] || reason="XDG_DATA_HOME is '${data_env:-unset}', want $DATA"
   fi
@@ -431,9 +438,7 @@ cmd_cleanup() {
   # shellcheck disable=SC1090
   source "$CURRENT"
   if [[ -n "${PID:-}" ]] && [[ -d "/proc/$PID" ]]; then
-    local cmd
-    cmd=$(tr '\0' ' ' <"/proc/$PID/cmdline" || true)
-    if [[ "$cmd" == *"${GAME:-/game}"* ]]; then
+    if game_arg_is_ours; then
       kill "$PID" 2>/dev/null || true
       local i
       for i in 1 2 3 4 5 6 7 8 9 10; do
