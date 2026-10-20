@@ -1,3 +1,5 @@
 *.tmp
 build/
 devblog/static/play/
+# Screenshots and transcripts from verify-echoes. Cleanup keeps this directory.
+artifacts/verify-echoes/

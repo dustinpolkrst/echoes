@@ -1,0 +1,473 @@
+#!/usr/bin/env bash
+# Drive one isolated Echoes window. Kill only the pid this file records.
+set -euo pipefail
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO=$(CDPATH= cd -- "$SCRIPT_DIR/../../../.." && pwd)
+CURRENT=${ECHOES_VERIFY_CURRENT:-/tmp/echoes-verify/current}
+EVIDENCE_ROOT="$REPO/artifacts/verify-echoes"
+GAME="$REPO/game"
+
+die() { printf 'verify-echoes: %s\n' "$*" >&2; exit 1; }
+
+fail_launch() {
+  if [[ -n "${PID:-}" ]] && kill -0 "$PID" 2>/dev/null; then
+    kill "$PID" 2>/dev/null || true
+    sleep 0.2
+    kill -9 "$PID" 2>/dev/null || true
+  fi
+  if [[ -n "${ROOT:-}" && "$ROOT" == /tmp/echoes-verify-* ]]; then
+    rm -rf "$ROOT"
+  fi
+  rm -f "$CURRENT"
+  die "$1"
+}
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || die "missing '$1' on PATH"
+}
+
+load_state() {
+  [[ -f "$CURRENT" ]] || die "no run state at $CURRENT (launch first)"
+  # shellcheck disable=SC1090
+  source "$CURRENT"
+  [[ -n "${PID:-}" && -n "${WID:-}" && -n "${ROOT:-}" && -n "${DATA:-}" && -n "${LOVE_BIN:-}" ]] || die "incomplete run state"
+}
+
+save_state() {
+  mkdir -p "$(dirname "$CURRENT")"
+  cat >"$CURRENT" <<EOF
+PID=$PID
+WID=$WID
+ROOT=$(printf '%q' "$ROOT")
+DATA=$(printf '%q' "$DATA")
+SAVE_DIR=$(printf '%q' "$SAVE_DIR")
+LOVE_BIN=$(printf '%q' "$LOVE_BIN")
+DISPLAY=$(printf '%q' "$DISPLAY")
+EOF
+}
+
+window_alive() {
+  xdotool getwindowname "$WID" >/dev/null 2>&1
+}
+
+client_geometry() {
+  local info
+  info=$(xwininfo -id "$WID")
+  GEO_X=$(awk '/Absolute upper-left X/ {print $NF}' <<<"$info")
+  GEO_Y=$(awk '/Absolute upper-left Y/ {print $NF}' <<<"$info")
+  GEO_W=$(awk '/^[[:space:]]*Width:/ {print $NF}' <<<"$info")
+  GEO_H=$(awk '/^[[:space:]]*Height:/ {print $NF}' <<<"$info")
+  [[ -n "$GEO_X" && -n "$GEO_Y" && -n "$GEO_W" && -n "$GEO_H" ]] || die "could not read window geometry"
+}
+
+grab_screen() {
+  xdotool getwindowname "$WID" >/dev/null 2>&1 || die "window $WID is gone"
+  local screen dest
+  dest=$1
+  client_geometry
+  screen=$DISPLAY
+  [[ "$screen" == *.* ]] || screen="${screen}.0"
+  mkdir -p "$(dirname "$dest")"
+  ffmpeg -y -loglevel error -f x11grab -video_size "${GEO_W}x${GEO_H}" -i "${screen}+${GEO_X},${GEO_Y}" -frames:v 1 "$dest"
+}
+
+png_stats() {
+  python3 - "$1" <<'PY'
+import struct, sys, zlib
+path = sys.argv[1]
+data = open(path, 'rb').read()
+if data[:8] != b'\x89PNG\r\n\x1a\n':
+    sys.exit('not a png')
+pos, w, h, idat = 8, None, None, b''
+while pos < len(data):
+    ln = struct.unpack('>I', data[pos:pos+4])[0]
+    typ = data[pos+4:pos+8]
+    chunk = data[pos+8:pos+8+ln]
+    if typ == b'IHDR':
+        w, h = struct.unpack('>II', chunk[:8])
+    elif typ == b'IDAT':
+        idat += chunk
+    elif typ == b'IEND':
+        break
+    pos += 12 + ln
+raw = zlib.decompress(idat)
+bpp = 3
+rowlen = w * bpp
+i, prev = 0, bytearray(rowlen)
+
+def paeth(a, b, c):
+    p = a + b - c
+    pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+    if pa <= pb and pa <= pc:
+        return a
+    if pb <= pc:
+        return b
+    return c
+
+total = 0
+total2 = 0
+count = 0
+for y in range(h):
+    f = raw[i]
+    i += 1
+    row = bytearray(raw[i:i+rowlen])
+    i += rowlen
+    for x in range(rowlen):
+        a = row[x - bpp] if x >= bpp else 0
+        b = prev[x]
+        c = prev[x - bpp] if x >= bpp else 0
+        v = row[x]
+        if f == 0:
+            pass
+        elif f == 1:
+            v = (v + a) & 255
+        elif f == 2:
+            v = (v + b) & 255
+        elif f == 3:
+            v = (v + ((a + b) // 2)) & 255
+        elif f == 4:
+            v = (v + paeth(a, b, c)) & 255
+        else:
+            sys.exit(f'bad png filter {f}')
+        row[x] = v
+    prev = row
+    for x in range(0, rowlen, 3):
+        lum = row[x] + row[x+1] + row[x+2]
+        total += lum
+        total2 += lum * lum
+        count += 1
+mean = total / count
+var = total2 / count - mean * mean
+if var < 0:
+    var = 0
+print(f'{w} {h} {mean/3:.2f} {(var ** 0.5)/3:.2f}')
+PY
+}
+
+our_process() {
+  [[ -d "/proc/$PID" ]] || return 1
+  local cmd
+  cmd=$(tr '\0' ' ' <"/proc/$PID/cmdline")
+  [[ "$cmd" == *"$GAME"* ]]
+}
+
+focus_window() {
+  local tries active name apid
+  for tries in 1 2 3 4 5 6 7 8; do
+    xdotool windowactivate --sync "$WID" >/dev/null
+    sleep 0.05
+    active=$(xdotool getactivewindow 2>/dev/null || true)
+    [[ -n "$active" ]] || continue
+    if [[ "$active" == "$WID" ]]; then
+      return 0
+    fi
+    name=$(xdotool getwindowname "$active" 2>/dev/null || true)
+    apid=$(xdotool getwindowpid "$active" 2>/dev/null || true)
+    if [[ "$name" == "ECHOES" && "$apid" == "$PID" ]]; then
+      return 0
+    fi
+  done
+  die "ECHOES window $WID did not take focus (active=$(xdotool getactivewindow 2>/dev/null || echo none))"
+}
+
+check_key() {
+  case "$1" in
+    Return|KP_Enter|Escape|BackSpace|Left|Right|Up|Down|space|z|x|k|p|r|c|shift|a|d|w) ;;
+    *) die "refusing key '$1'" ;;
+  esac
+}
+
+resolve_out() {
+  local path=$1
+  if [[ "$path" == /* ]]; then
+    printf '%s\n' "$path"
+  else
+    printf '%s\n' "$REPO/$path"
+  fi
+}
+
+cmd_launch() {
+  need love
+  need xdotool
+  need xwininfo
+  need ffmpeg
+  need python3
+  [[ -n "${DISPLAY:-}" ]] || die "DISPLAY is unset; Echoes needs an X11 display"
+  [[ -x "$REPO/scripts/play.sh" ]] || die "missing $REPO/scripts/play.sh"
+  if [[ -f "$CURRENT" ]]; then
+    # shellcheck disable=SC1090
+    source "$CURRENT"
+    if [[ -n "${PID:-}" ]] && our_process; then
+      die "a verification window is already running (pid $PID). cleanup before launch"
+    fi
+  fi
+  local others
+  others=$(xdotool search --name '^ECHOES$' 2>/dev/null || true)
+  if [[ -n "$others" ]]; then
+    die "an ECHOES window is already on $DISPLAY; refusing to share the display"
+  fi
+  LOVE_BIN=$(command -v "${LOVE:-love}")
+  local ver
+  ver=$("$LOVE_BIN" --version 2>&1 | head -n 1)
+  [[ "$ver" == LOVE\ 11.5* ]] || die "need LOVE 11.5, found: $ver"
+  ROOT=$(mktemp -d /tmp/echoes-verify-XXXXXX)
+  DATA="$ROOT/data"
+  SAVE_DIR="$DATA/love/echoes"
+  mkdir -p "$DATA" "$EVIDENCE_ROOT"
+  (
+    export XDG_DATA_HOME="$DATA"
+    export LOVE="$LOVE_BIN"
+    cd "$REPO"
+    exec "$REPO/scripts/play.sh"
+  ) >"$ROOT/love.log" 2>&1 &
+  PID=$!
+  WID=
+  local i
+  for i in $(seq 1 100); do
+    if ! kill -0 "$PID" 2>/dev/null; then
+      echo "love exited during startup; log follows" >&2
+      cat "$ROOT/love.log" >&2 || true
+      fail_launch "love exited during startup"
+    fi
+    WID=$(xdotool search --pid "$PID" --name '^ECHOES$' 2>/dev/null | head -n 1 || true)
+    if [[ -n "$WID" ]]; then
+      break
+    fi
+    sleep 0.1
+  done
+  [[ -n "$WID" ]] || fail_launch "ECHOES window did not appear; see $ROOT/love.log"
+  xdotool windowmove "$WID" 80 80 >/dev/null
+  xdotool windowsize "$WID" 960 540 >/dev/null
+  DISPLAY=$DISPLAY
+  save_state
+  local ready=0 stats w h mean stdev
+  for i in $(seq 1 40); do
+    xdotool windowactivate "$WID" >/dev/null 2>&1 || true
+    xdotool mousemove --screen 0 0 0 >/dev/null 2>&1 || true
+    if grab_screen "$ROOT/ready.png" 2>/dev/null; then
+      stats=$(png_stats "$ROOT/ready.png" || true)
+      read -r w h mean stdev <<<"${stats:-0 0 0 0}"
+      # A painted title is dark but not a flat framebuffer.
+      if awk -v m="$mean" -v s="$stdev" 'BEGIN{exit !(m>5 && m<80 && s>4)}'; then
+        ready=1
+        break
+      fi
+    fi
+    sleep 0.15
+  done
+  if [[ "$ready" != 1 ]]; then
+    echo "window never painted a title frame; log follows" >&2
+    cat "$ROOT/love.log" >&2 || true
+    fail_launch "window never became usable"
+  fi
+  rm -f "$ROOT/ready.png"
+  printf 'READY pid=%s window=%s title=ECHOES data=%s save=%s evidence=%s\n' \
+    "$PID" "$WID" "$DATA" "$SAVE_DIR" "$EVIDENCE_ROOT"
+}
+
+cmd_doctor() {
+  load_state
+  local reason= ver cmd data_env name class
+  reason=
+  if ! our_process; then
+    reason="pid $PID is not the Echoes process"
+  fi
+  ver=$("$LOVE_BIN" --version 2>&1 | head -n 1 || true)
+  [[ "$ver" == LOVE\ 11.5* ]] || reason="love version is '${ver:-missing}', want LOVE 11.5"
+  if [[ -z "$reason" ]]; then
+    local exe love_real
+    exe=$(readlink -f "/proc/$PID/exe" 2>/dev/null || true)
+    love_real=$(readlink -f "$LOVE_BIN" 2>/dev/null || true)
+    [[ -n "$exe" && "$exe" == "$love_real" ]] || reason="running binary is '${exe:-missing}', want $love_real"
+  fi
+  if [[ -z "$reason" ]]; then
+    cmd=$(tr '\0' ' ' <"/proc/$PID/cmdline")
+    [[ "$cmd" == *"$GAME"* ]] || reason="process command does not include $GAME"
+    data_env=$(tr '\0' '\n' <"/proc/$PID/environ" | awk -F= '$1=="XDG_DATA_HOME"{print substr($0, index($0,"=")+1)}')
+    [[ "$data_env" == "$DATA" ]] || reason="XDG_DATA_HOME is '${data_env:-unset}', want $DATA"
+  fi
+  if [[ -z "$reason" ]] && ! window_alive; then
+    reason="window $WID is gone"
+  fi
+  if [[ -z "$reason" ]]; then
+    name=$(xdotool getwindowname "$WID")
+    [[ "$name" == "ECHOES" ]] || reason="window title is '$name', want ECHOES"
+    class=$(xprop -id "$WID" WM_CLASS 2>/dev/null || true)
+    [[ "$class" == *love-11.5* ]] || reason="window class is '$class', want love-11.5"
+    local wpid
+    wpid=$(xdotool getwindowpid "$WID" 2>/dev/null || true)
+    [[ "$wpid" == "$PID" ]] || reason="window pid is '${wpid:-none}', want $PID"
+    client_geometry
+    [[ "$GEO_W" == 960 && "$GEO_H" == 540 ]] || reason="window size is ${GEO_W}x${GEO_H}, want 960x540"
+    local count
+    count=$(xdotool search --name '^ECHOES$' 2>/dev/null | wc -l)
+    [[ "$count" == 1 ]] || reason="found $count ECHOES windows on this display"
+  fi
+  if [[ -n "$reason" ]]; then
+    printf 'not ok\n%s\n' "$reason"
+    exit 1
+  fi
+  local focused=no active
+  active=$(xdotool getactivewindow 2>/dev/null || true)
+  if [[ "$active" == "$WID" ]]; then
+    focused=yes
+  elif [[ -n "$active" ]]; then
+    name=$(xdotool getwindowname "$active" 2>/dev/null || true)
+    local apid
+    apid=$(xdotool getwindowpid "$active" 2>/dev/null || true)
+    if [[ "$name" == "ECHOES" && "$apid" == "$PID" ]]; then
+      focused=yes
+    fi
+  fi
+  local save_file=absent
+  [[ -f "$SAVE_DIR/save.txt" ]] && save_file=present
+  printf 'ok\n'
+  printf 'version: %s\n' "$ver"
+  printf 'pid: %s\n' "$PID"
+  printf 'window: %s ECHOES\n' "$WID"
+  printf 'class: love-11.5\n'
+  printf 'size: 960x540\n'
+  printf 'data: %s\n' "$DATA"
+  printf 'save: %s\n' "$SAVE_DIR"
+  printf 'save_file: %s\n' "$save_file"
+  printf 'focused: %s\n' "$focused"
+  printf 'evidence: %s\n' "$EVIDENCE_ROOT"
+}
+
+cmd_key() {
+  load_state
+  [[ $# -eq 1 ]] || die "key needs one key name"
+  check_key "$1"
+  our_process || die "pid $PID is not running"
+  focus_window
+  xdotool key --clearmodifiers "$1"
+  sleep 0.12
+}
+
+cmd_keydown() {
+  load_state
+  [[ $# -eq 1 ]] || die "keydown needs one key name"
+  check_key "$1"
+  our_process || die "pid $PID is not running"
+  focus_window
+  xdotool keydown --clearmodifiers "$1"
+}
+
+cmd_keyup() {
+  load_state
+  [[ $# -eq 1 ]] || die "keyup needs one key name"
+  check_key "$1"
+  our_process || die "pid $PID is not running"
+  focus_window
+  xdotool keyup --clearmodifiers "$1"
+}
+
+cmd_wait() {
+  [[ $# -eq 1 ]] || die "wait needs seconds"
+  [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "wait seconds must be a number"
+  sleep "$1"
+}
+
+cmd_screenshot() {
+  load_state
+  local path=
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --path)
+        path=${2:-}
+        shift 2
+        ;;
+      *) die "unknown screenshot arg '$1'" ;;
+    esac
+  done
+  [[ -n "$path" ]] || die "screenshot requires --path"
+  our_process || die "pid $PID is not running"
+  local dest
+  dest=$(resolve_out "$path")
+  # The pointer sits on the game if left over a control. Park it off the window.
+  xdotool mousemove --screen 0 0 0 >/dev/null
+  sleep 0.05
+  grab_screen "$dest"
+  local stats
+  stats=$(png_stats "$dest")
+  [[ "$stats" == 960\ 540\ * ]] || die "screenshot is '$stats', want 960x540"
+  printf '%s\n' "$dest"
+}
+
+cmd_save_cat() {
+  load_state
+  local out=
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --out)
+        out=${2:-}
+        shift 2
+        ;;
+      *) die "unknown save-cat arg '$1'" ;;
+    esac
+  done
+  local body
+  if [[ -f "$SAVE_DIR/save.txt" ]]; then
+    body=$(cat "$SAVE_DIR/save.txt")
+  else
+    body='no save file'
+  fi
+  printf '%s\n' "$body"
+  if [[ -n "$out" ]]; then
+    local dest
+    dest=$(resolve_out "$out")
+    mkdir -p "$(dirname "$dest")"
+    printf '%s\n' "$body" >"$dest"
+    printf '%s\n' "$dest" >&2
+  fi
+}
+
+cmd_cleanup() {
+  if [[ ! -f "$CURRENT" ]]; then
+    printf 'nothing to clean\n'
+    exit 0
+  fi
+  # shellcheck disable=SC1090
+  source "$CURRENT"
+  if [[ -n "${PID:-}" ]] && [[ -d "/proc/$PID" ]]; then
+    local cmd
+    cmd=$(tr '\0' ' ' <"/proc/$PID/cmdline" || true)
+    if [[ "$cmd" == *"${GAME:-/game}"* ]]; then
+      kill "$PID" 2>/dev/null || true
+      local i
+      for i in 1 2 3 4 5 6 7 8 9 10; do
+        kill -0 "$PID" 2>/dev/null || break
+        sleep 0.1
+      done
+      if kill -0 "$PID" 2>/dev/null; then
+        kill -9 "$PID" 2>/dev/null || true
+      fi
+    fi
+  fi
+  if [[ -n "${ROOT:-}" && "$ROOT" == /tmp/echoes-verify-* ]]; then
+    rm -rf "$ROOT"
+  fi
+  rm -f "$CURRENT"
+  printf 'cleaned\n'
+  printf 'evidence: %s\n' "$EVIDENCE_ROOT"
+}
+
+main() {
+  local cmd=${1:-}
+  shift || true
+  case "$cmd" in
+    launch) cmd_launch "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    key) cmd_key "$@" ;;
+    keydown) cmd_keydown "$@" ;;
+    keyup) cmd_keyup "$@" ;;
+    wait) cmd_wait "$@" ;;
+    screenshot) cmd_screenshot "$@" ;;
+    save-cat) cmd_save_cat "$@" ;;
+    cleanup) cmd_cleanup "$@" ;;
+    *) die "usage: verify-echoes launch|doctor|key|keydown|keyup|wait|screenshot|save-cat|cleanup" ;;
+  esac
+}
+
+main "$@"
