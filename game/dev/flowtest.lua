@@ -302,7 +302,15 @@ function F.run(Scenes)
     Levels[#Levels + 1] = { name = name, hint = '', map = rows }
     return #Levels
   end
+  local function waitIdle()
+    -- coverage is 0 on the first frame of the close, while the iris is already busy.
+    if Trans.busy() or Trans.coverage() > 0 then
+      runUntil(function() return not Trans.busy() and Trans.coverage() == 0 end)
+    end
+  end
   local function startPlaying(index)
+    -- The clear card appears while its iris is still opening. Wait or the next level never starts.
+    waitIdle()
     local slot = index - 1
     local prev = store.data.levels[slot]
     if not Progress.unlocked(store.data, index) then store.data.levels[slot] = { done = true } end
@@ -316,9 +324,6 @@ function F.run(Scenes)
   local function hold(dir, pred)
     Scenes.inputSource = function() return { [dir] = true } end
     runUntil(pred)
-  end
-  local function waitIdle()
-    runUntil(function() return Trans.coverage() == 0 end)
   end
   local function respawnFrom(dying)
     Scenes.inputSource = function() return {} end
@@ -371,19 +376,22 @@ function F.run(Scenes)
   check('rewound death level starts', startPlaying(rewound))
   local rewoundWorld = Scenes.playing.world
   hold('right', function() return rewoundWorld.player.state == 'dead' end)
+  local deathX = rewoundWorld.player.x
   Scenes.inputSource = function() return { rewind = true } end
+  -- Far enough back that leftover speed does not slide into the spikes again.
   runUntil(function()
     local p = rewoundWorld.player
-    return p.state == 'ground' or p.state == 'air'
+    return Scenes.playing.world == rewoundWorld and (p.state == 'ground' or p.state == 'air') and p.x <= deathX - 32
   end)
   local revived = rewoundWorld.player
   check('rewinding through a death revives the player on the same attempt',
-    Scenes.playing.world == rewoundWorld and (revived.state == 'ground' or revived.state == 'air'),
-    'state=' .. revived.state)
+    Scenes.playing.world == rewoundWorld and (revived.state == 'ground' or revived.state == 'air') and revived.x <= deathX - 32,
+    ('state=%s x=%.1f deathX=%.1f'):format(revived.state, revived.x, deathX))
   clearWalking('left')
   local rewoundDeaths, rewoundLine = savedLine(rewound)
   check('the clear card and save record the rewound death count',
-    Scenes.name == 'levelclear' and Scenes.levelclear.index == rewound and Scenes.levelclear.deaths == 0 and rewoundDeaths == 0,
+    Scenes.playing.world == rewoundWorld and Scenes.name == 'levelclear' and Scenes.levelclear.index == rewound
+    and Scenes.levelclear.deaths == 0 and rewoundDeaths == 0,
     ('card=%s saved=%s %s'):format(tostring(Scenes.levelclear.deaths), tostring(rewoundDeaths), rewoundLine))
 
   local fresh = addLevel('No waystone', flat)
@@ -471,11 +479,12 @@ function F.run(Scenes)
     Scenes.update()
     if Scenes.playing.world == lateWorld then minX = math.min(minX, lateWorld.player.x) end
   end
-  local late = lateWorld.player
+  local now = Scenes.playing.world
+  local late = now.player
   check('rewind during the death fade undoes the death',
-    iris and Scenes.playing.world == lateWorld and (late.state == 'ground' or late.state == 'air') and late.x < xIris,
+    iris and now == lateWorld and (late.state == 'ground' or late.state == 'air') and late.x < xIris,
     ('iris=%s same=%s state=%s xIris=%.1f minX=%.1f x=%.1f'):format(
-      tostring(iris), tostring(Scenes.playing.world == lateWorld), late.state, xIris, minX, late.x))
+      tostring(iris), tostring(now == lateWorld), late.state, xIris, minX, late.x))
 
   Scenes.inputSource = function() return {} end
   while #Levels > levelCount do Levels[#Levels] = nil end
