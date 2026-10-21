@@ -207,4 +207,29 @@ return function(check)
   check('expired echo empties its slot', not Model.slots(world)[1].alive)
   Solutions.run(world, { { 200, '-' } })
   check('HUD memory caps at one full buffer', Model.memory(world) == 1)
+
+  local c5994, c5996, c60, c11996 = Model.clock(59.94), Model.clock(59.96), Model.clock(60), Model.clock(119.96)
+  check('clock carries a rounded 60 seconds into the next minute',
+    c5994 == '0:59.9' and c5996 == '1:00.0' and c60 == '1:00.0' and c11996 == '2:00.0',
+    ('59.94=%s 59.96=%s 60=%s 119.96=%s'):format(c5994, c5996, c60, c11996))
+
+  local function echoFrames(n)
+    local frames = {}
+    for i = 1, n do frames[i] = { x = 40, y = 40, facing = 1, state = 'air' } end
+    return frames
+  end
+  local function haltedEcho(lingerT)
+    local e = Echo.new(echoFrames(92))
+    e.halted, e.i, e.lingerT = true, 31, lingerT
+    return e
+  end
+  local last = haltedEcho(Echo.LINGER + Echo.FADE)
+  local fresh = haltedEcho(0)
+  local slots = Model.slots({ echoes = { last, fresh } })
+  local total = 92 * (1 / 60) + Echo.LINGER + Echo.FADE
+  local freshLife = (Echo.LINGER + Echo.FADE) / total
+  check('a halted echo is not shown as replaying and drops the frames it will never play',
+    slots[1].alive and not slots[1].replaying and math.abs(slots[1].frac) < 1e-9
+      and slots[2].alive and not slots[2].replaying and math.abs(slots[2].frac - freshLife) < 1e-9,
+    ('halted=true i=31 frames=92 lastFrac=%.3f lastReplaying=%s'):format(slots[1].frac, tostring(slots[1].replaying)))
 end
