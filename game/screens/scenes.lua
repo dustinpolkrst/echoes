@@ -93,7 +93,7 @@ local function followCamera(stage, snap)
 end
 
 
-local stats = { deaths = 0 }
+local playing = { deaths = 0 }
 
 local DUST = { 0.55, 0.55, 0.8 }
 local function react(stage, ev)
@@ -108,7 +108,7 @@ local function react(stage, ev)
   elseif ev.name == 'death' then
     Sfx.play('death')
     Input.rumble(0.6, 0.25)
-    stats.deaths = stats.deaths + 1
+    playing.deaths = (playing.deaths or 0) + 1
     stage.shake = data().settings.shake and 5 or 0
     burst(34, { speed = 110, life = 0.8, grav = 120, drag = 1.2, color = { 1, 0.7, 0.25 }, glow = true, size = 2 })
     burst(16, { speed = 60, life = 1.0, grav = -10, color = { 1, 0.95, 0.7 }, glow = true })
@@ -278,7 +278,7 @@ function S.to(name, ...)
 end
 
 local function startLevel(index)
-  stats = { deaths = 0 }
+  playing.deaths = 0
   S.to('playing', index)
 end
 
@@ -348,21 +348,40 @@ end
 S.title.actions = menuActions(function() return S.title.menu end)
 
 
-local playing = {}
 S.playing = playing
 
--- Death and R retry from the last waystone and keep the clock running; the pause menu's Restart level
--- starts the level over with a fresh clock. A taken ember survives a retry only once a waystone has been lit
--- while carrying it, so an ember grabbed on the way to dying is not kept.
+-- Deaths and the ember bank ride the timeline. Rewind reads them back off the state it lands on.
+local function noteTimeline()
+  local snap = playing.timeline.states[playing.timeline.last]
+  snap.deaths = playing.deaths or 0
+  snap.emberBanked = not not playing.emberBanked
+end
+
+local function restoreTimeline()
+  local snap = playing.timeline.states[playing.timeline.last]
+  playing.deaths = snap.deaths or 0
+  playing.emberBanked = snap.emberBanked and true or false
+end
+
+-- Death and R retry from the last waystone and keep the clock and the deaths. A death with no waystone,
+-- and Restart level from the pause menu, start the attempt over: a fresh clock and no deaths. A taken ember
+-- survives a retry only once a waystone was lit while carrying it, so an ember grabbed on the way to dying
+-- is not kept.
 local function loadAttempt(fromCheckpoint)
   local checkpoint = fromCheckpoint and playing.world and playing.world.respawn or nil
-  if not checkpoint then playing.emberBanked = false end
+  if not checkpoint then
+    playing.emberBanked = false
+    playing.deaths = 0
+  end
   setStage(playing, Level.new(Levels[playing.index], { checkpoint = checkpoint }))
   if playing.emberBanked then
     for _, c in ipairs(playing.world.embers) do c.taken = true end
   end
   playing.timeline = Timeline.new(playing.world)
+  noteTimeline()
   playing.rewindT = 0
+  playing.respawnArmed = false
+  playing.fadeRewound = false
   if not checkpoint then
     playing.t = 0
     playing.attemptT = 0
@@ -393,6 +412,10 @@ local function rewind(world)
   for _ = 1, speed do
     moved = Timeline.back(playing.timeline, world) or moved
   end
+  if moved then
+    playing.fadeRewound = true
+    restoreTimeline()
+  end
   if moved and floor(playing.rewindT * 60) % 5 == 0 then Sfx.play('rewind', 0.9 + 0.1 * speed) end
   playing.rewindT = playing.rewindT + DT
   Particles.update(playing.particles, DT)
@@ -413,14 +436,26 @@ function playing.update()
     for _, ev in ipairs(world.events) do
       if ev.name == 'checkpoint' and world:emberTaken() then playing.emberBanked = true end
     end
+    noteTimeline()
   end
   playing.t = playing.t + DT
   p = world.player
   if p.state ~= 'cleared' then playing.attemptT = playing.attemptT + DT end
   followCamera(playing)
-  if p.state == 'dead' and p.stateT >= DEATH_WAIT and not input.rewind then
+  if p.state == 'dead' and p.stateT >= DEATH_WAIT and not input.rewind and not playing.respawnArmed then
     local cx, cy = playerFocus()
-    Trans.start(function() loadAttempt(true) end, cx, cy)
+    local doomed = world
+    -- Rewind during the close moves this world backward. Leave it there instead of building a respawn.
+    if Trans.start(function()
+      playing.respawnArmed = false
+      if playing.world ~= doomed or playing.fadeRewound or playing.rewinding or doomed.player.state ~= 'dead' then
+        return
+      end
+      loadAttempt(true)
+    end, cx, cy) then
+      playing.respawnArmed = true
+      playing.fadeRewound = false
+    end
   elseif p.state == 'cleared' and p.stateT >= 1.1 then
     local cx, cy = playerFocus()
     Trans.start(function() S.go('levelclear', playing.index, playing.attemptT, world:emberTaken()) end, cx, cy)
@@ -456,7 +491,7 @@ function playing.drawUI()
     Ui.text(Input.hint(world.hint), f.mid, 110, C.white, a)
   end
   Hud.draw(world, {
-    index = playing.index, name = world.name, time = playing.attemptT, deaths = stats.deaths,
+    index = playing.index, name = world.name, time = playing.attemptT, deaths = playing.deaths,
     camx = playing.cam.x, camy = playing.cam.y, nameAlpha = 1 - a, checkpointT = playing.checkpointT,
     emberT = playing.emberT,
   })
@@ -791,7 +826,7 @@ S.levelclear = clear
 
 function clear.enter(index, time, ember)
   clear.index, clear.time, clear.t, clear.ember = index, time, 0, ember
-  clear.deaths = stats.deaths
+  clear.deaths = playing.deaths
   clear.result = Save.recordClear(data(), index, time, clear.deaths, ember)
   persist()
   local last = index >= #Levels
