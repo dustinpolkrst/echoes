@@ -781,6 +781,26 @@ local function testGamepadInput()
   local acts = Input.fromButton('start')
   check('pad Start maps to pause', acts[1] == 'pause')
   check('hint swaps button names for pad', Input.hint('Jump with Z, Space or Up.') == 'Jump with A.')
+
+  local zHeld = true
+  local function zKeys(k) return zHeld and k == 'z' end
+  Input.requireRelease()
+  check('Z held across requireRelease does not jump', not Input.read({}, zKeys).jump)
+  zHeld = false
+  check('releasing Z leaves jump clear', not Input.read({}, zKeys).jump)
+  zHeld = true
+  check('a fresh Z after that release still jumps', Input.read({}, zKeys).jump)
+  zHeld = false
+
+  local aDown = { a = true }
+  local aPad = fakePad(aDown)
+  local function readA() return Input.read({ aPad }, noKeys) end
+  Input.requireRelease()
+  check('gamepad A held across requireRelease does not jump', not readA().jump)
+  aDown.a = false
+  check('releasing A leaves jump clear', not readA().jump)
+  aDown.a = true
+  check('a fresh A after that release still jumps', readA().jump)
 end
 
 function S.run()
