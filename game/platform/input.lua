@@ -25,6 +25,8 @@ Input.lastDevice = 'key'
 Input.sceneEpoch = 0
 
 local freshKeys = {}
+local readEpoch = 0
+local jumpBlocked = false
 
 function Input.requireRelease()
   Input.sceneEpoch = Input.sceneEpoch + 1
@@ -143,6 +145,18 @@ function Input.read(joysticks, keyDown)
     input[name] = k or p
     keyUsed = keyUsed or k
     padUsed = padUsed or p
+  end
+  -- Jump shares confirm (Z, Space, A). A hold that crosses a scene stays ignored until release.
+  if readEpoch ~= Input.sceneEpoch then
+    readEpoch = Input.sceneEpoch
+    jumpBlocked = input.jump
+  end
+  if jumpBlocked then
+    if input.jump then
+      input.jump = false
+    else
+      jumpBlocked = false
+    end
   end
   if padUsed and not keyUsed then Input.lastDevice = 'pad' elseif keyUsed then Input.lastDevice = 'key' end
   return input
