@@ -258,6 +258,28 @@ local function testMirror()
   check('cast off the mirror is a plain echo', not w.echoes[1].mirrored and w.doorOpen.a == false)
 end
 
+-- --selftest disables graphics. Record the circles the memory trail would paint.
+local function memoryTrailMark(world)
+  local circles = {}
+  local stub = setmetatable({
+    newQuad = function() return {} end,
+    circle = function(_, x, y, r)
+      circles[#circles + 1] = { x = x, y = y, r = r }
+    end,
+  }, { __index = function() return function() end end })
+  local saved = love.graphics
+  love.graphics = stub
+  local Render = require 'gfx.render'
+  love.graphics = saved
+  Render.t = Render.t or 0
+  local ok, err = pcall(Render.drawGlows, world, 0, 0)
+  local stop
+  for i = 1, #circles do
+    if circles[i].r == 2 then stop = circles[i] end
+  end
+  return ok, err, stop, #circles
+end
+
 local function testVeil()
   local rows = {
     '##########',
@@ -273,12 +295,20 @@ local function testVeil()
   local w = arena(rows)
   run(w, { { 'R', cond.atX(4 * 16 + 3) }, { '-', cond.grounded } })
   check('player falls through a veil', w.player.y + w.player.h == 8 * 16, ('bottom=%.1f'):format(w.player.y + w.player.h))
+  local drew, err, stop, dots = memoryTrailMark(w)
   idle(w, 1, 'X')
   run(w, { { '-', function(c) return c.echoes[1]:arrived() end } })
   local e = w.echoes[1]
   local veilTop = 4 * 16
   check('echo halts touching the veil', e.halted and math.abs(e.y + e.h - veilTop) < 0.05,
     ('echo bottom=%.3f veil top=%d'):format(e.y + e.h, veilTop))
+  local cx = math.floor(e.x + e.w / 2) + 0.5
+  local cy = math.floor(e.y + e.h / 2) + 0.5
+  check('memory trail marks the stop on the veil',
+    drew and stop ~= nil and e.halted and stop.x == cx and stop.y == cy and not w:inVeil(e.x, e.y, e.w, e.h),
+    ('drew=%s err=%s dots=%d stop=%s echo=%.1f,%.1f bottom=%.2f veilTop=%d'):format(
+      tostring(drew), err and tostring(err) or 'nil', dots,
+      stop and ('%.1f,%.1f'):format(stop.x, stop.y) or 'nil', cx, cy, e.y + e.h, veilTop))
   local haltY = e.y
   idle(w, 30)
   check('halted echo stays put', w.echoes[1].y == haltY and w.echoes[1]:isSolid())

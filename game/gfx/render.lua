@@ -768,6 +768,32 @@ local function trailDot(x, y, r, a, col)
   gfx.circle('fill', floor(x + Echo.W / 2) + 0.5, floor(y + Echo.H / 2) + 0.5, r, 6)
 end
 
+-- The trail samples every TRAIL_STEP frames, so the sample that first overlaps the veil is already inside it.
+-- An echo stops on the last fraction before the first overlapping frame and stands on the veil. Mark that spot.
+local function veilContact(world, pose, k)
+  local j = k
+  for i = math.max(2, k - TRAIL_STEP + 1), k do
+    local f = pose(i)
+    if world:inVeil(f.x, f.y, Echo.W, Echo.H) then
+      j = i
+      break
+    end
+  end
+  if j < 2 then
+    local f = pose(k)
+    return f.x, f.y
+  end
+  local a, b = pose(j - 1), pose(j)
+  local lo, hi = 0, 1
+  for _ = 1, 10 do
+    local mid = (lo + hi) / 2
+    local x = a.x + (b.x - a.x) * mid
+    local y = a.y + (b.y - a.y) * mid
+    if world:inVeil(x, y, Echo.W, Echo.H) then hi = mid else lo = mid end
+  end
+  return a.x + (b.x - a.x) * lo, a.y + (b.y - a.y) * lo
+end
+
 local function drawMemoryTrail(world)
   local p = world.player
   local rec = world.rec
@@ -784,7 +810,8 @@ local function drawMemoryTrail(world)
   for k = 1, rec.count - TRAIL_STEP, TRAIL_STEP do
     local f = at(k)
     if world:inVeil(f.x, f.y, Echo.W, Echo.H) then
-      trailDot(f.x, f.y, 2, 0.4, pal.edge)
+      local x, y = veilContact(world, at, k)
+      trailDot(x, y, 2, 0.4, pal.edge)
       break
     end
     trailDot(f.x, f.y, 1, 0.25 + 0.45 * k / rec.count, pal.core)
