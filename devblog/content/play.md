@@ -16,22 +16,50 @@ This is the whole game, built for the browser with [love.js](https://github.com/
 <script>
   (function () {
     var frame = document.getElementById('echoes');
-    var screen = frame.parentNode;
+    var game = frame.parentNode.parentNode;
     var note = document.getElementById('echoes-note');
+    var button = document.getElementById('echoes-full');
+    function fsElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || null;
+    }
     function refused() {
       note.textContent = 'This browser would not go fullscreen here. Try F inside the game, or open the game on its own page.';
     }
-    document.getElementById('echoes-full').addEventListener('click', function () {
-      var request = screen.requestFullscreen || screen.webkitRequestFullscreen;
+    function exitFs() {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+    // Esc inside the frame does not reach this page. While the page itself is fullscreen,
+    // leave fullscreen instead of letting that key only pause the game. In-game F fullscreens
+    // the frame document, and the page then reports the frame, so that key is left alone.
+    function bindFrameKeys() {
+      var win;
+      try { win = frame.contentWindow; } catch (e) { return; }
+      if (!win || win.__echoesPageFs) return;
+      win.__echoesPageFs = true;
+      win.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var current = fsElement();
+        if (!current || current === frame) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        exitFs();
+      }, true);
+    }
+    frame.addEventListener('load', bindFrameKeys);
+    bindFrameKeys();
+    button.addEventListener('click', function () {
+      if (fsElement()) return exitFs();
+      var request = game.requestFullscreen || game.webkitRequestFullscreen;
       if (!request) return refused();
       try {
-        var result = request.call(screen);
+        var result = request.call(game);
         if (result && result.catch) result.catch(refused);
       } catch (e) {
         refused();
       }
       frame.focus();
-      frame.contentWindow.focus();
+      try { frame.contentWindow.focus(); } catch (err) {}
     });
   })();
 </script>
