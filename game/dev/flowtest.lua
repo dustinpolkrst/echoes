@@ -294,6 +294,192 @@ function F.run(Scenes)
   Scenes.inputSource = function() return {} end
   Levels[#Levels] = nil
 
+  -- A new attempt starts at 0 deaths. Rewind puts a death, and an ember banked on the way, back.
+  -- Restart level and a death with no waystone do too. A waystone death keeps the count and the clock.
+  local Trans = require 'screens.transition'
+  local levelCount = #Levels
+  local function addLevel(name, rows)
+    Levels[#Levels + 1] = { name = name, hint = '', map = rows }
+    return #Levels
+  end
+  local function startPlaying(index)
+    local slot = index - 1
+    local prev = store.data.levels[slot]
+    if not Progress.unlocked(store.data, index) then store.data.levels[slot] = { done = true } end
+    Scenes.inputSource = function() return {} end
+    Scenes.go('select', index)
+    key('return')
+    settle()
+    store.data.levels[slot] = prev
+    return Scenes.name == 'playing' and Scenes.playing.index == index
+  end
+  local function hold(dir, pred)
+    Scenes.inputSource = function() return { [dir] = true } end
+    runUntil(pred)
+  end
+  local function waitIdle()
+    runUntil(function() return Trans.coverage() == 0 end)
+  end
+  local function respawnFrom(dying)
+    Scenes.inputSource = function() return {} end
+    runUntil(function()
+      local w = Scenes.playing.world
+      return w ~= dying and w.player.state ~= 'dead'
+    end)
+    waitIdle()
+  end
+  local function clearWalking(dir)
+    hold(dir, function() return Scenes.playing.world.player.state == 'cleared' end)
+    Scenes.inputSource = function() return {} end
+    runUntil(onCard)
+  end
+  local function savedLine(index)
+    local text = files['save.txt'] or ''
+    local rec = Save.decode(text).levels[index]
+    return rec and rec.bestDeaths, text:match('level ' .. index .. ' [^\n]*') or 'missing'
+  end
+
+  local flat = {
+    '####################',
+    '#..................#',
+    '#G.P...........^^..#',
+    '####################',
+  }
+  local waystone = {
+    '######################',
+    '#....................#',
+    '#G.P..w.........^^...#',
+    '######################',
+  }
+
+  local kept = addLevel('Waystone count', waystone)
+  check('waystone count level starts', startPlaying(kept))
+  local keptWorld = Scenes.playing.world
+  local beforeClock = Scenes.playing.attemptT
+  hold('right', function() return keptWorld.player.state == 'dead' end)
+  respawnFrom(keptWorld)
+  local keptNow = Scenes.playing.world
+  check('waystone death keeps the clock', keptNow ~= keptWorld and keptNow.respawn == 1 and Scenes.playing.attemptT > beforeClock,
+    ('t=%.3f respawn=%s'):format(Scenes.playing.attemptT, tostring(keptNow.respawn)))
+  clearWalking('left')
+  local keptDeaths, keptLine = savedLine(kept)
+  check('waystone death keeps the death count',
+    Scenes.name == 'levelclear' and Scenes.levelclear.index == kept and Scenes.levelclear.deaths == 1 and keptDeaths == 1,
+    ('card=%s saved=%s %s'):format(tostring(Scenes.levelclear.deaths), tostring(keptDeaths), keptLine))
+
+  local rewound = addLevel('Rewound death', flat)
+  check('rewound death level starts', startPlaying(rewound))
+  local rewoundWorld = Scenes.playing.world
+  hold('right', function() return rewoundWorld.player.state == 'dead' end)
+  Scenes.inputSource = function() return { rewind = true } end
+  runUntil(function()
+    local p = rewoundWorld.player
+    return p.state == 'ground' or p.state == 'air'
+  end)
+  local revived = rewoundWorld.player
+  check('rewinding through a death revives the player on the same attempt',
+    Scenes.playing.world == rewoundWorld and (revived.state == 'ground' or revived.state == 'air'),
+    'state=' .. revived.state)
+  clearWalking('left')
+  local rewoundDeaths, rewoundLine = savedLine(rewound)
+  check('the clear card and save record the rewound death count',
+    Scenes.name == 'levelclear' and Scenes.levelclear.index == rewound and Scenes.levelclear.deaths == 0 and rewoundDeaths == 0,
+    ('card=%s saved=%s %s'):format(tostring(Scenes.levelclear.deaths), tostring(rewoundDeaths), rewoundLine))
+
+  local fresh = addLevel('No waystone', flat)
+  check('no waystone level starts', startPlaying(fresh))
+  local freshWorld = Scenes.playing.world
+  local freshX = freshWorld.player.x
+  hold('right', function() return freshWorld.player.state == 'dead' end)
+  respawnFrom(freshWorld)
+  check('a death with no waystone restarts the clock at the start',
+    Scenes.playing.world ~= freshWorld and Scenes.playing.world.respawn == nil
+    and Scenes.playing.attemptT < 1 and math.abs(Scenes.playing.world.player.x - freshX) < 1,
+    ('t=%.3f x=%.1f respawn=%s'):format(Scenes.playing.attemptT, Scenes.playing.world.player.x, tostring(Scenes.playing.world.respawn)))
+  clearWalking('left')
+  local freshDeaths, freshLine = savedLine(fresh)
+  check('a death with no waystone starts the attempt at 0 deaths',
+    Scenes.name == 'levelclear' and Scenes.levelclear.index == fresh and Scenes.levelclear.deaths == 0 and freshDeaths == 0,
+    ('card=%s saved=%s %s'):format(tostring(Scenes.levelclear.deaths), tostring(freshDeaths), freshLine))
+
+  local restarted = addLevel('Restart deaths', waystone)
+  check('restart level starts', startPlaying(restarted))
+  local restartWorld = Scenes.playing.world
+  local restartX = restartWorld.player.x
+  hold('right', function() return restartWorld.player.state == 'dead' end)
+  respawnFrom(restartWorld)
+  local running = Scenes.playing.attemptT
+  Scenes.inputSource = function() return {} end
+  key('p')
+  key('down')
+  key('return')
+  waitIdle()
+  check('pause Restart level restarts the clock at the start',
+    Scenes.name == 'playing' and Scenes.playing.world ~= restartWorld and Scenes.playing.world.respawn == nil
+    and Scenes.playing.attemptT < running and math.abs(Scenes.playing.world.player.x - restartX) < 1,
+    ('t %.3f -> %.3f x=%.1f'):format(running, Scenes.playing.attemptT, Scenes.playing.world.player.x))
+  clearWalking('left')
+  local restartDeaths, restartLine = savedLine(restarted)
+  check('pause Restart level starts the attempt at 0 deaths',
+    Scenes.name == 'levelclear' and Scenes.levelclear.index == restarted and Scenes.levelclear.deaths == 0 and restartDeaths == 0,
+    ('card=%s saved=%s %s'):format(tostring(Scenes.levelclear.deaths), tostring(restartDeaths), restartLine))
+
+  local emberIndex = addLevel('Ember rewind', {
+    '############################',
+    '#..........................#',
+    '#w..*..w..P............^^..#',
+    '############################',
+  })
+  Scenes.go('playing', emberIndex)
+  settle()
+  local emberWorld = Scenes.playing.world
+  hold('left', function() return emberWorld:emberTaken() and emberWorld.respawn == 1 end)
+  check('the ember is banked at the left waystone', emberWorld:emberTaken() and emberWorld.respawn == 1,
+    ('taken=%s respawn=%s'):format(tostring(emberWorld:emberTaken()), tostring(emberWorld.respawn)))
+  Scenes.inputSource = function() return { rewind = true } end
+  runUntil(function() return not emberWorld:emberTaken() and emberWorld.respawn == 2 end)
+  local emberRect = emberWorld.embers[1].rect
+  local parked = not emberWorld:emberTaken() and emberWorld.respawn == 2 and emberWorld.player.x >= emberRect.x + emberRect.w
+  check('rewind puts the ember back and the right waystone in charge', parked,
+    ('taken=%s respawn=%s x=%.1f emberRight=%.1f'):format(tostring(emberWorld:emberTaken()), tostring(emberWorld.respawn), emberWorld.player.x, emberRect.x + emberRect.w))
+  hold('right', function() return emberWorld.player.state == 'dead' end)
+  respawnFrom(emberWorld)
+  check('an ember rewound back to untaken stays untaken after death',
+    Scenes.playing.world ~= emberWorld and Scenes.playing.world.respawn == 2 and not Scenes.playing.world:emberTaken(),
+    ('taken=%s respawn=%s'):format(tostring(Scenes.playing.world:emberTaken()), tostring(Scenes.playing.world.respawn)))
+
+  local lateIndex = addLevel('Late rewind', {
+    '############################',
+    '#..........................#',
+    '#P..w.................^^...#',
+    '############################',
+  })
+  Scenes.go('playing', lateIndex)
+  settle()
+  hold('right', function() return Scenes.playing.world.player.state == 'dead' end)
+  Scenes.inputSource = function() return {} end
+  runUntil(function() return Trans.busy() end)
+  local lateWorld = Scenes.playing.world
+  local xIris = lateWorld.player.x
+  local iris = Trans.busy()
+  Scenes.inputSource = function() return { rewind = true } end
+  local minX = xIris
+  for _ = 1, 3000 do
+    if Scenes.playing.world ~= lateWorld then break end
+    local p = lateWorld.player
+    if p.state == 'ground' or p.state == 'air' then break end
+    Scenes.update()
+    if Scenes.playing.world == lateWorld then minX = math.min(minX, lateWorld.player.x) end
+  end
+  local late = lateWorld.player
+  check('rewind during the death fade undoes the death',
+    iris and Scenes.playing.world == lateWorld and (late.state == 'ground' or late.state == 'air') and late.x < xIris,
+    ('iris=%s same=%s state=%s xIris=%.1f minX=%.1f x=%.1f'):format(
+      tostring(iris), tostring(Scenes.playing.world == lateWorld), late.state, xIris, minX, late.x))
+
+  Scenes.inputSource = function() return {} end
+  while #Levels > levelCount do Levels[#Levels] = nil end
+
   local function drawnWorld(doorRow)
     local row = '#' .. doorRow .. '#'
     local w = Level.new({ name = 'door test', map = { '################', row, row, row, '#P.............#', '################' } })
