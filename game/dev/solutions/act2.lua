@@ -129,14 +129,32 @@ embers['Undertow'] = {
   { 'L', atLastEcho }, { 'J', onLastEcho }, { 4, '-' }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
 }
 
--- Underfoot: the ghost on the plate holds every door on it. The one above the bridge is open
--- for the same seven seconds as the hatch. What is up there before the long run?
+-- Underfoot: the stone above the bridge holds the ghost you just cast. It does not hold you.
+-- What is underneath, before the long run?
 embers['Underfoot'] = (function(p)
+  local SHELF, BRIDGE = 5, 8
+  local function ceilingOpen(w)
+    local e = w.echoes[#w.echoes]
+    if not (e and e:arrived()) then return false end
+    local tx = math.floor((e.x + e.w / 2) / 16)
+    for _, c in ipairs(w.crumbles) do
+      if c.ty == SHELF and c.tx == tx and c.gone then return true end
+    end
+    return false
+  end
+  local function bridgeRegrown(w)
+    for _, c in ipairs(w.crumbles) do
+      if c.ty == BRIDGE and c.gone then return false end
+    end
+    return true
+  end
   return {
+    { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) },
+    { 'R', atX(480) }, { 12, '-' }, { 1, 'X' }, { '-', ceilingOpen },
+    { 16, 'LJ' }, { 'L', onTop(128, 200, 520) },
+    { 'L', atXLeft(300) }, { '-', bridgeRegrown },
     { 'L', atXLeft(p.hopX) }, { p.hopHold, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
     { p.stand, '-' }, { 1, 'X' }, { p.leaveDelay, '-' },
-    { 'R', atX(250) }, { 10, 'RJ' }, { 'R', onTop(96, 256, 336) }, { 'R', atX(300) },
-    { 'L', onTop(128) },
     { 'R', atX(420) }, { '-', onTop(224) }, { 'R', atX(470) },
   }
 end)(S.decisions(strategies['Underfoot']))
