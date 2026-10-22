@@ -1,6 +1,7 @@
 local Echo = require 'world.echo'
 local Ui = require 'gfx.ui'
 local Model = require 'gfx.hudmodel'
+local Style = require 'gfx.style'
 
 local gfx = love.graphics
 local sin, pi = math.sin, math.pi
@@ -77,8 +78,9 @@ local function drawCheckpointLabel(world, ctx)
   Ui.text('waystone lit', Ui.fonts.small, y, BEACON, a, x - 100, 200, 'center')
 end
 
--- ctx: index, name, time, deaths, camx, camy, checkpointT (seconds since a waystone lit, or nil)
 function Hud.draw(world, ctx)
+  local themed = Style.look and Style.look.hud
+  if themed then return themed(world, ctx) end
   local f, t = Ui.fonts, Ui.time()
   drawPlayerRing(world, ctx.camx, ctx.camy, t)
   drawCheckpointLabel(world, ctx)

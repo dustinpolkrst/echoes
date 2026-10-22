@@ -1,6 +1,7 @@
 local Level = require 'world.level'
 local Echo = require 'world.echo'
 local Assets = require 'platform.assets'
+local Style = require 'gfx.style'
 
 local gfx = love.graphics
 local TILES = Level.TILES
@@ -10,7 +11,7 @@ local floor, sin, cos, pi, min, max = math.floor, math.sin, math.cos, math.pi, m
 local R = { W = 480, H = 270, scale = 2, ox = 0, oy = 0 }
 
 local AMBIENT = { 0.26, 0.25, 0.46 }
-local PLATE_COLORS = { { 0.35, 0.95, 1 }, { 1, 0.45, 0.85 }, { 1, 0.85, 0.35 }, { 0.55, 1, 0.5 } }
+local PLATE_COLORS = Style.plates
 local MIRROR = { 0.8, 0.5, 1 }
 local VEIL = { 1, 0.72, 0.3 }
 local BEACON = { 0.6, 1, 0.8 }
@@ -79,13 +80,10 @@ local function glow(x, y, r, cr, cg, cb, a)
   gfx.draw(R.glowImg, x - r, y - r, 0, 2 * r / 128, 2 * r / 128)
 end
 R.glow = glow
-
--- Sprite slots -------------------------------------------------------------
+Style.glow = glow
 
 local scratchQuad = gfx.newQuad(0, 0, 1, 1, 1, 1)
 
--- Draws the slot's sprite and returns true, or returns false when no file exists so the caller
--- runs its procedural drawing. opts: frame, v (0..1 variant pick), flip (+-1), sx, sy, tint, alpha, crop (visible height).
 local function drawSlot(name, x, y, o)
   local s = Assets.sprite(name)
   if not s then return false end
@@ -394,28 +392,36 @@ end
 
 local function variantOf(c) return { v = hash(c.tx, c.ty) } end
 
-TILES.solid.draw = withSlot('solid', proceduralSolid, variantOf)
-TILES.oneway.draw = withSlot('oneway', proceduralOneway, variantOf)
-TILES.spike.draw = withSlot('spike', proceduralSpike)
-TILES.torch.draw = withSlot('torch', proceduralTorch)
-TILES.goal.draw = withSlot('goal', proceduralGoal)
-TILES.plate.draw = withSlot('plate', proceduralPlate, function(c)
-  return { frame = c.pressed and 2 or 1, tint = PLATE_COLORS[c.idx] }
-end)
-TILES.mirror.draw = withSlot('mirror', proceduralMirror)
-TILES.veil.draw = withSlot('veil', proceduralVeil)
-TILES.crumble.draw = withSlot('crumble', proceduralCrumble, function(c)
-  return { frame = c.gone and 3 or c.crack and 2 or 1 }
-end)
-local drawEmber = withSlot('ember', proceduralEmber)
-TILES.ember.draw = function(world, c, x, y, t)
-  if not c.taken then drawEmber(world, c, x, y, t) end
+local function adopt(name, fn)
+  return function(world, c, x, y, t)
+    local tiles = Style.look and Style.look.tiles
+    local alt = tiles and tiles[name]
+    if alt then return alt(world, c, x, y, t) end
+    return fn(world, c, x, y, t)
+  end
 end
-TILES.checkpoint.draw = withSlot('checkpoint', proceduralCheckpoint, function(c)
-  return { frame = c.active and 2 or 1 }
-end)
 
--- Doors span several cells, so each door piece is drawn as one slab rather than per tile.
+TILES.solid.draw = adopt('solid', withSlot('solid', proceduralSolid, variantOf))
+TILES.oneway.draw = adopt('oneway', withSlot('oneway', proceduralOneway, variantOf))
+TILES.spike.draw = adopt('spike', withSlot('spike', proceduralSpike))
+TILES.torch.draw = adopt('torch', withSlot('torch', proceduralTorch))
+TILES.goal.draw = adopt('goal', withSlot('goal', proceduralGoal))
+TILES.plate.draw = adopt('plate', withSlot('plate', proceduralPlate, function(c)
+  return { frame = c.pressed and 2 or 1, tint = PLATE_COLORS[c.idx] }
+end))
+TILES.mirror.draw = adopt('mirror', withSlot('mirror', proceduralMirror))
+TILES.veil.draw = adopt('veil', withSlot('veil', proceduralVeil))
+TILES.crumble.draw = adopt('crumble', withSlot('crumble', proceduralCrumble, function(c)
+  return { frame = c.gone and 3 or c.crack and 2 or 1 }
+end))
+local drawEmber = withSlot('ember', proceduralEmber)
+TILES.ember.draw = adopt('ember', function(world, c, x, y, t)
+  if not c.taken then drawEmber(world, c, x, y, t) end
+end)
+TILES.checkpoint.draw = adopt('checkpoint', withSlot('checkpoint', proceduralCheckpoint, function(c)
+  return { frame = c.active and 2 or 1 }
+end))
+
 local function drawDoor(cells, open)
   local col = PLATE_COLORS[cells[1].idx]
   local x0, y0, x1, y1 = math.huge, math.huge, 0, 0
@@ -565,6 +571,7 @@ end
 
 function R.update(world, dt)
   R.t = R.t + dt
+  Style.t = R.t
   local doors = view(world).doors
   for id, open in pairs(world.doorOpen) do
     local target = open and 1 or 0
@@ -654,6 +661,8 @@ local function drawBgSlot(name, camx, camy)
 end
 
 function R.drawBackground(camx, camy, t)
+  local bg = Style.look and Style.look.background
+  if bg then return bg(camx, camy, t) end
   gfx.setBlendMode('alpha')
   if not drawBgSlot('bg_far', camx, camy) then bgGradient() end
   if not drawBgSlot('bg_mid', camx, camy) then drawArches(camx, camy) end
@@ -661,6 +670,9 @@ function R.drawBackground(camx, camy, t)
 end
 
 function R.drawMotes(camx, camy, t)
+  local motes = Style.look and Style.look.motes
+  if motes == false then return end
+  if motes then return motes(camx, camy, t) end
   gfx.setBlendMode('add')
   for i = 1, 46 do
     local depth = 1.15 + hash(i, 1) * 0.5
@@ -674,10 +686,10 @@ function R.drawMotes(camx, camy, t)
   gfx.setBlendMode('alpha')
 end
 
--- Actors -------------------------------------------------------------------
-
 function R.drawPlayer(p, alpha)
   if p.state == 'dead' then return end
+  local draw = Style.look and Style.look.player
+  if draw then return draw(p, alpha or 1) end
   alpha = alpha or 1
   local t = R.t
   gfx.push()
@@ -719,8 +731,16 @@ local function paint(c, a)
   gfx.setColor(c[1], c[2], c[3], a)
 end
 
+local function echoPalette(mirrored)
+  local custom = Style.look and Style.look.echo
+  if custom then return custom[mirrored] end
+  return ECHO_PALETTE[mirrored]
+end
+
 local function drawGhost(e, frame, alpha)
-  local pal = ECHO_PALETTE[e.mirrored]
+  local ghost = Style.look and Style.look.ghost
+  if ghost then return ghost(e, frame, alpha) end
+  local pal = echoPalette(e.mirrored)
   local cx, top = floor(frame.x + e.w / 2 + 0.5), floor(frame.y + 0.5)
   if drawSlot('echo', cx, top + e.h, { flip = frame.facing, tint = pal.tint, alpha = alpha * 0.85 }) then return end
   paint(pal.body, alpha * 0.55)
@@ -742,7 +762,8 @@ function R.drawEcho(e)
   elseif Echo.LINGER - e.lingerT < 1 then
     alpha = 0.65 + 0.35 * sin(R.t * 30)
   end
-  for k = 4, 1, -1 do
+  local copies = (Style.look and Style.look.echoCopies) or 4
+  for k = copies, 1, -1 do
     local f = e.frames[max(1, e.i - k * 4)]
     if f.x ~= e.x or f.y ~= e.y then
       drawGhost(e, f, alpha * (0.34 - k * 0.06))
@@ -750,7 +771,7 @@ function R.drawEcho(e)
   end
   drawGhost(e, e, alpha)
   if e:isSolid() then
-    local pal = ECHO_PALETTE[e.mirrored]
+    local pal = echoPalette(e.mirrored)
     local cx, top = floor(e.x + e.w / 2 + 0.5), floor(e.y + 0.5)
     paint(pal.edge, alpha * 0.9)
     gfx.rectangle('fill', cx - 6, top, 12, 1)
@@ -759,8 +780,7 @@ function R.drawEcho(e)
   end
 end
 
--- The memory trail: where an echo cast now would start and the path it would walk, so a cast is planned rather
--- than guessed. A cast at a mirror previews the reflection. Each live echo also shows the rest of its route.
+-- The memory trail is where a cast from here would walk, so the cast is planned. A cast at a mirror previews the reflection.
 local TRAIL_STEP = 6
 
 local function trailDot(x, y, r, a, col)
@@ -768,8 +788,17 @@ local function trailDot(x, y, r, a, col)
   gfx.circle('fill', floor(x + Echo.W / 2) + 0.5, floor(y + Echo.H / 2) + 0.5, r, 6)
 end
 
--- The trail samples every TRAIL_STEP frames, so the sample that first overlaps the veil is already inside it.
--- An echo stops on the last fraction before the first overlapping frame and stands on the veil. Mark that spot.
+local function markTrail(pts, x, y, r, a, col)
+  if pts then
+    pts[#pts + 1] = {
+      x = floor(x + Echo.W / 2) + 0.5, y = floor(y + Echo.H / 2) + 0.5, r = r, a = a,
+    }
+  else
+    trailDot(x, y, r, a, col)
+  end
+end
+
+-- Samples land every TRAIL_STEP frames, so the first sample inside a veil is already past the stop.
 local function veilContact(world, pose, k)
   local j = k
   for i = math.max(2, k - TRAIL_STEP + 1), k do
@@ -800,7 +829,9 @@ local function drawMemoryTrail(world)
   if not (p.state == 'ground' or p.state == 'air') or rec.count < 2 then return end
   local mirror = world:touchedMirror()
   local axis = mirror and mirror.tx * T + T / 2
-  local pal = ECHO_PALETTE[mirror ~= nil]
+  local stroke = Style.look and Style.look.stroke
+  local pts = stroke and {} or nil
+  local pal = echoPalette(mirror ~= nil)
   local function at(k)
     local f = rec.buf[(rec.head - rec.count + k - 1) % Echo.FRAMES + 1]
     if not axis then return f end
@@ -811,11 +842,12 @@ local function drawMemoryTrail(world)
     local f = at(k)
     if world:inVeil(f.x, f.y, Echo.W, Echo.H) then
       local x, y = veilContact(world, at, k)
-      trailDot(x, y, 2, 0.4, pal.edge)
+      markTrail(pts, x, y, 2, 0.4, pal.edge)
       break
     end
-    trailDot(f.x, f.y, 1, 0.25 + 0.45 * k / rec.count, pal.core)
+    markTrail(pts, f.x, f.y, 1, 0.25 + 0.45 * k / rec.count, pal.core)
   end
+  if stroke then stroke(pts, pal) end
   local first = at(1)
   local ghost = { w = Echo.W, h = Echo.H, mirrored = mirror ~= nil, frames = { first } }
   drawGhost(ghost, first, (0.45 + 0.15 * sin(R.t * 5)) * (0.4 + 0.6 * full))
@@ -823,7 +855,9 @@ end
 
 local function drawEchoRoute(world, e)
   if e.halted or e.i >= #e.frames then return end
-  local pal = ECHO_PALETTE[e.mirrored]
+  local stroke = Style.look and Style.look.stroke
+  local pts = stroke and {} or nil
+  local pal = echoPalette(e.mirrored)
   local last = e.frames[#e.frames]
   for k = e.i + TRAIL_STEP, #e.frames, TRAIL_STEP do
     local f = e.frames[k]
@@ -831,9 +865,10 @@ local function drawEchoRoute(world, e)
       last = f
       break
     end
-    trailDot(f.x, f.y, 1, 0.4 * (1 - (k - e.i) / #e.frames) + 0.15, pal.core)
+    markTrail(pts, f.x, f.y, 1, 0.4 * (1 - (k - e.i) / #e.frames) + 0.15, pal.core)
   end
-  trailDot(last.x, last.y, 2, 0.6, pal.edge)
+  markTrail(pts, last.x, last.y, 2, 0.6, pal.edge)
+  if stroke then stroke(pts, pal) end
 end
 
 function R.drawWorld(world)
@@ -841,7 +876,11 @@ function R.drawWorld(world)
   gfx.setColor(1, 1, 1)
   gfx.draw(layer(world), 0, 0)
   local v = view(world)
-  for _, p in ipairs(v.pieces) do drawDoor(p.cells, v.doors[p.id] or 0) end
+  local door = Style.look and Style.look.door
+  for _, piece in ipairs(v.pieces) do
+    if door then door(piece.cells, v.doors[piece.id] or 0)
+    else drawDoor(piece.cells, v.doors[piece.id] or 0) end
+  end
   for ty = 0, world.H - 1 do
     for tx = 0, world.W - 1 do
       local c = world.cells[ty][tx]
@@ -854,17 +893,16 @@ function R.drawWorld(world)
   R.drawPlayer(p, p.state == 'cleared' and max(0, 1 - p.stateT * 1.1) or 1)
 end
 
--- Lighting -----------------------------------------------------------------
-
--- The lightmap starts dark and light discs are added into it; multiplying it over the
--- scene is equivalent to a darkness layer with soft holes cut out.
 function R.drawLighting(world, camx, camy, extra)
+  local L = Style.look
+  if L and L.flatLight then return end
   local t = R.t
+  local ambient = (L and L.ambient) or AMBIENT
   gfx.push('all')
   gfx.setCanvas(R.lightmap)
   gfx.origin()
   gfx.translate(-camx, -camy)
-  gfx.clear(AMBIENT[1], AMBIENT[2], AMBIENT[3], 1)
+  gfx.clear(ambient[1], ambient[2], ambient[3], 1)
   gfx.setBlendMode('add')
 
   local p = world.player
@@ -874,11 +912,11 @@ function R.drawLighting(world, camx, camy, extra)
   end
   for _, e in ipairs(world.echoes) do
     local a = e.lingerT > Echo.LINGER and clamp(1 - (e.lingerT - Echo.LINGER) / Echo.FADE, 0, 1) or 1
-    local g = ECHO_PALETTE[e.mirrored].glow
+    local g = echoPalette(e.mirrored).glow
     glow(e.x + e.w / 2, e.y + 6, 52, g[1], g[2], g[3], 0.9 * a)
   end
   for _, l in ipairs(world.lights) do
-    local spec = LIGHTS[l.kind]
+    local spec = (L and L.lights and L.lights[l.kind]) or LIGHTS[l.kind]
     local r = l.r
     if spec.flicker then
       r = r + (sin(t * 11 + l.x) * 0.5 + sin(t * 17 + l.y) * 0.5) * spec.flicker
@@ -913,29 +951,32 @@ function R.drawLighting(world, camx, camy, extra)
 end
 
 function R.drawGlows(world, camx, camy)
+  local L = Style.look
   gfx.push('all')
   gfx.translate(-camx, -camy)
   for _, e in ipairs(world.echoes) do drawEchoRoute(world, e) end
   drawMemoryTrail(world)
   gfx.setBlendMode('add')
   local p = world.player
+  local playerR = (L and L.playerGlowR) or 24
+  local echoR = (L and L.echoGlowR) or 20
   if p.state ~= 'dead' then
     local k = p.state == 'cleared' and max(0, 1 - p.stateT) or 1
-    glow(p.x + p.w / 2, p.y + 6, 24, 1, 0.7, 0.3, 0.55 * k)
+    glow(p.x + p.w / 2, p.y + 6, playerR, 1, 0.7, 0.3, 0.55 * k)
   end
   for _, e in ipairs(world.echoes) do
-    local g = ECHO_PALETTE[e.mirrored].glow
-    glow(e.x + e.w / 2, e.y + 6, 20, g[1], g[2], g[3], 0.5)
+    local g = echoPalette(e.mirrored).glow
+    glow(e.x + e.w / 2, e.y + 6, echoR, g[1], g[2], g[3], 0.5)
   end
-  for _, l in ipairs(world.lights) do
-    local spec = LIGHTS[l.kind]
-    local lift = spec.flicker and 4 or 0
-    glow(l.x, l.y - lift, spec.flicker and 16 or 24, spec.color[1], spec.color[2], spec.color[3], 0.65 * lightAlpha(spec, l))
+  if not (L and L.noPropGlow) then
+    for _, l in ipairs(world.lights) do
+      local spec = (L and L.lights and L.lights[l.kind]) or LIGHTS[l.kind]
+      local lift = spec.flicker and 4 or 0
+      glow(l.x, l.y - lift, spec.flicker and 16 or 24, spec.color[1], spec.color[2], spec.color[3], 0.65 * lightAlpha(spec, l))
+    end
   end
   gfx.pop()
 end
-
--- Frame plumbing -----------------------------------------------------------
 
 function R.beginFrame()
   gfx.setCanvas(R.game)
@@ -955,6 +996,8 @@ function R.present(target)
   gfx.clear(0, 0, 0, 1)
   gfx.setColor(1, 1, 1, 1)
   gfx.draw(R.game, R.ox, R.oy, 0, s, s)
+  local post = Style.look and Style.look.post
+  if post then post(R.ox, R.oy, s) end
 end
 
 return R
