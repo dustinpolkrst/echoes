@@ -43,7 +43,7 @@ Run this first whenever the window, the save, or focus looks wrong. It is read-o
 .cursor/skills/verify-echoes/scripts/verify-echoes doctor
 ```
 
-Exit 0 prints `ok`, then `version: LOVE 11.5 ...`, the pid, `window: <id> ECHOES`, `class: love-11.5`, `size: 960x540`, the run's `data` and `save` directories, whether `save.txt` is present, and whether the window is focused. Any other ECHOES window on the display, a different love version, a dead pid, or a data directory that is not this run's fails with `not ok` and a reason. Do not drive a failed doctor.
+Exit 0 prints `ok`, then `version: LOVE 11.5 ...`, the pid, `window: <id> ECHOES`, `class: love`, `size: 960x540`, the run's `data` and `save` directories, whether `save.txt` is present, and whether the window is focused. Any other ECHOES window on the display, a different love version, a dead pid, or a data directory that is not this run's fails with `not ok` and a reason. Do not drive a failed doctor.
 
 ## Drive
 

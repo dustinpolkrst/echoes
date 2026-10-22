@@ -160,6 +160,31 @@ our_process() {
   game_arg_is_ours
 }
 
+# The process image is the ELF at the end of the launcher. The PATH entry
+# may be the install wrapper, which execs AppRun, which execs bin/love.
+love_image() {
+  local path=$1 hop target sig
+  for hop in 1 2 3 4; do
+    path=$(readlink -f "$path" 2>/dev/null || true)
+    [[ -n "$path" && -f "$path" ]] || return 1
+    sig=
+    IFS= read -r -n 2 sig <"$path" || true
+    [[ "$sig" == '#!' ]] || { printf '%s\n' "$path"; return 0; }
+    if grep -q 'exec "\$APPDIR/bin/love"' "$path"; then
+      path=$(dirname "$path")/bin/love
+      continue
+    fi
+    target=$(sed -n 's/^real=//p' "$path" | head -n 1)
+    if [[ -n "$target" ]] && grep -q 'exec "\$real"' "$path"; then
+      path=$target
+      continue
+    fi
+    printf '%s\n' "$path"
+    return 0
+  done
+  return 1
+}
+
 focus_window() {
   local tries active name apid
   for tries in 1 2 3 4 5 6 7 8; do
@@ -286,8 +311,8 @@ cmd_doctor() {
   if [[ -z "$reason" ]]; then
     local exe love_real
     exe=$(readlink -f "/proc/$PID/exe" 2>/dev/null || true)
-    love_real=$(readlink -f "$LOVE_BIN" 2>/dev/null || true)
-    [[ -n "$exe" && "$exe" == "$love_real" ]] || reason="running binary is '${exe:-missing}', want $love_real"
+    love_real=$(love_image "$LOVE_BIN" || true)
+    [[ -n "$exe" && -n "$love_real" && "$exe" == "$love_real" ]] || reason="running binary is '${exe:-missing}', want ${love_real:-missing}"
   fi
   if [[ -z "$reason" ]]; then
     game_arg_is_ours || reason="process is not running $GAME"
@@ -301,7 +326,7 @@ cmd_doctor() {
     name=$(xdotool getwindowname "$WID")
     [[ "$name" == "ECHOES" ]] || reason="window title is '$name', want ECHOES"
     class=$(xprop -id "$WID" WM_CLASS 2>/dev/null || true)
-    [[ "$class" == *love-11.5* ]] || reason="window class is '$class', want love-11.5"
+    [[ "$class" == *'"love"'* ]] || reason="window class is '$class', want love"
     local wpid
     wpid=$(xdotool getwindowpid "$WID" 2>/dev/null || true)
     [[ "$wpid" == "$PID" ]] || reason="window pid is '${wpid:-none}', want $PID"
@@ -333,7 +358,7 @@ cmd_doctor() {
   printf 'version: %s\n' "$ver"
   printf 'pid: %s\n' "$PID"
   printf 'window: %s ECHOES\n' "$WID"
-  printf 'class: love-11.5\n'
+  printf 'class: love\n'
   printf 'size: 960x540\n'
   printf 'data: %s\n' "$DATA"
   printf 'save: %s\n' "$SAVE_DIR"
