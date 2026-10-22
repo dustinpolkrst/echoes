@@ -1,0 +1,4 @@
+{
+  "name": "ECHOES",
+  "install": "bash .cursor/install.sh"
+}
