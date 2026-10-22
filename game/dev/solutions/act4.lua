@@ -599,14 +599,16 @@ embers['Undercroft'] = (function(p)
   return append(append(trapfloor, underFarSide(p)), underSunken(p))
 end)(nominal('Undercroft'))
 
--- Crawlspace: the ghost parked on the plate holds the door. The lip past the drop is only
--- reachable while that door is open. What is over there before you fall?
+-- Crawlspace: a veil stops the ghost that replays your walk. It does not stop you.
+-- What is past the one by the drop?
 embers['Crawlspace'] = (function(p)
   local parked = {
     { 'L', atXLeft(14 * T + 2) }, { p.castDelay1, '-' }, { 1, 'X' },
     { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
     { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
-    { 'R', atX(27 * T + 12) }, { 14, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 33 * T) }, { 'R', atX(32 * T + 6) },
+    { 'R', atX(444) }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
+    { 'R', atX(32 * T - 8) }, { 200, '-' }, { 'R', atX(35 * T + 8) }, { 12, '-' }, { 1, 'X' },
+    { '-', echoArrived },
     { 'L', atXLeft(29 * T) }, { '-', onTop(11 * T) },
   }
   return append(append(parked, crawlShortMemory(p)), crawlWrongWay(p))
