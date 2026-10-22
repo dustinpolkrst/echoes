@@ -833,8 +833,128 @@ local function testGamepadInput()
   check('a fresh A after that release still jumps', readA().jump)
 end
 
+local function grounded()
+  local w = arena {
+    '################',
+    '#..............#',
+    '#..............#',
+    '#..............#',
+    '#..............#',
+    '#..............#',
+    '#.P............#',
+    '################',
+  }
+  idle(w, 90)
+  return w
+end
+
+local function eventCount(w, name)
+  local n = 0
+  for _, ev in ipairs(w.events) do
+    if ev.name == name then n = n + 1 end
+  end
+  return n
+end
+
+local function testTapBetweenUpdates()
+  local function up() return false end
+  local function sample() return Input.read({}, up) end
+  Input.requireRelease()
+  sample()
+
+  local castW = grounded()
+  check('player is on the ground before a tap', castW.player.state == 'ground', castW.player.state)
+  Input.fromKey('x')
+  Level.step(castW, sample())
+  local echoes = #castW.echoes
+  local later = 0
+  for _ = 1, 8 do
+    Level.step(castW, sample())
+    later = later + eventCount(castW, 'cast')
+  end
+  check('a tap of x between updates casts once', echoes == 1 and later == 0,
+    ('echoes=%d later=%d'):format(echoes, later))
+
+  local again = grounded()
+  Input.fromKey('x')
+  Level.step(again, sample())
+  Input.fromKey('x')
+  Level.step(again, sample())
+  check('a second tap of x casts a second echo', #again.echoes == 2, ('echoes=%d'):format(#again.echoes))
+
+  local kay = grounded()
+  Input.fromKey('k')
+  Level.step(kay, sample())
+  local kEchoes = #kay.echoes
+  Level.step(kay, sample())
+  check('a tap of k between updates casts once', kEchoes == 1 and #kay.echoes == 1,
+    ('echoes=%d'):format(#kay.echoes))
+
+  local jumpW = grounded()
+  Input.fromKey('z')
+  local jumps = 0
+  for _ = 1, 90 do
+    Level.step(jumpW, sample())
+    jumps = jumps + eventCount(jumpW, 'jump')
+  end
+  check('a tap of z between updates jumps once', jumps == 1, ('jumps=%d'):format(jumps))
+
+  local padCast = grounded()
+  Input.fromButton('x')
+  Level.step(padCast, sample())
+  local padEchoes = #padCast.echoes
+  Level.step(padCast, sample())
+  check('a gamepad x tap between updates casts once', padEchoes == 1 and #padCast.echoes == 1,
+    ('echoes=%d'):format(#padCast.echoes))
+
+  local padJump = grounded()
+  Input.fromButton('a')
+  local padJumps = 0
+  for _ = 1, 90 do
+    Level.step(padJump, sample())
+    padJumps = padJumps + eventCount(padJump, 'jump')
+  end
+  check('a gamepad a tap between updates jumps once', padJumps == 1, ('jumps=%d'):format(padJumps))
+
+  Input.fromKey('right')
+  local right = sample()
+  check('a tap of right is down on the next read only', right.right == true and not sample().right)
+  Input.fromKey('c')
+  local rewind = sample()
+  check('a tap of c is rewind on the next read only', rewind.rewind == true and not sample().rewind)
+
+  local held = { x = true }
+  local function heldDown(k) return held[k] == true end
+  local holdW = grounded()
+  local casts = 0
+  for _ = 1, 12 do
+    Level.step(holdW, Input.read({}, heldDown))
+    casts = casts + eventCount(holdW, 'cast')
+  end
+  held.x = false
+  for _ = 1, 4 do
+    Level.step(holdW, Input.read({}, heldDown))
+    casts = casts + eventCount(holdW, 'cast')
+  end
+  check('holding x casts once and releasing does not cast', casts == 1, ('casts=%d'):format(casts))
+
+  local scripted = grounded()
+  Input.fromKey('x')
+  idle(scripted, 1, 'X')
+  check('a scripted one-frame cast still creates one echo', #scripted.echoes == 1, ('echoes=%d'):format(#scripted.echoes))
+  idle(scripted, 6, '-')
+  check('scripted steps do not cast a press the script did not ask for', #scripted.echoes == 1, ('echoes=%d'):format(#scripted.echoes))
+
+  local menu = grounded()
+  Input.fromKey('x')
+  Input.requireRelease()
+  Level.step(menu, sample())
+  check('a cast tap cleared before the next read does not fire', #menu.echoes == 0, ('echoes=%d'):format(#menu.echoes))
+end
+
 function S.run()
   testGamepadInput()
+  testTapBetweenUpdates()
   require('dev.uitest')(check)
   testPhysics()
   testHazards()
