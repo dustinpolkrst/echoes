@@ -11,12 +11,12 @@ local Script = require 'dev.script'
 --               checkpoint and the naive approaches that must fail. See docs/level-design.md.
 local ACTS = { 'dev.solutions.act1', 'dev.solutions.act2', 'dev.solutions.act3', 'dev.solutions.act4', 'dev.solutions.act5' }
 
-local M = { scripts = {}, strategies = {}, rooms = {}, embers = {} }
+local M = { scripts = {}, strategies = {}, rooms = {}, embers = {}, emberBlocks = {} }
 M.run, M.driver, M.cond, M.decisions = Script.run, Script.driver, Script.cond, Script.decisions
 
 for _, path in ipairs(ACTS) do
   local act = require(path)
-  for _, key in ipairs({ 'scripts', 'strategies', 'rooms', 'embers' }) do
+  for _, key in ipairs({ 'scripts', 'strategies', 'rooms', 'embers', 'emberBlocks' }) do
     for name, v in pairs(act[key] or {}) do
       assert(M[key][name] == nil, ('%s: %s for %q defined twice'):format(path, key, name))
       M[key][name] = v

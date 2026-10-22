@@ -129,34 +129,32 @@ embers['Undertow'] = {
   { 'L', atLastEcho }, { 'J', onLastEcho }, { 4, '-' }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
 }
 
--- Underfoot: the stone above the bridge holds the ghost you just cast. It does not hold you.
--- What is underneath, before the long run?
+local function emberTaken(w) return w:emberTaken() end
+
+-- Underfoot: the stone drops you and keeps the ghost on the plate. The door across the bridge stays open for the ghost.
 embers['Underfoot'] = (function(p)
-  local SHELF, BRIDGE = 5, 8
-  local function ceilingOpen(w)
-    local e = w.echoes[#w.echoes]
-    if not (e and e:arrived()) then return false end
-    local tx = math.floor((e.x + e.w / 2) / 16)
-    for _, c in ipairs(w.crumbles) do
-      if c.ty == SHELF and c.tx == tx and c.gone then return true end
-    end
-    return false
-  end
-  local function bridgeRegrown(w)
-    for _, c in ipairs(w.crumbles) do
-      if c.ty == BRIDGE and c.gone then return false end
-    end
-    return true
-  end
-  return {
+  local shelf = {
     { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) },
-    { 'R', atX(480) }, { 12, '-' }, { 1, 'X' }, { '-', ceilingOpen },
-    { 16, 'LJ' }, { 'L', onTop(128, 200, 520) },
-    { 'L', atXLeft(300) }, { '-', bridgeRegrown },
-    { 'L', atXLeft(p.hopX) }, { p.hopHold, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
-    { p.stand, '-' }, { 1, 'X' }, { p.leaveDelay, '-' },
-    { 'R', atX(420) }, { '-', onTop(224) }, { 'R', atX(470) },
+    { 12, '-' }, { 1, 'X' }, { '-', echoArrived },
+    { 'L', atXLeft(312) }, { 22, 'LJ' }, { '-', onTop(80, 13 * 16, 19 * 16) },
+    { 'L', emberTaken },
+    { 'R', atX(19 * 16) }, { '-', onTop(128, 16 * 16, 21 * 16) },
   }
+  return append(shelf, strategies['Underfoot'].build(p))
 end)(S.decisions(strategies['Underfoot']))
 
-return { scripts = scripts, strategies = strategies, rooms = rooms, embers = embers }
+local emberBlocks = {
+  ['Underfoot'] = {
+    { 'never cast', {
+      { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) }, { 180, '-' }, { '-', onTop(128) },
+      { 'L', atXLeft(312) }, { 22, 'LJ' }, { '-', onTop(80, 13 * 16, 19 * 16) }, { 30, 'L' },
+    } },
+    { 'cast after the stone drops you and ignore the ghost', {
+      { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) },
+      { 40, '-' }, { '-', onTop(128) }, { 1, 'X' }, { 140, '-' },
+      { 'L', atXLeft(312) }, { 22, 'LJ' }, { '-', onTop(80, 13 * 16, 19 * 16) }, { 30, 'L' },
+    } },
+  },
+}
+
+return { scripts = scripts, strategies = strategies, rooms = rooms, embers = embers, emberBlocks = emberBlocks }

@@ -599,16 +599,16 @@ embers['Undercroft'] = (function(p)
   return append(append(trapfloor, underFarSide(p)), underSunken(p))
 end)(nominal('Undercroft'))
 
--- Crawlspace: a veil stops the ghost that replays your walk. It does not stop you.
--- What is past the one by the drop?
+-- Crawlspace: a veil stops the ghost on the plate past the drop. The door stays open for that ghost.
 embers['Crawlspace'] = (function(p)
   local parked = {
     { 'L', atXLeft(14 * T + 2) }, { p.castDelay1, '-' }, { 1, 'X' },
     { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
     { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
     { 'R', atX(444) }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
-    { 'R', atX(32 * T - 8) }, { 200, '-' }, { 'R', atX(35 * T + 8) }, { 12, '-' }, { 1, 'X' },
-    { '-', echoArrived },
+    { 'R', atX(32 * T - 8) }, { 200, '-' }, { 'R', atX(34 * T) }, { 8, '-' }, { 1, 'X' },
+    { '-', echoArrived }, { '-', doorOpen('d') },
+    { 'R', function(w) return w:emberTaken() end },
     { 'L', atXLeft(29 * T) }, { '-', onTop(11 * T) },
   }
   return append(append(parked, crawlShortMemory(p)), crawlWrongWay(p))
@@ -625,4 +625,23 @@ embers["Ferryman's Toll"] = (function(p)
   return append(append(append(tollDock(p), jump), tollGate(p)), tollHatch(p))
 end)(nominal("Ferryman's Toll"))
 
-return { scripts = {}, strategies = strategies, rooms = rooms, embers = embers }
+local emberBlocks = {
+  ['Crawlspace'] = {
+    { 'never cast', {
+      { 'L', atXLeft(14 * T + 2) }, { 20, '-' }, { 1, 'X' },
+      { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
+      { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
+      { 'R', atX(444) }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
+      { 'R', atX(36 * T) }, { 50, 'R' },
+    } },
+    { 'cast before the pocket and ignore the ghost', {
+      { 'L', atXLeft(14 * T + 2) }, { 20, '-' }, { 1, 'X' },
+      { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
+      { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
+      { 'R', atX(444) }, { 1, 'X' }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
+      { 'R', atX(36 * T) }, { 50, 'R' },
+    } },
+  },
+}
+
+return { scripts = {}, strategies = strategies, rooms = rooms, embers = embers, emberBlocks = emberBlocks }
