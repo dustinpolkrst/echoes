@@ -13,6 +13,7 @@ local Trans = require 'screens.transition'
 local Ui = require 'gfx.ui'
 local Hud = require 'gfx.hud'
 local Assets = require 'platform.assets'
+local Style = require 'gfx.style'
 
 local gfx = love.graphics
 local floor, sin, pi, min, max = math.floor, math.sin, math.pi, math.min, math.max
@@ -96,15 +97,25 @@ end
 local playing = { deaths = 0 }
 
 local DUST = { 0.55, 0.55, 0.8 }
+
+local function dustColor()
+  return (Style.look and Style.look.dust) or DUST
+end
+
+local function castColor(mirrored)
+  local look = Style.look
+  if look then return mirrored and look.castMirror or look.castColor end
+  return mirrored and { 0.85, 0.5, 1 } or { 0.4, 0.95, 1 }
+end
 local function react(stage, ev)
   local x, y = ev.x, ev.y
   local function burst(n, opts) Particles.burst(stage.particles, x, y, n, opts) end
   if ev.name == 'jump' then
     Sfx.play('jump')
-    burst(6, { dir = -pi / 2, spread = pi * 0.9, speed = 30, life = 0.35, grav = 60, color = DUST })
+    burst(6, { dir = -pi / 2, spread = pi * 0.9, speed = 30, life = 0.35, grav = 60, color = dustColor() })
   elseif ev.name == 'land' then
     Sfx.play('land', 0.9 + min(0.3, ev.v / 1500))
-    burst(4 + floor(ev.v / 60), { dir = -pi / 2, spread = pi * 0.95, speed = 45, life = 0.4, grav = 80, color = DUST })
+    burst(4 + floor(ev.v / 60), { dir = -pi / 2, spread = pi * 0.95, speed = 45, life = 0.4, grav = 80, color = dustColor() })
   elseif ev.name == 'death' then
     Sfx.play('death')
     Input.rumble(0.6, 0.25)
@@ -115,7 +126,7 @@ local function react(stage, ev)
   elseif ev.name == 'cast' then
     Sfx.play('cast', ev.v and 0.8 or 1)
     Input.rumble(0.25, 0.12)
-    burst(26, { speed = 70, life = 0.7, drag = 2, color = ev.v and { 0.85, 0.5, 1 } or { 0.4, 0.95, 1 }, glow = true })
+    burst(26, { speed = 70, life = 0.7, drag = 2, color = castColor(ev.v), glow = true })
   elseif ev.name == 'crumble' then
     Sfx.play('crumble', ev.v and 1 or 1.4)
     burst(ev.v and 14 or 5, { dir = pi / 2, spread = pi * 0.8, speed = 40, life = 0.6, grav = 160, color = { 0.55, 0.42, 0.28 } })
@@ -124,7 +135,7 @@ local function react(stage, ev)
     Particles.burst(stage.particles, x, y - 2, 6, { dir = -pi / 2, spread = pi, speed = 40, life = 0.4, grav = 80, color = { 0.6, 0.95, 1 }, glow = true })
   elseif ev.name == 'door' then
     Sfx.play('door', ev.v and 1 or 0.85)
-    burst(12, { dir = pi / 2, spread = pi, speed = 25, life = 0.7, grav = 40, color = DUST, jitter = 8 })
+    burst(12, { dir = pi / 2, spread = pi, speed = 25, life = 0.7, grav = 40, color = dustColor(), jitter = 8 })
   elseif ev.name == 'goal' then
     Sfx.play('goal')
     burst(30, { speed = 90, life = 1.0, drag = 1.5, color = { 0.7, 1, 0.95 }, glow = true })
@@ -146,12 +157,12 @@ local function ambientParticles(stage)
   local world = stage.world
   for _, e in ipairs(world.echoes) do
     if rand() < 0.2 then
-      Particles.burst(stage.particles, e.x + e.w / 2 + (rand() - 0.5) * 6, e.y + 8, 1, { dir = -pi / 2, spread = 0.6, speed = 14, life = 0.7, color = { 0.4, 0.95, 1 }, glow = true })
+      Particles.burst(stage.particles, e.x + e.w / 2 + (rand() - 0.5) * 6, e.y + 8, 1, { dir = -pi / 2, spread = 0.6, speed = 14, life = 0.7, color = castColor(false), glow = true })
     end
   end
   for _, l in ipairs(world.lights) do
     if rand() < 0.06 then
-      Particles.burst(stage.particles, l.x, l.y - 2, 1, { dir = -pi / 2, spread = 0.8, speed = 18, life = 0.9, color = { 1, 0.6, 0.2 }, glow = true })
+      Particles.burst(stage.particles, l.x, l.y - 2, 1, { dir = -pi / 2, spread = 0.8, speed = 18, life = 0.9, color = (Style.look and Style.look.torchSpark) or { 1, 0.6, 0.2 }, glow = true })
     end
   end
 end
@@ -320,14 +331,19 @@ end
 
 function S.title.drawUI()
   local t, f = S.title.t, Ui.fonts
-  local pulse = 0.85 + 0.15 * sin(t * 2)
-  gfx.setFont(f.title)
-  for i = 3, 1, -1 do
-    gfx.setColor(0.35, 0.9, 1, 0.1 * pulse * (4 - i) / 3)
-    gfx.printf('ECHOES', -i * 14, 40, Ui.W, 'center')
+  local wordmark = Style.look and Style.look.wordmark
+  if wordmark then
+    wordmark(Ui, t)
+  else
+    local pulse = 0.85 + 0.15 * sin(t * 2)
+    gfx.setFont(f.title)
+    for i = 3, 1, -1 do
+      gfx.setColor(0.35, 0.9, 1, 0.1 * pulse * (4 - i) / 3)
+      gfx.printf('ECHOES', -i * 14, 40, Ui.W, 'center')
+    end
+    Ui.glowText('ECHOES', f.title, 40, { 1, 0.88, 0.55 }, 1, { 1, 0.6, 0.2 })
+    Ui.text('a small light remembers where it has been', f.mid, 184, C.cyan, 0.8)
   end
-  Ui.glowText('ECHOES', f.title, 40, { 1, 0.88, 0.55 }, 1, { 1, 0.6, 0.2 })
-  Ui.text('a small light remembers where it has been', f.mid, 184, C.cyan, 0.8)
   local panelH = 34 + 46 * #S.title.menu.items
   Ui.panel(Ui.W / 2 - 190, 236, 380, panelH, 0.9)
   Ui.menu(S.title.menu, Ui.W / 2, 250, { rowHeight = 46, width = 320 })
@@ -487,7 +503,8 @@ function playing.drawUI()
   local t = playing.t
   local a = t < 2.8 and 1 or max(0, 1 - (t - 2.8) / 1.4)
   if a > 0 then
-    Ui.glowText(('%d. %s'):format(playing.index, world.name), f.big, 60, C.amber, a, { 1, 0.6, 0.2 })
+    local titleFont = Style.look and f.num or f.big
+    Ui.glowText(('%d. %s'):format(playing.index, world.name), titleFont, 60, C.amber, a, { 1, 0.6, 0.2 })
     Ui.text(Input.hint(world.hint), f.mid, 110, C.white, a)
   end
   Hud.draw(world, {
@@ -670,22 +687,33 @@ local function drawCard(i, x, y, selected, pulse)
   local open = Progress.unlocked(d, i)
   local done = Progress.done(d, i)
   local f = Ui.fonts
-  gfx.setColor(0.03, 0.04, 0.1, open and 0.85 or 0.7)
-  gfx.rectangle('fill', x, y, CARD_W, CARD_H, 6, 6)
-  if selected then
-    gfx.setColor(1, 0.75, 0.35, 0.1 + 0.06 * pulse)
-    gfx.rectangle('fill', x, y, CARD_W, CARD_H, 6, 6)
-    gfx.setLineWidth(2)
-    gfx.setColor(1, 0.82, 0.45, 0.75 + 0.25 * pulse)
+  local card = Style.look and Style.look.card
+  if card then
+    gfx.setColor(card.fill[1], card.fill[2], card.fill[3], open and card.fillA or card.lockedA)
+    gfx.rectangle('fill', x, y, CARD_W, CARD_H, card.radius, card.radius)
+    gfx.setLineWidth(selected and 2 or 1)
+    local line = selected and card.sel or card.line
+    gfx.setColor(line[1], line[2], line[3], line[4] or 1)
+    gfx.rectangle('line', x + 0.5, y + 0.5, CARD_W - 1, CARD_H - 1, card.radius, card.radius)
   else
-    gfx.setLineWidth(1)
-    if done then gfx.setColor(C.cyan[1], C.cyan[2], C.cyan[3], 0.45)
-    elseif open then gfx.setColor(1, 0.82, 0.45, 0.3)
-    else gfx.setColor(C.locked[1], C.locked[2], C.locked[3], 0.3) end
+    gfx.setColor(0.03, 0.04, 0.1, open and 0.85 or 0.7)
+    gfx.rectangle('fill', x, y, CARD_W, CARD_H, 6, 6)
+    if selected then
+      gfx.setColor(1, 0.75, 0.35, 0.1 + 0.06 * pulse)
+      gfx.rectangle('fill', x, y, CARD_W, CARD_H, 6, 6)
+      gfx.setLineWidth(2)
+      gfx.setColor(1, 0.82, 0.45, 0.75 + 0.25 * pulse)
+    else
+      gfx.setLineWidth(1)
+      if done then gfx.setColor(C.cyan[1], C.cyan[2], C.cyan[3], 0.45)
+      elseif open then gfx.setColor(1, 0.82, 0.45, 0.3)
+      else gfx.setColor(C.locked[1], C.locked[2], C.locked[3], 0.3) end
+    end
+    gfx.rectangle('line', x + 0.5, y + 0.5, CARD_W - 1, CARD_H - 1, 6, 6)
   end
-  gfx.rectangle('line', x + 0.5, y + 0.5, CARD_W - 1, CARD_H - 1, 6, 6)
   local numColor = open and (done and C.cyan or C.amber) or C.locked
-  Ui.text(tostring(i), f.big, y + (CARD_H - f.big:getHeight()) / 2, numColor, open and 1 or 0.7, x + 10, 44, 'center')
+  local numFont = Style.look and f.num or f.big
+  Ui.text(tostring(i), numFont, y + (CARD_H - numFont:getHeight()) / 2, numColor, open and 1 or 0.7, x + 10, 44, 'center')
   local tx = x + 60
   if open then
     local name = Levels[i].name

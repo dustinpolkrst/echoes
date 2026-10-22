@@ -1,4 +1,4 @@
-local selftest, flow, bench, shotTarget, shotArg = false, false, nil, nil, nil
+local selftest, flow, bench, shotTarget, shotArg, styleName = false, false, nil, nil, nil, nil
 local benchOpts = {}
 local diffPair, slackArgs, cheeseArgs, recordLevel, favicon
 local args = arg or {}
@@ -29,6 +29,7 @@ for i, a in pairs(args) do
     shotTarget = args[i + 1] or '1'
     shotArg = tonumber(args[i + 2])
   end
+  if a == '--style' then styleName = args[i + 1] end
 end
 
 if diffPair then
@@ -68,6 +69,7 @@ local navState
 local shot = { target = shotTarget, captured = false }
 
 function love.load()
+  if styleName then require('gfx.style').use(styleName) end
   love.graphics.setDefaultFilter('nearest', 'nearest')
   local Render = require 'gfx.render'
   local Sfx = require 'platform.sfx'
