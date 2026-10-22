@@ -878,9 +878,10 @@ local function testTapBetweenUpdates()
   local again = grounded()
   Input.fromKey('x')
   Level.step(again, sample())
+  Level.step(again, sample())
   Input.fromKey('x')
   Level.step(again, sample())
-  check('a second tap of x casts a second echo', #again.echoes == 2, ('echoes=%d'):format(#again.echoes))
+  check('a later tap of x casts another echo', #again.echoes == 2, ('echoes=%d'):format(#again.echoes))
 
   local kay = grounded()
   Input.fromKey('k')
@@ -938,6 +939,20 @@ local function testTapBetweenUpdates()
   end
   check('holding x casts once and releasing does not cast', casts == 1, ('casts=%d'):format(casts))
 
+  local both = grounded()
+  local down = { x = true }
+  local function downAt(k) return down[k] == true end
+  Input.fromKey('x')
+  local heldCasts = 0
+  for _ = 1, 12 do
+    Level.step(both, Input.read({}, downAt))
+    heldCasts = heldCasts + eventCount(both, 'cast')
+  end
+  down.x = false
+  Level.step(both, Input.read({}, downAt))
+  heldCasts = heldCasts + eventCount(both, 'cast')
+  check('a held x that also sent keydown casts once', heldCasts == 1, ('casts=%d'):format(heldCasts))
+
   local scripted = grounded()
   Input.fromKey('x')
   idle(scripted, 1, 'X')
@@ -950,6 +965,12 @@ local function testTapBetweenUpdates()
   Input.requireRelease()
   Level.step(menu, sample())
   check('a cast tap cleared before the next read does not fire', #menu.echoes == 0, ('echoes=%d'):format(#menu.echoes))
+
+  local dropped = grounded()
+  Input.fromKey('x')
+  Input.discard()
+  Level.step(dropped, sample())
+  check('a cast tap dropped before the next read does not fire', #dropped.echoes == 0, ('echoes=%d'):format(#dropped.echoes))
 end
 
 function S.run()

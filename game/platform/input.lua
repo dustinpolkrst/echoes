@@ -25,12 +25,18 @@ Input.lastDevice = 'key'
 Input.sceneEpoch = 0
 
 local freshKeys = {}
+local pending = {}
 local readEpoch = 0
 local jumpBlocked = false
+
+function Input.discard()
+  pending = {}
+end
 
 function Input.requireRelease()
   Input.sceneEpoch = Input.sceneEpoch + 1
   freshKeys = {}
+  Input.discard()
 end
 
 local function contains(list, v)
@@ -48,10 +54,17 @@ local function actionsFor(field, value)
   return out
 end
 
+local function latch(field, value, device)
+  for _, name in ipairs(HELD) do
+    if contains(BINDINGS[name][field], value) then pending[name] = device end
+  end
+end
+
 function Input.fromKey(key, isRepeat)
   Input.lastDevice = 'key'
   if not isRepeat then
     freshKeys[key] = true
+    latch('keys', key, 'key')
   elseif not freshKeys[key] then
     return {}
   end
@@ -68,6 +81,7 @@ end
 
 function Input.fromButton(button)
   Input.lastDevice = 'pad'
+  latch('buttons', button, 'pad')
   local out = {}
   for _, name in ipairs(actionsFor('buttons', button)) do
     if not contains(NAV, name) then out[#out + 1] = name end
@@ -138,13 +152,16 @@ end
 function Input.read(joysticks, keyDown)
   joysticks = joysticks or Input.joysticks()
   keyDown = keyDown or love.keyboard.isDown
+  local latched = pending
+  pending = {}
   local input, padUsed, keyUsed = {}, false, false
   for _, name in ipairs(HELD) do
     local k = keyDown(unpack(BINDINGS[name].keys))
     local p = padHeld(joysticks, name)
-    input[name] = k or p
-    keyUsed = keyUsed or k
-    padUsed = padUsed or p
+    local src = latched[name]
+    input[name] = k or p or src ~= nil
+    keyUsed = keyUsed or k or src == 'key'
+    padUsed = padUsed or p or src == 'pad'
   end
   -- Jump shares confirm (Z, Space, A). A hold that crosses a scene stays ignored until release.
   if readEpoch ~= Input.sceneEpoch then

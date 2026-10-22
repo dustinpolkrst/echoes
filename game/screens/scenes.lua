@@ -368,6 +368,7 @@ end
 -- survives a retry only once a waystone was lit while carrying it, so an ember grabbed on the way to dying
 -- is not kept.
 local function loadAttempt(fromCheckpoint)
+  Input.discard()
   local checkpoint = fromCheckpoint and playing.world and playing.world.respawn or nil
   if not checkpoint then
     playing.emberBanked = false
@@ -404,6 +405,7 @@ local REWIND_SPEEDS = { { 0, 1 }, { 1.2, 2 }, { 2.5, 4 } }
 local DEATH_WAIT = Player.DEATH_DELAY + 0.6
 
 local function rewind(world)
+  Input.discard()
   local speed = 1
   for _, s in ipairs(REWIND_SPEEDS) do
     if playing.rewindT >= s[1] then speed = s[2] end
@@ -555,6 +557,7 @@ function pause.leave()
 end
 
 local function resume()
+  Input.discard()
   pause.leave()
   S.name = pause.under
   current = S[pause.under]
