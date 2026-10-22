@@ -129,10 +129,16 @@ embers['Undertow'] = {
   { 'L', atLastEcho }, { 'J', onLastEcho }, { 4, '-' }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
 }
 
--- Underfoot: the hatch opens under whoever stands on it; what is on the far side if you jump it instead?
-embers['Underfoot'] = {
-  { 'L', atXLeft(70) }, { 12, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
-  { 190, '-' }, { 1, 'X' }, { 10, '-' }, { 'R', atX(400) }, { 14, 'RJ' }, { 'R', onTop(224) }, { 'L', atXLeft(440) },
-}
+-- Underfoot: the ghost on the plate holds every door on it. The one above the bridge is open
+-- for the same seven seconds as the hatch. What is up there before the long run?
+embers['Underfoot'] = (function(p)
+  return {
+    { 'L', atXLeft(p.hopX) }, { p.hopHold, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
+    { p.stand, '-' }, { 1, 'X' }, { p.leaveDelay, '-' },
+    { 'R', atX(250) }, { 10, 'RJ' }, { 'R', onTop(96, 256, 336) }, { 'R', atX(300) },
+    { 'L', onTop(128) },
+    { 'R', atX(420) }, { '-', onTop(224) }, { 'R', atX(470) },
+  }
+end)(S.decisions(strategies['Underfoot']))
 
 return { scripts = scripts, strategies = strategies, rooms = rooms, embers = embers }
