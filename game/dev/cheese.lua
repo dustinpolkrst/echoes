@@ -34,7 +34,8 @@ local function simulate(def, from, exit, policy, afterStep)
     if not input then return false end
     Level.step(w, input)
     if afterStep then afterStep(w, s, input) end
-    if M.reached(w, exit) then return true, f end
+    local scored = exit == 'ember' and w:emberTaken() or (exit ~= 'ember' and M.reached(w, exit))
+    if scored then return true, f end
     if w.player.state == 'dead' then return false end
   end
   return false
@@ -274,6 +275,44 @@ function M.format(index, def, result)
     end
   end
   return table.concat(lines, '\n')
+end
+
+-- Shallow families plus the level's no-echo scripts, scored on the ember instead of a room exit.
+function M.searchEmber(def)
+  local started = os.clock()
+  local hits, runs, familiesRun = {}, 0, {}
+  local function family(name)
+    local row = { name = name, runs = 0, hits = 0 }
+    familiesRun[#familiesRun + 1] = row
+    return row
+  end
+  local function score(row, label, policy)
+    row.runs = row.runs + 1
+    runs = runs + 1
+    local ok, frame = simulate(def, nil, 'ember', policy)
+    if ok then
+      row.hits = row.hits + 1
+      hits[#hits + 1] = { family = row.name, label = label, frame = frame }
+    end
+    return ok
+  end
+  local w = Level.new(def)
+  for _, fam in ipairs(families(def, w)) do
+    local row = family(fam.name)
+    local n = 0
+    fam.gen(function(label, policy)
+      if n >= HITS_PER_FAMILY then return end
+      if score(row, label, policy) then n = n + 1 end
+    end)
+  end
+  local row = family('no echo')
+  for _, block in ipairs(Solutions.emberBlocks[def.name] or {}) do
+    score(row, block[1], function(world, s)
+      if not s.drive then s.drive = Solutions.driver(block[2]) end
+      return s.drive(world)
+    end)
+  end
+  return { hits = hits, runs = runs, families = familiesRun, seconds = os.clock() - started }
 end
 
 -- args: level numbers; none means every level. Exits nonzero when any room has a hit.

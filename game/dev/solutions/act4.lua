@@ -566,13 +566,16 @@ rooms["Ferryman's Toll"] = {
 
 local embers = {}
 
--- Relay: the ghost you leave on b arrives under you; will it lift you to the ember two rows up while B is still held?
+-- Relay: B opens when the ghost arrives, not when you cast. A longer stand on b keeps that
+-- arrival on the plate through a jump to the ledge past B. What is up there before the waystone?
 embers['Relay'] = (function(p)
   return append(append({
     { 'R', atX(plate(3)) }, { p.standA, '-' }, { 1, 'X' },
-    { 'R', atX(plate(11)) }, { p.standB, '-' }, { 1, 'X' }, { '-', echoArrived },
-    { 20, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
-    { 'R', atX(22 * T - 20) }, { '-', doorOpen('b') }, { 'R', atX(plate(23) + 3) },
+    { 'R', atX(plate(11)) }, { 120, '-' }, { 1, 'X' },
+    { 'R', atX(22 * T - 28) }, { '-', doorOpen('b') },
+    { 12, 'RJ' }, { 'R', onTop(80, 23 * T, 26 * T) }, { 'R', atX(25 * T + 4) },
+    { 'L', onTop(7 * T) },
+    { 'R', atX(plate(23) + 3) },
   }, relayLoop(p)), relayEncore(p))
 end)(nominal('Relay'))
 
@@ -596,15 +599,19 @@ embers['Undercroft'] = (function(p)
   return append(append(trapfloor, underFarSide(p)), underSunken(p))
 end)(nominal('Undercroft'))
 
--- Crawlspace: Wrong Way Round makes you wait in the pocket for the stone; what does that wait leave standing under you?
+-- Crawlspace: a veil stops the ghost on the plate past the drop. The door stays open for that ghost.
 embers['Crawlspace'] = (function(p)
-  local wrongWay = {
-    { 'L', atXLeft(23 * T + 2) }, { '-', stoneBack(13) }, { p.pocketWait3, '-' }, { 1, 'X' }, { '-', echoArrived },
-    { 12, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
-    { 'R', atX(32 * T + 2) }, { p.castDelay3, '-' }, { 1, 'X' },
-    { 'R', atX(36 * T - 12) }, { '-', doorOpen('c') }, { 'R', atX(38 * T) },
+  local parked = {
+    { 'L', atXLeft(14 * T + 2) }, { p.castDelay1, '-' }, { 1, 'X' },
+    { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
+    { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
+    { 'R', atX(444) }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
+    { 'R', atX(32 * T - 8) }, { 200, '-' }, { 'R', atX(34 * T) }, { 8, '-' }, { 1, 'X' },
+    { '-', echoArrived }, { '-', doorOpen('d') },
+    { 'R', function(w) return w:emberTaken() end },
+    { 'L', atXLeft(29 * T) }, { '-', onTop(11 * T) },
   }
-  return append(append(crawlParked(p), crawlShortMemory(p)), wrongWay)
+  return append(append(parked, crawlShortMemory(p)), crawlWrongWay(p))
 end)(nominal('Crawlspace'))
 
 -- Ferryman's Toll: the ferry is a reflection of your wait at the foot; what does a reflection of a jump there reach?
@@ -618,4 +625,23 @@ embers["Ferryman's Toll"] = (function(p)
   return append(append(append(tollDock(p), jump), tollGate(p)), tollHatch(p))
 end)(nominal("Ferryman's Toll"))
 
-return { scripts = {}, strategies = strategies, rooms = rooms, embers = embers }
+local emberBlocks = {
+  ['Crawlspace'] = {
+    { 'never cast', {
+      { 'L', atXLeft(14 * T + 2) }, { 20, '-' }, { 1, 'X' },
+      { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
+      { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
+      { 'R', atX(444) }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
+      { 'R', atX(36 * T) }, { 50, 'R' },
+    } },
+    { 'cast before the pocket and ignore the ghost', {
+      { 'L', atXLeft(14 * T + 2) }, { 20, '-' }, { 1, 'X' },
+      { 'R', atX(17 * T + 2) }, { 14, 'RJ' }, { 'R', onTop(3 * T, 18 * T, 23 * T) }, { 'R', atX(23 * T + 2) },
+      { '-', onTop(5 * T) }, { 'R', atX(24 * T - 16) }, { '-', doorOpen('a') },
+      { 'R', atX(444) }, { 1, 'X' }, { 16, 'RJ' }, { 'R', onTop(5 * T, 30 * T, 38 * T) },
+      { 'R', atX(36 * T) }, { 50, 'R' },
+    } },
+  },
+}
+
+return { scripts = {}, strategies = strategies, rooms = rooms, embers = embers, emberBlocks = emberBlocks }

@@ -129,10 +129,32 @@ embers['Undertow'] = {
   { 'L', atLastEcho }, { 'J', onLastEcho }, { 4, '-' }, { 'LJ', onTop(144, 0, 54) }, { 'L', atXLeft(40) },
 }
 
--- Underfoot: the hatch opens under whoever stands on it; what is on the far side if you jump it instead?
-embers['Underfoot'] = {
-  { 'L', atXLeft(70) }, { 12, 'LJ' }, { 'L', onTop(112) }, { 'L', atXLeft(16) },
-  { 190, '-' }, { 1, 'X' }, { 10, '-' }, { 'R', atX(400) }, { 14, 'RJ' }, { 'R', onTop(224) }, { 'L', atXLeft(440) },
+local function emberTaken(w) return w:emberTaken() end
+
+-- Underfoot: the stone drops you and keeps the ghost on the plate. The door across the bridge stays open for the ghost.
+embers['Underfoot'] = (function(p)
+  local shelf = {
+    { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) },
+    { 12, '-' }, { 1, 'X' }, { '-', echoArrived },
+    { 'L', atXLeft(312) }, { 22, 'LJ' }, { '-', onTop(80, 13 * 16, 19 * 16) },
+    { 'L', emberTaken },
+    { 'R', atX(19 * 16) }, { '-', onTop(128, 16 * 16, 21 * 16) },
+  }
+  return append(shelf, strategies['Underfoot'].build(p))
+end)(S.decisions(strategies['Underfoot']))
+
+local emberBlocks = {
+  ['Underfoot'] = {
+    { 'never cast', {
+      { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) }, { 180, '-' }, { '-', onTop(128) },
+      { 'L', atXLeft(312) }, { 22, 'LJ' }, { '-', onTop(80, 13 * 16, 19 * 16) }, { 30, 'L' },
+    } },
+    { 'cast after the stone drops you and ignore the ghost', {
+      { 'R', atX(364) }, { 36, 'RJ' }, { '-', onTop(80) },
+      { 40, '-' }, { '-', onTop(128) }, { 1, 'X' }, { 140, '-' },
+      { 'L', atXLeft(312) }, { 22, 'LJ' }, { '-', onTop(80, 13 * 16, 19 * 16) }, { 30, 'L' },
+    } },
+  },
 }
 
-return { scripts = scripts, strategies = strategies, rooms = rooms, embers = embers }
+return { scripts = scripts, strategies = strategies, rooms = rooms, embers = embers, emberBlocks = emberBlocks }

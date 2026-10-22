@@ -54,7 +54,23 @@ function Shot.setup(Scenes, target, arg)
     return level == 0 and 'shot_0.png' or (arg and ('shot_%d_f%d.png'):format(level, arg) or ('shot_%d.png'):format(level))
   end
 
-  if target == 'title' then
+  if target == 'ember' then
+    local level = arg or 1
+    Scenes.init(seededStore(0))
+    local def = Levels[level]
+    local sim = require('world.level').new(def)
+    local Solutions = require 'dev.solutions'
+    local before = 0
+    require('dev.script').run(sim, Solutions.embers[def.name], function(w)
+      if not w:emberTaken() then before = before + 1 end
+    end)
+    Scenes.go('playing', level)
+    local drive = Solutions.driver(Solutions.embers[def.name])
+    Scenes.inputSource = function(world)
+      return drive(world) or {}
+    end
+    frames(Scenes, before)
+  elseif target == 'title' then
     Scenes.init(seededStore(arg or 2))
     Scenes.go('title')
     frames(Scenes, 100)

@@ -1,7 +1,7 @@
 local selftest, bench = false, false
 for _, a in pairs(arg or {}) do
   if a == '--selftest' or a == '--slack' or a == '--cheese' then selftest = true end
-  if a == '--bench' then bench = true end
+  if a == '--bench' or a == '--shot' then bench = true end
 end
 
 function love.conf(t)

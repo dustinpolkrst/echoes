@@ -787,6 +787,12 @@ local function testEmberRoutes()
       local ok, err = pcall(run, e, route)
       check(label .. ' ember route takes the ember and clears the level', ok and e:emberTaken() and e.player.state == 'cleared',
         ok and ('state=' .. e.player.state) or tostring(err))
+      for _, block in ipairs(Solutions.emberBlocks[def.name] or {}) do
+        local b = Level.new(def)
+        run(b, block[2])
+        check(label .. ' no-echo "' .. block[1] .. '" leaves the ember', not b:emberTaken(),
+          'state=' .. tostring(b.player.state))
+      end
     else
       check(label .. ' has an ember route', false)
     end

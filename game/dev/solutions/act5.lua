@@ -604,14 +604,16 @@ local rooms = {
 
 local embers = {}
 
--- Clockwork: the ghost on a holds A for seven seconds and the run needs five; what else can it do with the other two?
+-- Clockwork: one memory is cast plain, then mirrored. Step into the new tile before the shrine
+-- and the reflection steps into the rock on the far side. What does it walk through on the way?
 embers['Clockwork'] = (function(p)
-  local overlap = {
-    { 'R', atX(tile(CW.a1)) }, { p.standA1, '-' }, { 1, 'X' }, { 12, 'J' }, { '-', onLastEcho }, { 20, 'J' }, { '-', grounded },
-    { 'R', atX(tile(CW.b1)) }, { p.holdB1, '-' }, { 1, 'X' },
-    { 'R', atX(tile(CW.w1 - 5)) }, { 'R', atX(tile(CW.w1)) },
+  local basement = {
+    { 'R', atX(tile(CW.a3 - 1)) }, { '-', grounded }, { p.standA3, '-' }, { 1, 'X' },
+    { 'L', atXLeft(59 * T) }, { 40, '-' },
+    { 'R', atX(CW.M3 * T + 2) }, { p.mirrorDelay, '-' }, { 1, 'X' },
+    { 'RJ', onTop(10 * T, CW.roof3 * T) }, { 'R', atX(CW.G3 * T) },
   }
-  return append(append(overlap, clockworkRoom2(p)), clockworkRoom3(p))
+  return append(append(clockworkRoom1(p), clockworkRoom2(p)), basement)
 end)(nominal('Clockwork'))
 
 -- Hall of Mirrors: a reflection keeps your height; which shrine reflects a hop on the roof into the air over the spikes?
