@@ -61,7 +61,7 @@ Act one teaches the echo: 1 Wake (movement, gaps, spikes), 2 First Echo (a plate
 
 Act two introduces one tile each: 6 Other Side (a plate in a sealed room, pressed by a reflected echo), 7 Trapdoor (a plate on crumble stone), 8 Undertow (a veil parks the ghost you climb), 9 Underfoot (the door is the floor).
 
-Act three combines them: 10 Ferry, 11 Short Memory, 12 Confluence.
+Act three combines them: 10 Ferry, 11 Short Memory, 12 Confluence, 13 Both Hands.
 
 A level unlocks when the previous one is cleared. Progress (cleared levels, best time, fewest deaths) and settings (volumes, screen shake, fullscreen) are saved to `save.txt` in the LÖVE save directory (`%APPDATA%/LOVE/echoes` on Windows). A missing or corrupt file falls back to defaults.
 

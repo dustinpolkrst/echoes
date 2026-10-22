@@ -49,6 +49,17 @@ local function shortMemory(p)
   }
 end
 
+local function bothHands(p)
+  return {
+    { 'R', atX(p.hopX) }, { p.hopHold, 'RJ' }, { 'R', onTop(192) },
+    { 'R', atX(p.standX) }, { 'L', atXLeft(p.standX) }, { p.wait, '-' },
+    { 'R', atX(p.plainX) }, { p.plainDelay, '-' }, { 1, 'X' },
+    { 'R', atX(224) }, { p.castDelay, '-' }, { 1, 'X' },
+    { p.crossDelay, '-' },
+    { 'R', atX(400) },
+  }
+end
+
 local strategies = {
   ['Short Memory'] = {
     params = {
@@ -69,6 +80,19 @@ local strategies = {
         { p.landDelay, '-' }, { 'R', atX(326) }, { 1, 'X' }, { '-', doorOpen('a') }, { 'R', atX(360) },
       })
     end,
+  },
+  ['Both Hands'] = {
+    params = {
+      { name = 'hopX', unit = 'px', nominal = 28, min = 16, max = 64, step = 2 },
+      { name = 'hopHold', unit = 'frames', nominal = 12, min = 1, max = 40, step = 1 },
+      { name = 'standX', unit = 'px', nominal = 100, min = 56, max = 124, step = 2 },
+      { name = 'wait', unit = 'frames', nominal = 40, min = 0, max = 150, step = 2 },
+      { name = 'plainX', unit = 'px', nominal = 200, min = 160, max = 210, step = 2 },
+      { name = 'plainDelay', unit = 'frames', nominal = 4, min = 0, max = 40, step = 2 },
+      { name = 'castDelay', unit = 'frames', nominal = 4, min = 0, max = 40, step = 2 },
+      { name = 'crossDelay', unit = 'frames', nominal = 40, min = 0, max = 100, step = 2 },
+    },
+    build = bothHands,
   },
 }
 
@@ -114,6 +138,60 @@ local rooms = {
       },
     },
   },
+  ['Both Hands'] = {
+    {
+      name = 'Both ledges',
+      insight = 'one recording of the jump, cast once on the shrine and once off it, holds both ledges at the same time',
+      solve = strategies['Both Hands'].build(S.decisions(strategies['Both Hands'])),
+      naive = {
+        { 'cast once, on the shrine', {
+          { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) },
+          { 'R', atX(100) }, { 'L', atXLeft(100) }, { 40, '-' },
+          { 'R', atX(224) }, { 4, '-' }, { 1, 'X' },
+          { 'R', atX(400) },
+        } },
+        { 'cast once, off the shrine', {
+          { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) },
+          { 'R', atX(100) }, { 'L', atXLeft(100) }, { 40, '-' },
+          { 'R', atX(224) }, { 'L', atXLeft(200) }, { 4, '-' }, { 1, 'X' },
+          { 'R', atX(400) },
+        } },
+        { 'no cast', {
+          { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) },
+          { 'R', atX(100) }, { 'L', atXLeft(100) }, { 40, '-' },
+          { 'R', atX(400) },
+        } },
+        { 'mash X every half second against the door', append(
+          { { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) }, { 'R', atX(224) } },
+          append(mash('R', 30, 20), { { 60, 'R' } })) },
+      },
+    },
+    {
+      name = 'The niche',
+      exit = { 22, 9, 22, 9 },
+      insight = 'a jump that starts on the ledge reaches the niche in the sealed gallery; the jump that only climbed the ledge does not',
+      solve = {
+        { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) },
+        { 'R', atX(100) }, { 'L', atXLeft(100) }, { 10, '-' },
+        { 14, 'J' }, { '-', onTop(192) }, { 40, '-' },
+        { 'R', atX(224) }, { 4, '-' }, { 1, 'X' },
+        { 'L', atXLeft(200) }, { 4, '-' }, { 1, 'X' },
+        { 'R', atX(400) },
+      },
+      naive = {
+        { 'climb the ledge and cast twice, without jumping on it', {
+          { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) },
+          { 'R', atX(100) }, { 'L', atXLeft(100) }, { 40, '-' },
+          { 'R', atX(224) }, { 4, '-' }, { 1, 'X' },
+          { 'L', atXLeft(200) }, { 4, '-' }, { 1, 'X' },
+          { 30, '-' },
+        } },
+        { 'run along the floor and cast on the shrine', {
+          { 'R', atX(224) }, { 4, '-' }, { 1, 'X' }, { 180, '-' },
+        } },
+      },
+    },
+  },
 }
 
 -- Each ember script starts from the level start, takes the ember and clears the level.
@@ -140,5 +218,15 @@ embers['Confluence'] = (function(p)
     { 'L', atXLeft(296) }, { 8, 'J' }, { '-', grounded }, { 'R', atX(326) }, { 90, '-' }, { 1, 'X' }, { 70, '-' }, { 'R', atX(360) },
   })
 end)(S.decisions(strategies['Confluence']))
+
+-- Both Hands: the climb onto the ledge is too low for the niche. Can a jump that starts on the ledge reach it?
+embers['Both Hands'] = {
+  { 'R', atX(22) }, { 12, 'RJ' }, { 'R', onTop(192) },
+  { 'R', atX(100) }, { 'L', atXLeft(100) }, { 10, '-' },
+  { 14, 'J' }, { '-', onTop(192) }, { 40, '-' },
+  { 'R', atX(224) }, { 4, '-' }, { 1, 'X' },
+  { 'L', atXLeft(200) }, { 4, '-' }, { 1, 'X' },
+  { 'R', atX(400) },
+}
 
 return { strategies = strategies, rooms = rooms, embers = embers }
