@@ -975,6 +975,10 @@ function R.drawGlows(world, camx, camy)
       glow(l.x, l.y - lift, spec.flicker and 16 or 24, spec.color[1], spec.color[2], spec.color[3], 0.65 * lightAlpha(spec, l))
     end
   end
+  if L and L.plateStripe then
+    gfx.setBlendMode('alpha')
+    L.plateStripe(world)
+  end
   gfx.pop()
 end
 

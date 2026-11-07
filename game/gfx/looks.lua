@@ -138,6 +138,18 @@ local function plateBody(x, y, c, base, ink)
   end
 end
 
+-- Same bar plateBody draws for a non-ink plate: the full top contact stripe.
+-- Cutout paints it again after the additive bloom, opaque, so the center stays
+-- the puzzle hue instead of a white core with a colored fringe.
+local function cutPlateStripe(world)
+  gfx.setBlendMode('alpha')
+  for _, c in ipairs(world.plates) do
+    local drop = c.pressed and 2 or 0
+    rgb(PLATE[c.idx], 1)
+    gfx.rectangle('fill', c.tx * T + 2, c.ty * T + 12 + drop, T - 4, 3)
+  end
+end
+
 local function doorPaint(cells, open, body, stripeW)
   local x0, y0, x1, y1, wide, vis, col = bounds(cells, open)
   local span = wide and (y1 - y0) or (x1 - x0)
@@ -735,6 +747,7 @@ looks.cut = function()
       end,
     },
     door = function(cells, open) doorPaint(cells, open, CUT, 6) end,
+    plateStripe = cutPlateStripe,
     player = function(p, alpha)
       atFeet(p)
       local dir = p.facing
