@@ -1,12 +1,13 @@
 local Render = require 'gfx.render'
 local Menu = require 'screens.menu'
+local Style = require 'gfx.style'
 
 local gfx = love.graphics
 local sin, min, max = math.sin, math.min, math.max
 
 local U = { W = 960, H = 540 }
 
-local SIZES = { title = 120, big = 34, menu = 26, mid = 20, small = 15, tiny = 12 }
+local SIZES = { title = 120, big = 34, menu = 26, mid = 20, small = 15, tiny = 12, num = 34 }
 
 U.colors = {
   amber = { 1, 0.82, 0.45 },
@@ -18,10 +19,23 @@ U.colors = {
 local C = U.colors
 
 local fontScale
+local function face(name)
+  local look = Style.look
+  if not look then return nil end
+  local named = look.fonts and look.fonts[name]
+  return named or look.font
+end
+
 -- dpiscale renders glyphs at the real pixel size, so text stays crisp at any window scale.
 local function buildFonts(scale)
   local fonts = {}
-  for name, size in pairs(SIZES) do fonts[name] = gfx.newFont(size, 'normal', scale) end
+  local sizes = Style.look and Style.look.sizes
+  for name, size in pairs(SIZES) do
+    local px = sizes and sizes[name] or size
+    local file = face(name)
+    if file then fonts[name] = gfx.newFont(file, px, 'normal', scale)
+    else fonts[name] = gfx.newFont(px, 'normal', scale) end
+  end
   U.fonts = fonts
   fontScale = scale
 end
@@ -43,6 +57,8 @@ function U.time()
 end
 
 function U.text(str, font, y, color, alpha, x, limit, align)
+  local draw = Style.look and Style.look.text
+  if draw then return draw(str, font, y, color, alpha, x, limit, align) end
   gfx.setFont(font)
   alpha = alpha or 1
   local px, w = x or 0, limit or U.W
@@ -56,6 +72,8 @@ end
 local GLOW_OFFSETS = { { 0, 0 }, { 3, 0 }, { -3, 0 }, { 0, 3 }, { 0, -3 }, { 6, 6 }, { -6, 6 }, { 6, -6 }, { -6, -6 } }
 
 function U.glowText(str, font, y, color, alpha, glowColor, x, limit)
+  local draw = Style.look and Style.look.glowText
+  if draw then return draw(str, font, y, color, alpha, glowColor, x, limit) end
   gfx.setFont(font)
   local px, w = x or 0, limit or U.W
   gfx.setBlendMode('add')
@@ -71,11 +89,15 @@ function U.glowText(str, font, y, color, alpha, glowColor, x, limit)
 end
 
 function U.dim(alpha)
+  local draw = Style.look and Style.look.dim
+  if draw then return draw(alpha) end
   gfx.setColor(0.02, 0.025, 0.07, alpha)
   gfx.rectangle('fill', 0, 0, U.W, U.H)
 end
 
 function U.panel(x, y, w, h, alpha)
+  local draw = Style.look and Style.look.panel
+  if draw then return draw(x, y, w, h, alpha) end
   alpha = alpha or 1
   gfx.setColor(0.03, 0.04, 0.1, 0.82 * alpha)
   gfx.rectangle('fill', x, y, w, h, 6, 6)
@@ -87,6 +109,8 @@ function U.panel(x, y, w, h, alpha)
 end
 
 function U.iris(coverage, cx, cy)
+  local draw = Style.look and Style.look.iris
+  if draw then return draw(coverage, cx, cy) end
   if coverage <= 0 then return end
   gfx.setColor(0.01, 0.01, 0.03, 1)
   if coverage >= 0.999 then
@@ -130,12 +154,17 @@ function U.menu(m, cx, y, o)
     local color = sel and C.amber or C.dim
     local a = sel and 1 or 0.78
     if sel then
-      gfx.setColor(1, 0.75, 0.35, 0.09 + 0.05 * pulse)
-      gfx.rectangle('fill', left, ry, w, rh - 4, 4, 4)
-      gfx.setColor(1, 0.8, 0.45, 0.9)
-      gfx.rectangle('fill', left, ry + 4, 3, rh - 12)
-      gfx.setColor(C.amber[1], C.amber[2], C.amber[3], 0.9)
-      triangle(left + 16, ry + (rh - 4) / 2, 5, 1)
+      local cursor = Style.look and Style.look.cursor
+      if cursor then
+        cursor(left, ry, w, rh, pulse)
+      else
+        gfx.setColor(1, 0.75, 0.35, 0.09 + 0.05 * pulse)
+        gfx.rectangle('fill', left, ry, w, rh - 4, 4, 4)
+        gfx.setColor(1, 0.8, 0.45, 0.9)
+        gfx.rectangle('fill', left, ry + 4, 3, rh - 12)
+        gfx.setColor(C.amber[1], C.amber[2], C.amber[3], 0.9)
+        triangle(left + 16, ry + (rh - 4) / 2, 5, 1)
+      end
     end
     if twoCol then
       U.text(Menu.label(m, i), font, ty, color, a, left + 34, w, 'left')
@@ -172,9 +201,9 @@ function U.menu(m, cx, y, o)
   end
 end
 
--- hints: { {key, label}, ... } centred along the bottom edge.
--- The ember as a UI icon, centred on x, y: lit when found, an outline when not.
 function U.ember(x, y, lit, alpha, size)
+  local draw = Style.look and Style.look.emberIcon
+  if draw then return draw(x, y, lit, alpha, size) end
   local k = size or 1
   local pts = { x, y - 7 * k, x + 5 * k, y, x, y + 5 * k, x - 5 * k, y }
   if lit then
@@ -190,6 +219,8 @@ function U.ember(x, y, lit, alpha, size)
 end
 
 function U.footer(hints, y)
+  local draw = Style.look and Style.look.footer
+  if draw then return draw(hints, y, U) end
   local font = U.fonts.small
   y = y or 496
   gfx.setFont(font)
@@ -215,5 +246,7 @@ function U.footer(hints, y)
     x = x + wd.kw + 8 + wd.lw + gap
   end
 end
+
+Style.paint(U)
 
 return U
