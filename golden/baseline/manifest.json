@@ -1,0 +1,62 @@
+{
+  "base": "7c65f7011fb778860de9cd2f7bd97e390f49acaa",
+  "style": "baseline",
+  "limits": "Underfoot arrive and leave cannot be reached on main's solution tape. The ghost is born on plate a at frame 236, already standing, and the world freezes at frame 599 with that ghost still solid and the hatch still open. Frames 190-236 do not qualify as a pre-cast idle plate: the player is standing on plate a until the cast. Frames 1-43 do qualify (nobody on plate a, hatch animation 0, plate unpressed). Frame 43 is the last of those, one frame before the player steps on the plate at frame 44.",
+  "references": [
+    {
+      "level": 9,
+      "levelName": "Underfoot",
+      "moment": "precast",
+      "frame": 43,
+      "time": "43/60 s",
+      "style": "baseline",
+      "base": "7c65f7011fb778860de9cd2f7bd97e390f49acaa",
+      "file": "underfoot-precast.png",
+      "what": "Before the cast and before the step onto plate a. Player is in the air at x=16.58 y=95.25 and does not overlap the plate. No ghost. Plate a unpressed. Hatch animation 0, door closed."
+    },
+    {
+      "level": 9,
+      "levelName": "Underfoot",
+      "moment": "hold",
+      "frame": 360,
+      "time": "360/60 s",
+      "style": "baseline",
+      "base": "7c65f7011fb778860de9cd2f7bd97e390f49acaa",
+      "file": "underfoot-hold.png",
+      "what": "Ghost alone on plate a at x=16 y=100, solid, dx=0, playback frame 125 of 180. Hatch animation 1. Player on the crumble bridge at x=201.25 y=116, ground, not on the plate. Before the clear at frame 521."
+    },
+    {
+      "level": 16,
+      "levelName": "Crawlspace",
+      "moment": "arrive",
+      "frame": 136,
+      "time": "136/60 s",
+      "style": "baseline",
+      "base": "7c65f7011fb778860de9cd2f7bd97e390f49acaa",
+      "file": "crawlspace-arrive.png",
+      "what": "First frame the walking ghost overlaps plate a. Ghost x=334.58, dx=-1.67, playback 25 of 112, not yet halted. Door animation 0.05. Player is not on the plate."
+    },
+    {
+      "level": 16,
+      "levelName": "Crawlspace",
+      "moment": "hold",
+      "frame": 270,
+      "time": "270/60 s",
+      "style": "baseline",
+      "base": "7c65f7011fb778860de9cd2f7bd97e390f49acaa",
+      "file": "crawlspace-hold.png",
+      "what": "Inside the hold window 155-384. Ghost halted on plate a at x=320, solid, linger 2.1 s, door animation 1. Player is not on the plate."
+    },
+    {
+      "level": 16,
+      "levelName": "Crawlspace",
+      "moment": "leave",
+      "frame": 385,
+      "time": "385/60 s",
+      "style": "baseline",
+      "base": "7c65f7011fb778860de9cd2f7bd97e390f49acaa",
+      "file": "crawlspace-leave.png",
+      "what": "Fade start. First frame the halted ghost is no longer solid: linger 4.017 s, still alive, still on the plate coordinate, door animation 0.95 and closing."
+    }
+  ]
+}
