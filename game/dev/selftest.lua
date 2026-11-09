@@ -1005,6 +1005,7 @@ function S.run()
   testCheeseSearch()
   testSolutionSlack()
   testHumanSlack()
+  check('workflow gate probe', false, 'intentional')
   print(('%d checks, %d failed'):format(total, failed))
   return failed == 0
 end
