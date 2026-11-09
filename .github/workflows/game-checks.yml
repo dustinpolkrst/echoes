@@ -1,0 +1,132 @@
+name: Game checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  headless:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned LÖVE 11.5
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          pkgs=()
+          for pkg in ca-certificates curl xz-utils xvfb python3 libgl1 libgl1-mesa-dri; do
+            if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+              pkgs+=("$pkg")
+            fi
+          done
+          if [ "${#pkgs[@]}" -gt 0 ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends "${pkgs[@]}"
+          fi
+
+          love_dir=/opt/love-11.5
+          love_sha=65a673406431eff7167a15a032bf7a2e4ba50108e091eb7b176465831f9b5e00
+          love_out=$("$love_dir/AppRun" --version 2>&1 || true)
+          if ! printf '%s\n' "$love_out" | grep -q 'LOVE 11.5 '; then
+            work=$(mktemp -d /var/tmp/love-11.5.XXXXXX)
+            curl -fsSL -o "$work/love.AppImage" "https://github.com/love2d/love/releases/download/11.5/love-11.5-x86_64.AppImage"
+            echo "${love_sha}  $work/love.AppImage" | sha256sum -c -
+            chmod +x "$work/love.AppImage"
+            (cd "$work" && ./love.AppImage --appimage-extract)
+            sudo rm -rf "$love_dir"
+            sudo mv "$work/squashfs-root" "$love_dir"
+            rm -rf "$work"
+          fi
+
+          wrapper=$(mktemp)
+          cat > "$wrapper" <<'EOF'
+          #!/bin/sh
+          real=/opt/love-11.5/AppRun
+          if [ -z "${DISPLAY:-}" ]; then
+            exec xvfb-run -a "$real" "$@"
+          fi
+          exec "$real" "$@"
+          EOF
+          sudo install -m 755 "$wrapper" /usr/local/bin/love
+          rm -f "$wrapper"
+
+          love_out=$(love --version 2>&1)
+          printf '%s\n' "$love_out" | grep -q 'LOVE 11.5 '
+          command -v xvfb-run >/dev/null
+          echo "love_path=$(command -v love)"
+          echo "love_real=/opt/love-11.5/AppRun"
+          readlink -f "$(command -v love)"
+          echo "runner_image=${ImageOS:-unknown}"
+          . /etc/os-release
+          echo "runner_pretty=${PRETTY_NAME}"
+
+      - name: Run selftest and flow
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          : > logs/selftest.log
+          : > logs/flow.log
+
+          set +e
+          xvfb-run -a love game --selftest > logs/selftest.log 2>&1
+          self_ec=$?
+          xvfb-run -a love game --flow > logs/flow.log 2>&1
+          flow_ec=$?
+          set -e
+
+          echo "selftest_exit=${self_ec}"
+          echo "flow_exit=${flow_ec}"
+          echo "--- selftest summary ---"
+          grep -aE '^[0-9]+ checks, [0-9]+ failed$' logs/selftest.log || true
+          echo "--- flow summary ---"
+          grep -aE '^[0-9]+ flow checks, [0-9]+ failed$' logs/flow.log || true
+
+          status=0
+          if [ "${self_ec}" -ne 0 ]; then
+            echo "selftest exited ${self_ec}"
+            status=1
+          fi
+          if [ "${flow_ec}" -ne 0 ]; then
+            echo "flow exited ${flow_ec}"
+            status=1
+          fi
+
+          # Harness failures are lines that start with FAIL, and a summary whose
+          # failed count is not zero. The count itself is not fixed. Audio-open
+          # warnings also contain "Failed"; those are not check results.
+          reported=0
+          for log in logs/selftest.log logs/flow.log; do
+            if grep -aE '^FAIL([[:space:]]|$)' "$log"; then
+              echo "reported failure lines in ${log}"
+              reported=1
+            fi
+            if grep -aE '^[0-9]+ (flow )?checks, [1-9][0-9]* failed$' "$log"; then
+              echo "reported nonzero failure count in ${log}"
+              reported=1
+            fi
+          done
+          if [ "${reported}" -ne 0 ]; then
+            status=1
+          fi
+          exit "${status}"
+
+      - name: Upload selftest log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest
+          path: logs/selftest.log
+          if-no-files-found: error
+
+      - name: Upload flow log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flow
+          path: logs/flow.log
+          if-no-files-found: error
